@@ -9,6 +9,10 @@ done
 
 echo "Postgres is up!"
 
+# Generate Prisma client now, after DB is ready
+npx prisma generate
+npx prisma migrate dev --name init
+
 # Run your app
 exec "$@"
 

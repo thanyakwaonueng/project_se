@@ -16,9 +16,6 @@ COPY . .
 COPY wait-for-db.sh ./wait-for-db.sh
 RUN chmod +x ./wait-for-db.sh
 
-# Set env variables
-ENV DATABASE_URL="postgres://user:pass@db:5432/your_db"
-
 EXPOSE 4000
 
 # Wait for DB, then run server
