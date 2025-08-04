@@ -4,6 +4,9 @@ import About from '../pages/About';
 import Artist from '../pages/Artist';
 import Venue from '../pages/Venue';
 import Event from '../pages/Event';
+import Login from '../pages/Login';
+import Signup from '../pages/Signup';
+import Logout from '../pages/Logout';
 
 export default function AppRoutes() {
   return (
@@ -12,9 +15,13 @@ export default function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
 
-        <Route path="/artists" element={<Artist />} />
-        <Route path="/venues" element={<Venue />} />
-        <Route path="/events" element={<Event />} />
+        <Route path="/page_artists" element={<Artist />} />
+        <Route path="/page_venues" element={<Venue />} />
+        <Route path="/page_events" element={<Event />} />
+
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/logout" element={<Logout />} />
       </Routes>
     </Router>
   );

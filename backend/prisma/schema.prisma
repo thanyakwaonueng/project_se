@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -14,11 +8,106 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// **WE'RE NOT USING THIS JUST ADD IT FOR TESTING DB CONNECTION
 model User {
-  id    Int    @id @default(autoincrement())
-  name  String
-  email String @unique
+  id              Int             @id @default(autoincrement())
+  email           String          @unique
+  passwordHash    String
+  role            UserRole        @default(FAN)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Each of these is the “parent” side of a 1 – 1
+  artistProfile   ArtistProfile?  // no @relation fields here
+  venueProfile    VenueProfile?
 }
 
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  ORGANIZER
+  ARTIST
+  VENUE
+  FAN
+}
+
+model ArtistProfile {
+  id              Int       @id @default(autoincrement())
+  // … your other artist fields …
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // 1 – 1 to User: child side holds the FK
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          Int       @unique
+
+  // many – many to Event
+  events          Event[]   @relation("ArtistPerformances")
+}
+
+model VenueProfile {
+  id              Int       @id @default(autoincrement())
+  // … your other venue fields …
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // 1 – 1 to User: child side holds the FK
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          Int       @unique
+
+  // 1 – N to Event (named relation)
+  events          Event[]   @relation("VenueEvents")
+}
+
+enum BookingType {
+  FULL_BAND
+  TRIO
+  DUO
+  SOLO
+}
+
+enum PriceRate {
+  BUDGET
+  STANDARD
+  PREMIUM
+  VIP
+  LUXURY
+}
+
+enum AlcoholPolicy {
+  SERVE
+  NONE
+  BYOB
+}
+
+model Event {
+  id              Int            @id @default(autoincrement())
+  name            String
+  // … your other event fields …
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // 1 – N back to Venue (must share the same relation name)
+  venue           VenueProfile   @relation("VenueEvents", fields: [venueId], references: [id], onDelete: Cascade)
+  venueId         Int
+
+  // many – many back to ArtistProfile
+  artists         ArtistProfile[] @relation("ArtistPerformances")
+}
+
+enum EventType {
+  OUTDOOR
+  INDOOR
+  HYBRID
+}
+
+enum TicketingType {
+  FREE
+  DONATION
+  TICKET_MELON
+  DIRECT_CONTACT
+  ONSITE_SALES
+}
 
