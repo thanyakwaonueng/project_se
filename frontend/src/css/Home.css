@@ -1,0 +1,187 @@
+body {
+    /* font-family: 'Mitr', sans-serif; */
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    /* font-family: 'Prompt', sans-serif; */
+    background-color: #f6f6f6;
+}
+
+.container-center {
+  text-align: center;  
+}
+
+.container-1 {
+  margin-bottom: 30px;
+}
+
+
+.center-pic {
+  width: 400px;
+  height: auto;
+  margin-left: 500px;
+  margin-top: -50px;
+  display: block;
+
+}
+
+.graphic-2 {
+  left: 50%;   
+  transform: translateX(-50%);  /* ขยับกลับครึ่งหนึ่งของความกว้าง */
+  width: 650px;
+  margin: 20px;
+}
+
+
+.graphic-4 {
+  width: 200px;
+  height: auto;
+  margin-left: 620px;
+  margin-top: 50px;
+
+}
+
+.chiang-mai-original {
+  font-size: 80px;
+  text-align: center;
+  margin-bottom: 20px;  
+}
+
+.text-4 {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto 40px auto;  /* กึ่งกลางและมีระยะห่างด้านล่าง */
+  font-size: 24px;
+  line-height: 1;
+
+}
+
+
+#get-started {
+  border-radius: 8px;
+  background-color: #fbbf12;
+  margin: 6px;
+  color: #231f20;
+  transition: all 0.3s ease; /* เพิ่ม transition เพื่อให้เอฟเฟกต์ลื่นขึ้น */
+  /* font-weight: bold; */
+
+
+}
+
+
+#get-started:hover {
+  background-color: #231f20;
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+
+
+
+
+
+.image-wrapper {
+  position: relative;
+  width: 400px;
+  height: auto;
+}
+
+.center-pic {
+  width: 100%;
+  display: block;
+}
+
+.overlay-text-1 {
+  position: absolute;
+  top: 43%;     
+  left: -8%;           
+  transform: translate(-50%, -50%); 
+  color: #231f20;          
+  font-size: 3.8rem;     
+  margin-left: 400px;
+  /* font-weight: bold;  */
+  
+}
+
+.overlay-text-2 {
+  position: absolute;
+  top: 43%;       
+  left: 136%;           
+  transform: translate(-50%, -50%);  /* ขยับศูนย์กลางตัวอักษรให้อยู่กลาง */
+  color: #231f20;          
+  font-size: 3.8rem;     
+  text-align: center;
+  z-index: 10;
+  /* font-weight: bold;  */
+}
+
+.overlay-text-3 {
+  position: absolute;
+  top: 55%;       
+  left: 120%;           
+  transform: translate(-50%, -50%);  
+  color: #231f20;          
+  font-size: 3.5rem;     
+  text-align: center;
+  z-index: 10;
+  /* font-weight: bold;  */
+}
+
+.overlay-text-4 {
+
+  top: 48%;       
+  left: 119%;           
+  color: #231f20;          
+    
+
+  /* font-weight: bold;  */
+}
+
+.overlay-button {
+  position: absolute;
+  bottom: 23%;       
+  left: 110%;           
+  /* transform: translate(-50%, -50%);  */
+  
+
+}
+
+
+#nav-start-btn {
+    border-radius: 20px;
+    /* background-color: #67b1f9; */
+    background-color: #231f20;
+    margin: 6px;
+    color: #fbbf12;
+    transition: all 0.3s ease; /* เพิ่ม transition เพื่อให้เอฟเฟกต์ลื่นขึ้น */
+    /* font-weight: bold; */
+    padding: 8px 18px; 
+
+    
+}
+
+#nav-start-btn:hover {
+  background-color: #fbbf12;
+  color: #231f20;
+  transform: scale(1.1);
+}
+
+#nav-start-btn:active {
+  background-color: #808080; 
+  color: #ffffff; 
+  transform: scale(0.95); 
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.content-box {
+  background-color: #231f20;
+  width: 100%;       
+  height: 200px;         
+  border-radius: 12px;     
+  padding: 20px;      
+  box-sizing: border-box;      /* ให้นับ padding ใน width/height */
+}
+
+.Graphic-1 {
+  width: 500px;
+}
+
+

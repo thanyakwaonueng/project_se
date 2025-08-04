@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Layout from '../pages/Layout'; // ปรับ path ให้ถูกต้อง
 import Home from '../pages/Home';
 import About from '../pages/About';
 import Artist from '../pages/Artist';
@@ -12,6 +13,7 @@ export default function AppRoutes() {
   return (
     <Router>
       <Routes>
+        <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
 
@@ -22,6 +24,7 @@ export default function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/logout" element={<Logout />} />
+        </Route>
       </Routes>
     </Router>
   );
