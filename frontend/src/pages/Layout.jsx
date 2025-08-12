@@ -1,15 +1,19 @@
+import React from 'react';
+import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
-import { Outlet } from 'react-router-dom';
+import { AuthProvider } from '../lib/auth';
 
 export default function Layout() {
   return (
-    <>
-      <Navbar />
-      <main className="container mt-4">
-        <Outlet />
-      </main>
-      <Footer />
-    </>
+    <AuthProvider>
+      <div className="d-flex flex-column" style={{ minHeight: '100vh' }}>
+        <Navbar />
+        <main style={{ flex: 1 }}>
+          <Outlet />
+        </main>
+        <Footer />
+      </div>
+    </AuthProvider>
   );
 }

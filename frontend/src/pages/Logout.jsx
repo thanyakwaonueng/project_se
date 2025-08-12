@@ -1,22 +1,17 @@
 import React, { useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../lib/auth';
 
 export default function Logout() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   useEffect(() => {
-    async function logout() {
-      try {
-        await axios.post('/auth/logout');
-      } catch (err) {
-        // ignore errors here
-      }
-      navigate('/login');
-    }
-    logout();
-  }, [navigate]);
+    (async () => {
+      await logout();
+      navigate('/');
+    })();
+  }, [logout, navigate]);
 
-  return <p>Logging out...</p>;
+  return <div style={{ padding: 16 }}>Logging out…</div>;
 }
-

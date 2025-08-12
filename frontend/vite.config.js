@@ -1,45 +1,21 @@
+// vite.config.js
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  //added from gpt to make frontend->backend service communication in development
-  //in production might have to use CORS or better yet deploy both service in the same origin
   server: {
+    host: '0.0.0.0',
     proxy: {
-      // Users
-      '/users': {
+      '/api': {
+        // ถ้ารัน Vite บนเครื่อง: ใช้ localhost
+        // target: 'http://localhost:4000',
+        // ถ้ารันทั้งคู่ใน docker-compose เดียวกัน: ใช้ service name
         target: 'http://backend:4000',
         changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
-      // Single-user routes also start with /users
-      // Artists
-      '/artists': {
-        target: 'http://backend:4000',
-        changeOrigin: true,
-      },
-      // Venues
-      '/venues': {
-        target: 'http://backend:4000',
-        changeOrigin: true,
-      },
-      // Events
-      '/events': {
-        target: 'http://backend:4000',
-        changeOrigin: true,
-      },
-      // Auth 
-      '/auth/login': {
-          target: 'http://backend:4000',
-          changeOrigin: true,
-      },
-      '/auth/logout': {
-          target: 'http://backend:4000',
-          changeOrigin: true,
-      }
-
-
-    }
-  }
+    },
+  },
 })
