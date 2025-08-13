@@ -9,6 +9,7 @@ import Login from '../pages/Login';
 import Signup from '../pages/Signup';
 import Logout from '../pages/Logout';
 import CreateArtist from '../pages/CreateArtist';
+import CreateVenue from '../pages/CreateVenue';
 
 export default function AppRoutes() {
   return (
@@ -22,6 +23,7 @@ export default function AppRoutes() {
         <Route path="/page_venues" element={<Venue />} />
         <Route path="/page_events" element={<Event />} />
         <Route path="/page_create_artist" element={<CreateArtist />} />
+        <Route path="/page_create_venue" element={<CreateVenue />} />
 
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />

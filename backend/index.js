@@ -189,6 +189,67 @@ app.get('/artists/:id', async (req, res) => {
 /**
  * ── VENUES ────────────────────────────────────────────────────────────────────
  */
+app.post('/venues', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const data = req.body;
+
+    // Check if profile already exists for this user
+    const existing = await prisma.venueProfile.findUnique({
+      where: { userId },
+    });
+
+    if (existing) {
+      // Update existing profile
+      const updated = await prisma.venueProfile.update({
+        where: { userId },
+        data,
+      });
+      return res.json(updated);
+    }
+
+    // Create new profile
+    const venue = await prisma.venueProfile.create({
+      data: {
+        ...data,
+        user: { connect: { id: userId } },
+      },
+    });
+
+    // Optionally promote user to VENUE
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role: 'VENUE' },
+    });
+
+    res.status(201).json(venue);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not create/update venue' });
+  }
+});
+
+app.get('/venues', async (req, res) => {
+  try {
+    const venues = await prisma.venueProfile.findMany({ include: { user: true, events: true } });
+    res.json(venues);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not fetch venues' });
+  }
+});
+
+app.get('/venues/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const venue = await prisma.venueProfile.findUnique({ where: { id }, include: { user: true, events: true } });
+    if (!venue) return res.status(404).json({ error: 'Venue not found' });
+    res.json(venue);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not fetch venue' });
+  }
+});
+
 
 /**
  * ── EVENTS ────────────────────────────────────────────────────────────────────

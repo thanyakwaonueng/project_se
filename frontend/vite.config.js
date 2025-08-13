@@ -26,8 +26,12 @@ export default defineConfig({
       '/artists': {
           target: 'http://backend:4000',
           changeOrigin: true,
+      },
+      // Venue
+      '/venues': {
+          target: 'http://backend:4000',
+          changeOrigin: true,
       }
-
 
     }
   }
