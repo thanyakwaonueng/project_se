@@ -22,6 +22,11 @@ export default defineConfig({
           target: 'http://backend:4000',
           changeOrigin: true,
       },
+      // Artist
+      '/artists': {
+          target: 'http://backend:4000',
+          changeOrigin: true,
+      }
 
 
     }

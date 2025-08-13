@@ -113,6 +113,52 @@ app.get('/users/:id', async (req, res) => {
  * ── ARTISTS ───────────────────────────────────────────────────────────────────
  */
 
+ app.post('/artists', authMiddleware, async (req, res) => {
+  try {
+    // Use current user as owner
+    const userId = req.user.id;
+    // Prevent duplicate profile
+    const existing = await prisma.artistProfile.findUnique({ where: { userId } });
+    if (existing) return res.status(400).json({ error: 'Artist profile already exists for this user' });
+
+    const data = req.body;
+    const artist = await prisma.artistProfile.create({
+      data: {
+        ...data,
+        user: { connect: { id: userId } },
+      },
+    });
+    // Optionally promote user role to ARTIST
+    await prisma.user.update({ where: { id: userId }, data: { role: 'ARTIST' } });
+    res.status(201).json(artist);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not create artist' });
+  }
+});
+
+ app.get('/artists', async (req, res) => {
+  try {
+    const artists = await prisma.artistProfile.findMany({ include: { user: true, events: true } });
+    res.json(artists);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not fetch artists' });
+  }
+});
+
+app.get('/artists/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const artist = await prisma.artistProfile.findUnique({ where: { id }, include: { user: true, events: true } });
+    if (!artist) return res.status(404).json({ error: 'Artist not found' });
+    res.json(artist);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not fetch artist' });
+  }
+});
+
+
+
 /**
  * ── VENUES ────────────────────────────────────────────────────────────────────
  */
