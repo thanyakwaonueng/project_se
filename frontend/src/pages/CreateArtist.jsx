@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 export default function CreateArtist() {
   const [name, setName] = useState('');
   const [genre, setGenre] = useState('');
-  const [bookingType, setBookingType] = useState('SOLO'); // adjust to match your BookingType enum
+  const [bookingType, setBookingType] = useState('SOLO');
   const [description, setDescription] = useState('');
   const [foundingYear, setFoundingYear] = useState('');
   const [isIndependent, setIsIndependent] = useState(true);
@@ -15,15 +15,44 @@ export default function CreateArtist() {
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
   const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
-  // social urls
   const [spotifyUrl, setSpotifyUrl] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [instagramUrl, setInstagramUrl] = useState('');
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hasProfile, setHasProfile] = useState(false);
 
   const navigate = useNavigate();
+
+  // Fetch current user profile info
+  useEffect(() => {
+    axios.get('/me', { withCredentials: true })
+      .then(res => {
+        const profile = res.data.artistProfile;
+        if (profile) {
+          setHasProfile(true);
+          setName(profile.name || '');
+          setGenre(profile.genre || '');
+          setBookingType(profile.bookingType || 'SOLO');
+          setDescription(profile.description || '');
+          setFoundingYear(profile.foundingYear || '');
+          setIsIndependent(profile.isIndependent ?? true);
+          setMemberCount(profile.memberCount || '');
+          setContactEmail(profile.contactEmail || '');
+          setContactPhone(profile.contactPhone || '');
+          setPriceMin(profile.priceMin || '');
+          setPriceMax(profile.priceMax || '');
+          setProfilePhotoUrl(profile.profilePhotoUrl || '');
+          setSpotifyUrl(profile.spotifyUrl || '');
+          setYoutubeUrl(profile.youtubeUrl || '');
+          setInstagramUrl(profile.instagramUrl || '');
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch /me:', err);
+      });
+  }, []);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -31,11 +60,10 @@ export default function CreateArtist() {
     setLoading(true);
 
     try {
-      // Build payload, converting types and removing empty fields
       const raw = {
         name: name.trim(),
         genre: genre.trim(),
-        bookingType: bookingType.trim(), // must match Prisma BookingType enum
+        bookingType: bookingType.trim(),
         description: description.trim() || undefined,
         foundingYear: foundingYear ? parseInt(foundingYear, 10) : undefined,
         isIndependent: Boolean(isIndependent),
@@ -50,11 +78,11 @@ export default function CreateArtist() {
         instagramUrl: instagramUrl.trim() || undefined,
       };
 
-      // remove undefined fields so Prisma uses defaults / nulls properly
       const payload = Object.fromEntries(
         Object.entries(raw).filter(([, v]) => v !== undefined && v !== '')
       );
 
+      // Using POST only; backend decides create or update
       const res = await axios.post('/artists', payload, {
         withCredentials: true,
         headers: { 'Content-Type': 'application/json' },
@@ -64,8 +92,7 @@ export default function CreateArtist() {
       navigate(`/artists/${res.data.id}`);
     } catch (err) {
       setLoading(false);
-      // show helpful server error if present
-      const serverMessage = err.response?.data?.error || err.message || 'Failed to create artist';
+      const serverMessage = err.response?.data?.error || err.message || 'Failed to save artist';
       setError(serverMessage);
       console.error('CreateArtist error:', err);
     }
@@ -73,7 +100,7 @@ export default function CreateArtist() {
 
   return (
     <form onSubmit={submit} style={{ maxWidth: 700 }}>
-      <h2>Create Artist Profile</h2>
+      <h2>{hasProfile ? 'Edit Artist Profile' : 'Create Artist Profile'}</h2>
 
       {error && <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>}
 
@@ -91,7 +118,6 @@ export default function CreateArtist() {
 
       <label>
         Booking type *
-        {/* Adjust options to match your BookingType enum values in Prisma */}
         <select value={bookingType} onChange={e => setBookingType(e.target.value)} required>
           <option value="FULL_BAND">FULL_BAND</option>
           <option value="TRIO">TRIO</option>
@@ -194,7 +220,7 @@ export default function CreateArtist() {
       <br />
 
       <button type="submit" disabled={loading}>
-        {loading ? 'Creating…' : 'Create Artist'}
+        {loading ? (hasProfile ? 'Updating…' : 'Creating…') : (hasProfile ? 'Update Artist' : 'Create Artist')}
       </button>
     </form>
   );

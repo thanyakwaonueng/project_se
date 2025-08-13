@@ -32,6 +32,20 @@ function authMiddleware(req, res, next) {
   }
 }
 
+// helper: check owner or admin
+async function isOwnerOrAdminForArtist(reqUser, artistId) {
+  if (!reqUser) return false;
+  if (reqUser.role === 'ADMIN' || reqUser.role === 'SUPERADMIN') return true;
+  const artist = await prisma.artistProfile.findUnique({ where: { id: artistId } });
+  return artist && artist.userId === reqUser.id;
+}
+async function isOwnerOrAdminForVenue(reqUser, venueId) {
+  if (!reqUser) return false;
+  if (reqUser.role === 'ADMIN' || reqUser.role === 'SUPERADMIN') return true;
+  const venue = await prisma.venueProfile.findUnique({ where: { id: venueId } });
+  return venue && venue.userId === reqUser.id;
+}
+
 /**
  * ── AUTH ROUTES  ──────────────────────────────────────────────────────────────────────
  */
@@ -112,32 +126,47 @@ app.get('/users/:id', async (req, res) => {
 /**
  * ── ARTISTS ───────────────────────────────────────────────────────────────────
  */
-
- app.post('/artists', authMiddleware, async (req, res) => {
+app.post('/artists', authMiddleware, async (req, res) => {
   try {
-    // Use current user as owner
     const userId = req.user.id;
-    // Prevent duplicate profile
-    const existing = await prisma.artistProfile.findUnique({ where: { userId } });
-    if (existing) return res.status(400).json({ error: 'Artist profile already exists for this user' });
-
     const data = req.body;
+
+    // Check if profile already exists for this user
+    const existing = await prisma.artistProfile.findUnique({ where: { userId } });
+
+    if (existing) {
+      // Update existing profile
+      const updated = await prisma.artistProfile.update({
+        where: { userId },
+        data,
+      });
+      return res.json(updated);
+    }
+
+    // Create new profile
     const artist = await prisma.artistProfile.create({
       data: {
         ...data,
         user: { connect: { id: userId } },
       },
     });
-    // Optionally promote user role to ARTIST
-    await prisma.user.update({ where: { id: userId }, data: { role: 'ARTIST' } });
+
+    // Optionally promote user to ARTIST
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role: 'ARTIST' },
+    });
+
     res.status(201).json(artist);
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Could not create artist' });
+    res.status(500).json({ error: 'Could not create/update artist' });
   }
 });
 
- app.get('/artists', async (req, res) => {
+
+app.get('/artists', async (req, res) => {
   try {
     const artists = await prisma.artistProfile.findMany({ include: { user: true, events: true } });
     res.json(artists);
@@ -156,8 +185,6 @@ app.get('/artists/:id', async (req, res) => {
     res.status(500).json({ error: 'Could not fetch artist' });
   }
 });
-
-
 
 /**
  * ── VENUES ────────────────────────────────────────────────────────────────────
