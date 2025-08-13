@@ -13,32 +13,25 @@ export default defineConfig({
         target: 'http://backend:4000',
         changeOrigin: true,
       },
-      // Single-user routes also start with /users
-      // Artists
-      '/artists': {
-        target: 'http://backend:4000',
-        changeOrigin: true,
-      },
-      // Venues
-      '/venues': {
-        target: 'http://backend:4000',
-        changeOrigin: true,
-      },
-      // Events
-      '/events': {
-        target: 'http://backend:4000',
-        changeOrigin: true,
-      },
       // Auth 
-      '/auth/login': {
+      '/auth': {
           target: 'http://backend:4000',
           changeOrigin: true,
       },
-      '/auth/logout': {
+      '/me': {
+          target: 'http://backend:4000',
+          changeOrigin: true,
+      },
+      // Artist
+      '/artists': {
+          target: 'http://backend:4000',
+          changeOrigin: true,
+      },
+      // Venue
+      '/venues': {
           target: 'http://backend:4000',
           changeOrigin: true,
       }
-
 
     }
   }

@@ -33,6 +33,36 @@ enum UserRole {
 model ArtistProfile {
   id              Int       @id @default(autoincrement())
   // … your other artist fields …
+  name             String
+  description      String?
+  genre            String
+  subGenre         String?
+  bookingType      BookingType
+  foundingYear     Int?
+  label            String?
+  isIndependent    Boolean   @default(true)
+  memberCount      Int?
+  contactEmail     String?
+  contactPhone     String?
+  priceMin         Float?
+  priceMax         Float?
+  photoUrl         String?
+  videoUrl         String?
+  profilePhotoUrl  String?
+  rateCardUrl      String?
+  epkUrl           String?
+  riderUrl         String?
+
+  // social links
+  spotifyUrl       String?
+  youtubeUrl       String?
+  appleMusicUrl    String?
+  facebookUrl      String?
+  instagramUrl     String?
+  soundcloudUrl    String?
+  shazamUrl        String?
+  bandcampUrl      String?
+  tiktokUrl        String?
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -48,6 +78,27 @@ model ArtistProfile {
 model VenueProfile {
   id              Int       @id @default(autoincrement())
   // … your other venue fields …
+  name             String
+  locationUrl      String
+  genre            String
+  description      String?
+  capacity         Int?
+  dateOpen         DateTime?
+  dateClose        DateTime?
+  priceRate        PriceRate?
+  timeOpen         String?
+  timeClose        String?
+  alcoholPolicy    AlcoholPolicy
+  ageRestriction   String?
+  profilePhotoUrl  String?
+  photoUrls        String[]
+  contactEmail     String?
+  contactPhone     String?
+  facebookUrl      String?
+  instagramUrl     String?
+  lineUrl          String?
+  tiktokUrl        String?
+  websiteUrl       String?
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -85,6 +136,19 @@ model Event {
   id              Int            @id @default(autoincrement())
   name            String
   // … your other event fields …
+  description      String?
+  posterUrl        String?
+  conditions       String?
+  eventType        EventType
+  ticketing        TicketingType
+  ticketLink       String?
+  alcoholPolicy    AlcoholPolicy
+  ageRestriction   String?
+  date             DateTime
+  doorOpenTime     String?
+  endTime          String?
+  genre            String?
+
 
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
