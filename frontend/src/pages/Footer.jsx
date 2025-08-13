@@ -46,7 +46,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <p className="bottom-text">© 2025 CHIANG MAI ORIGINAL</p>
+      <p className="bottom-text">2025 CHIANG MAI ORIGINAL</p>
     </div>
   );
 }

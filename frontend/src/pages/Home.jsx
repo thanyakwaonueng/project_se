@@ -1,30 +1,32 @@
-import '../css/Home.css'
+import '../css/Home.css';
 
 
 export default function Home() {
   return (
+    <div className="container-1">
+      <div className="text-section">
+        <h1 className="overlay-text-1">Chiang Mai Original</h1>
+        <h2 className="overlay-text-2">
+          Explore the music and lifestyle of the people of the northern city. 
+          Discover local artists Listen to the songs you love and discover new music styles with us.
+        </h2>
 
-    <div className="container">
+        <button type="button" className="learn-more-btn" 
+          onClick={() => window.location.href = "/page_artists"}>
+          <span>Learn more</span>
+          <div className="icon-circle">
+            <span>➜</span>
 
-      <div className="container-1 container-center ">
-        <div className="image-wrapper">
-          <img src="/img/graphic-4.png" className="graphic-4" alt="center" />
-          <h1 className="overlay-text-1">CHIANG</h1>
-          <h1 className="overlay-text-2">MAI</h1>
-          <h1 className="overlay-text-3">ORIGINAL</h1>
-          {/* <p className="overlay-text-4">Explore the music and lifestyle of the people of the northern city. Discover local artists Listen to the songs you love and discover new music styles with us</p> */}
-
-          <a className="btn overlay-button" id="nav-start-btn" href="/signup" role="button"> ▶</a>
-        </div>
+          </div>
+        </button>
       </div>
 
-
-
+      <img src="/img/cat_1.png" className="cat-1" />
     </div>
 
-    
   );
 }
+
 
 
 // export default function Home() {

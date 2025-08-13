@@ -52,7 +52,7 @@ export default function Navbar() {
     <nav className={`navbar navbar-expand-md navbar-dark ${isScrolled ? 'navbar-small' : ''}`}>
       <div className="container">
         <a href="/">
-          <img src="/img/logonavbar.png" className="logo" alt="logo" />
+          <img src="/img/logo_navbar.png" className="logo" alt="logo" />
         </a>
 
         <form className="form-inline-nav">
