@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import '../css/Navbar.css';
+import { useState, useEffect } from 'react';
+import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import '../css/Navbar.css';
 
 export default function Navbar() {
-  const { user, loading } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
+  const { user, loading } = useAuth(); // ใช้สถานะจาก AuthProvider
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 30);
@@ -13,12 +13,9 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const canCreateEvent = !!user && ['VENUE', 'ORGANIZER', 'ADMIN'].includes(user.role);
-  const isArtist = !!user && ['ARTIST', 'ADMIN'].includes(user.role);
-  const isVenueSide = !!user && ['VENUE', 'ORGANIZER', 'ADMIN'].includes(user.role);
-
   function LanguageDropdown() {
     const [language, setLanguage] = useState('th');
+    const handleSelect = (lang) => setLanguage(lang);
     return (
       <div className="dropdown">
         <button
@@ -33,8 +30,55 @@ export default function Navbar() {
           {language === 'th' ? 'TH' : 'EN'}
         </button>
         <ul className="dropdown-menu" aria-labelledby="languageDropdown">
-          <li><button className="dropdown-item" onClick={() => setLanguage('th')}>🇹🇭 Thai</button></li>
-          <li><button className="dropdown-item" onClick={() => setLanguage('en')}>🇺🇸 English</button></li>
+          <li><button className="dropdown-item" onClick={() => handleSelect('th')}>🇹🇭 Thai</button></li>
+          <li><button className="dropdown-item" onClick={() => handleSelect('en')}>🇺🇸 English</button></li>
+        </ul>
+      </div>
+    );
+  }
+
+  function AuthButtons() {
+    if (loading) {
+      return <span className="nav-item nav-link" id="nav-style">กำลังตรวจสอบ…</span>;
+    }
+    if (!user) {
+      return (
+        <>
+          <Link className="btn btn-light" id="nav-login-btn" to="/login">LOGIN</Link>
+          <Link className="btn" id="nav-signup-btn" to="/signup" role="button">SIGN UP</Link>
+        </>
+      );
+    }
+    return (
+      <div className="dropdown">
+        <button
+          className="btn btn-light dropdown-toggle"
+          type="button"
+          id="accountDropdown"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+          style={{ fontWeight: 600 }}
+        >
+          {user.email || 'My Account'}
+        </button>
+        <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
+          <li className="dropdown-item-text" style={{ fontSize: 12, color: '#666' }}>
+            Role: {user.role}
+          </li>
+          <li><hr className="dropdown-divider" /></li>
+
+          {(user.role === 'ARTIST' || user.role === 'ADMIN') && (
+            <li><Link className="dropdown-item" to="/me/artist">My Artist</Link></li>
+          )}
+          {(user.role === 'VENUE' || user.role === 'ORGANIZER' || user.role === 'ADMIN') && (
+            <>
+              <li><Link className="dropdown-item" to="/me/venue">My Venue</Link></li>
+              <li><Link className="dropdown-item" to="/page_events/new">Create Event</Link></li>
+            </>
+          )}
+
+          <li><hr className="dropdown-divider" /></li>
+          <li><Link className="dropdown-item" to="/logout">Logout</Link></li>
         </ul>
       </div>
     );
@@ -44,43 +88,17 @@ export default function Navbar() {
     <nav className={`navbar navbar-expand-md navbar-dark ${isScrolled ? 'navbar-small' : ''}`}>
       <div className="container">
         <Link to="/">
-          <img src="/img/logonavbar.png" className="logo" alt="logo" />
+          <img src="/img/logo_navbar.png" className="logo" alt="logo" />
         </Link>
 
         <form className="form-inline-nav">
-          <Link className="nav-item nav-link" id="nav-style" to="/page_artists">ARTISTS</Link>
-          <Link className="nav-item nav-link" id="nav-style" to="/page_events">EVENT</Link>
-          <Link className="nav-item nav-link" id="nav-style" to="/page_venues">VENUE</Link>
-
-          {canCreateEvent && (
-            <Link className="nav-item nav-link" id="nav-style" to="/page_events/new">
-              + CREATE EVENT
-            </Link>
-          )}
-
-          {isArtist && (
-            <Link className="nav-item nav-link" id="nav-style" to="/me/artist">
-              MY ARTIST
-            </Link>
-          )}
-
-          {isVenueSide && (
-            <Link className="nav-item nav-link" id="nav-style" to="/me/venue">
-              MY VENUE
-            </Link>
-          )}
+          <NavLink className="nav-item nav-link" id="nav-style" to="/page_artists">ARTISTS</NavLink>
+          <NavLink className="nav-item nav-link" id="nav-style" to="/page_events">EVENT</NavLink>
+          <NavLink className="nav-item nav-link" id="nav-style" to="/page_venues">VENUE</NavLink>
+          <NavLink className="nav-item nav-link" id="nav-style" to="/page_venues/map">MAP</NavLink>
 
           <LanguageDropdown />
-
-          {!loading && !user && (
-            <>
-              <Link className="btn" id="nav-signup-btn" to="/signup" role="button">SIGN UP</Link>
-              <Link className="nav-item nav-link" id="nav-style" to="/login">LOGIN</Link>
-            </>
-          )}
-          {!loading && user && (
-            <Link className="nav-item nav-link" id="nav-style" to="/logout">LOG OUT</Link>
-          )}
+          <AuthButtons />
         </form>
       </div>
     </nav>

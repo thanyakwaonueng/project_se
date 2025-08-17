@@ -16,8 +16,7 @@ model User {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
-  // Each of these is the “parent” side of a 1 – 1
-  artistProfile   ArtistProfile?  // no @relation fields here
+  artistProfile   ArtistProfile?
   venueProfile    VenueProfile?
 }
 
@@ -31,8 +30,7 @@ enum UserRole {
 }
 
 model ArtistProfile {
-  id              Int       @id @default(autoincrement())
-  // … your other artist fields …
+  id               Int       @id @default(autoincrement())
   name             String
   description      String?
   genre            String
@@ -53,7 +51,6 @@ model ArtistProfile {
   epkUrl           String?
   riderUrl         String?
 
-  // social links
   spotifyUrl       String?
   youtubeUrl       String?
   appleMusicUrl    String?
@@ -64,20 +61,17 @@ model ArtistProfile {
   bandcampUrl      String?
   tiktokUrl        String?
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  // 1 – 1 to User: child side holds the FK
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          Int       @unique
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           Int       @unique
 
-  // many – many to Event
-  events          Event[]   @relation("ArtistPerformances")
+  events           Event[]   @relation("ArtistPerformances")
 }
 
 model VenueProfile {
-  id              Int       @id @default(autoincrement())
-  // … your other venue fields …
+  id               Int       @id @default(autoincrement())
   name             String
   locationUrl      String
   genre            String
@@ -100,15 +94,19 @@ model VenueProfile {
   tiktokUrl        String?
   websiteUrl       String?
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  // ✅ พิกัดสำหรับแผนที่
+  latitude         Float?
+  longitude        Float?
 
-  // 1 – 1 to User: child side holds the FK
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          Int       @unique
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  // 1 – N to Event (named relation)
-  events          Event[]   @relation("VenueEvents")
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           Int       @unique
+
+  events           Event[]   @relation("VenueEvents")
+
+  @@index([latitude, longitude])
 }
 
 enum BookingType {
@@ -133,9 +131,8 @@ enum AlcoholPolicy {
 }
 
 model Event {
-  id              Int            @id @default(autoincrement())
-  name            String
-  // … your other event fields …
+  id               Int            @id @default(autoincrement())
+  name             String
   description      String?
   posterUrl        String?
   conditions       String?
@@ -149,16 +146,13 @@ model Event {
   endTime          String?
   genre            String?
 
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  venue            VenueProfile   @relation("VenueEvents", fields: [venueId], references: [id], onDelete: Cascade)
+  venueId          Int
 
-  // 1 – N back to Venue (must share the same relation name)
-  venue           VenueProfile   @relation("VenueEvents", fields: [venueId], references: [id], onDelete: Cascade)
-  venueId         Int
-
-  // many – many back to ArtistProfile
-  artists         ArtistProfile[] @relation("ArtistPerformances")
+  artists          ArtistProfile[] @relation("ArtistPerformances")
 }
 
 enum EventType {
@@ -174,4 +168,3 @@ enum TicketingType {
   DIRECT_CONTACT
   ONSITE_SALES
 }
-

@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 
 const { requireRole, requireOwnershipOrAdmin } = require('./authz');
 const {
-  validateBody,
+  zodValidate,
   loginSchema,
   createUserSchema,
   createEventSchema,
@@ -175,7 +175,7 @@ function authMiddleware(req, res, next) {
 }
 
 /* ───────────────────────────── AUTH ROUTES ───────────────────────────── */
-app.post('/auth/login', validateBody(loginSchema), async (req, res) => {
+app.post('/auth/login', zodValidate(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
@@ -238,7 +238,7 @@ app.get('/meta/enums', (_req, res) => {
 });
 
 /* ───────────────────────────── USERS ───────────────────────────── */
-app.post('/users', validateBody(createUserSchema), async (req, res) => {
+app.post('/users', zodValidate(createUserSchema), async (req, res) => {
   try {
     const { email, password, role } = req.body;
     const passwordHash = await bcrypt.hash(password, 10);
@@ -279,7 +279,7 @@ app.post(
   '/artists',
   authMiddleware,
   requireRole('ARTIST', 'ADMIN'),
-  validateBody(createArtistSchema),
+  zodValidate(createArtistSchema),
   async (req, res) => {
     try {
       const { userId, bookingType, ...rest } = req.body;
@@ -328,7 +328,7 @@ app.get('/artists/:id', async (req, res) => {
 app.put(
   '/artists/:id',
   authMiddleware,
-  validateBody(updateArtistSchema),
+  zodValidate(updateArtistSchema),
   requireOwnershipOrAdmin(async (req) => {
     const id = +req.params.id;
     const a = await prisma.artistProfile.findUnique({ where: { id } });
@@ -368,7 +368,7 @@ app.post(
   '/venues',
   authMiddleware,
   requireRole('VENUE', 'ADMIN', 'ORGANIZER'),
-  validateBody(createVenueSchema),
+  zodValidate(createVenueSchema),
   async (req, res) => {
     try {
       const { userId, ...rest } = req.body;
@@ -417,7 +417,7 @@ app.get('/venues/:id', async (req, res) => {
 app.put(
   '/venues/:id',
   authMiddleware,
-  validateBody(updateVenueSchema),
+  zodValidate(updateVenueSchema),
   requireOwnershipOrAdmin(async (req) => {
     const id = +req.params.id;
     const v = await prisma.venueProfile.findUnique({ where: { id } });
@@ -455,7 +455,7 @@ app.post(
   '/events',
   authMiddleware,
   requireRole('VENUE', 'ADMIN', 'ORGANIZER'),
-  validateBody(createEventSchema),
+  zodValidate(createEventSchema),
   async (req, res) => {
     try {
       const { artistIds = [], venueId, ...rest } = req.body;
@@ -514,7 +514,7 @@ app.put(
   '/events/:id',
   authMiddleware,
   requireRole('VENUE', 'ADMIN', 'ORGANIZER'),
-  validateBody(updateEventSchema),
+  zodValidate(updateEventSchema),
   async (req, res) => {
     try {
       const id = +req.params.id;

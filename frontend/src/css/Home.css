@@ -1,7 +1,9 @@
 body {
     /* font-family: 'Mitr', sans-serif; */
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      /* font-family: 'Anton', sans-serif; */
     /* font-family: 'Prompt', sans-serif; */
+      /* font-family: 'Noto Serif', serif; */
     background-color: #f6f6f6;
 }
 
@@ -10,140 +12,78 @@ body {
 }
 
 .container-1 {
-  margin-bottom: 30px;
+  display: flex;
+  align-items: center;  
+  justify-content: space-between; /* วางข้อความซ้าย รูปขวา */
+  gap: 10px;
+  padding: 50px;
 }
 
-
-.center-pic {
-  width: 400px;
-  height: auto;
-  margin-left: 500px;
-  margin-top: -50px;
-  display: block;
-
-}
-
-.graphic-2 {
-  left: 50%;   
-  transform: translateX(-50%);  /* ขยับกลับครึ่งหนึ่งของความกว้าง */
-  width: 650px;
-  margin: 20px;
-}
-
-
-.graphic-4 {
-  width: 200px;
-  height: auto;
-  margin-left: 620px;
-  margin-top: 50px;
-
-}
-
-.chiang-mai-original {
-  font-size: 80px;
-  text-align: center;
-  margin-bottom: 20px;  
-}
-
-.text-4 {
-  text-align: center;
-  max-width: 800px;
-  margin: 0 auto 40px auto;  /* กึ่งกลางและมีระยะห่างด้านล่าง */
-  font-size: 24px;
-  line-height: 1;
-
-}
-
-
-#get-started {
-  border-radius: 8px;
-  background-color: #fbbf12;
-  margin: 6px;
-  color: #231f20;
-  transition: all 0.3s ease; /* เพิ่ม transition เพื่อให้เอฟเฟกต์ลื่นขึ้น */
-  /* font-weight: bold; */
-
-
-}
-
-
-#get-started:hover {
-  background-color: #231f20;
-  color: #ffffff;
-  transform: scale(1.1);
-}
-
-
-
-
-
-
-.image-wrapper {
-  position: relative;
-  width: 400px;
-  height: auto;
-}
-
-.center-pic {
-  width: 100%;
-  display: block;
+.text-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .overlay-text-1 {
-  position: absolute;
-  top: 43%;     
-  left: -8%;           
-  transform: translate(-50%, -50%); 
-  color: #231f20;          
-  font-size: 3.8rem;     
-  margin-left: 400px;
-  /* font-weight: bold;  */
-  
+  font-family: 'Noto Serif', serif;
+  font-size: 3.8rem;
+  font-weight: bold;
+  color: #231f20;
 }
 
 .overlay-text-2 {
-  position: absolute;
-  top: 43%;       
-  left: 136%;           
-  transform: translate(-50%, -50%);  /* ขยับศูนย์กลางตัวอักษรให้อยู่กลาง */
-  color: #231f20;          
-  font-size: 3.8rem;     
-  text-align: center;
-  z-index: 10;
-  /* font-weight: bold;  */
+  font-family: 'Noto Serif', serif;
+  font-size: 16px;
+  color: #231f20;
 }
 
-.overlay-text-3 {
-  position: absolute;
-  top: 55%;       
-  left: 120%;           
-  transform: translate(-50%, -50%);  
-  color: #231f20;          
-  font-size: 3.5rem;     
-  text-align: center;
-  z-index: 10;
-  /* font-weight: bold;  */
+.cat-1 {
+  width: 600px;
+  height: auto;
 }
 
-.overlay-text-4 {
 
-  top: 48%;       
-  left: 119%;           
-  color: #231f20;          
-    
 
-  /* font-weight: bold;  */
+.learn-more-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #c4e7fc;
+  color: #000;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-family: 'Noto Serif', serif;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: background-color 0.3s ease;
 }
 
-.overlay-button {
-  position: absolute;
-  bottom: 23%;       
-  left: 110%;           
-  /* transform: translate(-50%, -50%);  */
-  
-
+.learn-more-btn:hover {
+  background-color: #a9deff;
 }
 
+.learn-more-btn {
+  width: 50%; /* ปรับตามความกว้างของ container */
+  max-width: 300px; /* จำกัดสูงสุด */
+}
+
+
+.icon-circle {
+  background-color: #222;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  margin-left: auto;
+}
 
 #nav-start-btn {
     border-radius: 20px;

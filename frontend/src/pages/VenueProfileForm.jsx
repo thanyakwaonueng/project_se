@@ -18,12 +18,13 @@ export default function VenueProfileForm() {
     description: '',
     contactEmail: '',
     contactPhone: '',
-    capacity: '', // ← เพิ่มช่อง capacity (string ก่อน แปลงเป็น number ตอนส่ง)
+    capacity: '',
+    latitude: '',
+    longitude: '',
   });
 
   const isEdit = useMemo(() => !!user?.venueProfile?.id, [user]);
 
-  // โหลด enums ครั้งเดียว
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -43,7 +44,6 @@ export default function VenueProfileForm() {
     return () => { alive = false; };
   }, []);
 
-  // รอ auth เสร็จ ค่อยโหลดโปรไฟล์ (ถ้ามี)
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -74,6 +74,8 @@ export default function VenueProfileForm() {
             contactEmail: data?.contactEmail || '',
             contactPhone: data?.contactPhone || '',
             capacity: typeof data?.capacity === 'number' ? String(data.capacity) : '',
+            latitude: typeof data?.latitude === 'number' ? String(data.latitude) : '',
+            longitude: typeof data?.longitude === 'number' ? String(data.longitude) : '',
           });
         }
       } catch (e) {
@@ -95,8 +97,12 @@ export default function VenueProfileForm() {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  // helper: แปลง capacity string → number (หรือ undefined)
-  const parseCapacity = (val) => {
+  const parseIntOrUndef = (val) => {
+    if (val === '' || val === null || val === undefined) return undefined;
+    const n = Number(val);
+    return Number.isFinite(n) ? Math.trunc(n) : undefined;
+  };
+  const parseFloatOrUndef = (val) => {
     if (val === '' || val === null || val === undefined) return undefined;
     const n = Number(val);
     return Number.isFinite(n) ? n : undefined;
@@ -118,8 +124,14 @@ export default function VenueProfileForm() {
         contactPhone: form.contactPhone || undefined,
       };
 
-      const cap = parseCapacity(form.capacity);
+      const cap = parseIntOrUndef(form.capacity);
       if (cap !== undefined) payload.capacity = cap;
+
+      const lat = parseFloatOrUndef(form.latitude);
+      if (lat !== undefined) payload.latitude = lat;
+
+      const lng = parseFloatOrUndef(form.longitude);
+      if (lng !== undefined) payload.longitude = lng;
 
       if (isEdit) {
         await api.put(`/venues/${user.venueProfile.id}`, payload);
@@ -169,18 +181,19 @@ export default function VenueProfileForm() {
           </select>
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Capacity</label>
-          <input
-            name="capacity"
-            type="number"
-            min="0"
-            className="form-control"
-            value={form.capacity}
-            onChange={onChange}
-            placeholder="เช่น 150"
-          />
-          <small style={{ color: '#666' }}>ไม่บังคับ หากเว้นว่างจะไม่ส่งค่าให้ backend</small>
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Capacity</label>
+            <input name="capacity" type="number" min="0" className="form-control" value={form.capacity} onChange={onChange} placeholder="เช่น 150" />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Latitude</label>
+            <input name="latitude" type="number" step="0.000001" className="form-control" value={form.latitude} onChange={onChange} placeholder="18.79" />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Longitude</label>
+            <input name="longitude" type="number" step="0.000001" className="form-control" value={form.longitude} onChange={onChange} placeholder="98.98" />
+          </div>
         </div>
 
         <div>
@@ -208,6 +221,10 @@ export default function VenueProfileForm() {
           </button>
         </div>
       </form>
+
+      <div style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
+        * ถ้ามีพิกัด Latitude/Longitude จะใช้แสดงตำแหน่งบนแผนที่ในหน้า MAP
+      </div>
     </div>
   );
 }
