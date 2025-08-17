@@ -16,6 +16,26 @@ export default defineConfig({
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
-    },
-  },
+      // Auth 
+      '/auth': {
+          target: 'http://backend:4000',
+          changeOrigin: true,
+      },
+      '/me': {
+          target: 'http://backend:4000',
+          changeOrigin: true,
+      },
+      // Artist
+      '/artists': {
+          target: 'http://backend:4000',
+          changeOrigin: true,
+      },
+      // Venue
+      '/venues': {
+          target: 'http://backend:4000',
+          changeOrigin: true,
+      }
+
+    }
+  }
 })

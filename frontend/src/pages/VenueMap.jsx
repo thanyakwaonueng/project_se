@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvent } from 'react-leafl
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// ----- Fix default marker paths (Vite) -----
+// ----- Fix default marker paths (สำหรับ Vite) -----
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -17,22 +17,33 @@ L.Icon.Default.mergeOptions({
 
 const CNX = { lat: 18.7883, lng: 98.9853 }; // Chiang Mai
 
-// สร้าง divIcon สำหรับ Event ให้ต่างจาก Venue
-function eventIcon(label = 'E') {
+// ----- ไอคอนอีเวนต์เป็นป้ายกลมสีดำ + หาง -----
+function eventIcon(text = 'EVT', color = '#111') {
   return L.divIcon({
     className: '',
     html: `
       <div style="
-        display:inline-flex;align-items:center;gap:6px;
-        background:#111827;color:#fff;border-radius:999px;
-        padding:4px 8px;font-size:12px;border:1px solid #0f172a;
-        box-shadow:0 1px 6px rgba(0,0,0,.25)
+        position:relative;
+        display:inline-flex;align-items:center;justify-content:center;
+        padding:3px 8px;border-radius:999px;
+        background:${color};color:#fff;
+        font-weight:700;font-size:12px;
+        box-shadow:0 2px 8px rgba(0,0,0,.35);
+        transform:translate(-50%,-100%);left:50%;
+        white-space:nowrap;
       ">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:999px;background:#22c55e"></span>
-        <span style="font-weight:700">${label}</span>
+        <span>${text}</span>
+        <div style="
+          position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
+          width:0;height:0;
+          border-left:6px solid transparent;border-right:6px solid transparent;
+          border-top:6px solid ${color};
+          filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));
+        "></div>
       </div>
     `,
-    iconAnchor: [16, 16],
+    iconAnchor: [18, 24],   // ยึดใกล้ปลายหาง
+    popupAnchor: [0, -26],  // ให้ป๊อปลอยเหนือป้าย
   });
 }
 
@@ -62,8 +73,8 @@ export default function VenueMap() {
   const [mode, setMode] = useState('VENUES');
 
   // ฟิลเตอร์
-  const [q, setQ] = useState('');              // ค้นหาชื่อ
-  const [genre, setGenre] = useState('ALL');    // สำหรับ VENUES
+  const [q, setQ] = useState('');                 // ค้นหาชื่อ
+  const [genre, setGenre] = useState('ALL');      // สำหรับ VENUES
   const [eventType, setEventType] = useState('ALL'); // สำหรับ EVENTS
   const [daysForward, setDaysForward] = useState('60'); // แสดงอีเวนต์ล่วงหน้า X วัน
 
@@ -101,7 +112,7 @@ export default function VenueMap() {
     return Array.from(s).sort();
   }, [venues]);
 
-  // ===== กรอง VENUES ตามจอ + คำค้น + แนว =====
+  // ===== กรอง VENUES =====
   const visibleVenues = useMemo(() => {
     return venues.filter(v => {
       if (v.latitude == null || v.longitude == null) return false;
@@ -121,23 +132,20 @@ export default function VenueMap() {
     });
   }, [venues, bounds, q, genre]);
 
-  // ===== กรอง EVENTS ตามจอ + คำค้น + ประเภท + ช่วงวันล่วงหน้า =====
+  // ===== กรอง EVENTS =====
   const visibleEvents = useMemo(() => {
     const now = new Date();
     const maxDays = Number(daysForward) || 60;
     const until = new Date(now.getFullYear(), now.getMonth(), now.getDate() + maxDays);
 
     return events.filter(ev => {
-      // ต้องมี venue + พิกัด
       const v = ev.venue;
       if (!v || v.latitude == null || v.longitude == null) return false;
 
-      // ตามช่วงวัน
       const dt = ev?.date ? new Date(ev.date) : null;
       if (!dt) return false;
       if (dt < now || dt > until) return false;
 
-      // ตาม viewport
       if (bounds) {
         const inLat = v.latitude <= bounds.north && v.latitude >= bounds.south;
         const inLng = bounds.west <= bounds.east
@@ -146,13 +154,11 @@ export default function VenueMap() {
         if (!(inLat && inLng)) return false;
       }
 
-      // keyword
       if (q.trim()) {
         const hit = (ev.name || '').toLowerCase().includes(q.trim().toLowerCase());
         if (!hit) return false;
       }
 
-      // event type
       if (eventType !== 'ALL' && ev.eventType !== eventType) return false;
 
       return true;
@@ -229,7 +235,7 @@ export default function VenueMap() {
           <MapContainer center={CNX} zoom={13} style={{ height: '100%', width: '100%' }}>
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; OpenStreetMap contributors'
+              attribution="&copy; OpenStreetMap contributors"
             />
             <BoundsTracker onChange={setBounds} />
 
@@ -260,7 +266,6 @@ export default function VenueMap() {
 
             {mode === 'EVENTS' && visibleEvents.map(ev => {
               const v = ev.venue;
-              const label = ev.name?.length > 16 ? ev.name.slice(0, 16) + '…' : (ev.name || `Event #${ev.id}`);
               return (
                 <Marker
                   key={`e-${ev.id}`}
