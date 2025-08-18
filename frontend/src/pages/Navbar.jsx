@@ -44,7 +44,7 @@ export default function Navbar() {
     if (!user) {
       return (
         <>
-          <Link className="btn btn-light" id="nav-login-btn" to="/login">LOGIN</Link>
+          <Link className="btn btn-light" id="nav-signup-btn" to="/login">LOGIN</Link>
           <Link className="btn" id="nav-signup-btn" to="/signup" role="button">SIGN UP</Link>
         </>
       );
