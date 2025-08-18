@@ -16,7 +16,7 @@ body {
   align-items: center;  
   justify-content: space-between; /* วางข้อความซ้าย รูปขวา */
   gap: 10px;
-  padding: 50px;
+  padding: 120px;
 }
 
 .text-section {
