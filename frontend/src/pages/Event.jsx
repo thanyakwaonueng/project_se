@@ -1,6 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import '../css/Event.css';
-import api, { extractErrorMessage } from '../lib/api';
+
+const allEvents = [
+  { day: '01', month: 'August', genre: 'Pop', title: 'ผลัดกันเล่น ผลัดการฟัง',
+    desc: 'ผลัดกันเล่น ผลัดการฟังม่วน ๆ เน้อ', image: '/img/at cnxog.jpg',
+    condition: `วันที่ : 18 กุมภาพันธ์ 2568 | ประตูเปิด 19:00 น.\nสถานที่ : Chiang Mai OriginaLive\nEarly Bird 450 THB | Regular 550 THB\nสามารถทัก inbox : Chiangmai originaLive เพื่อสำรองบัตรได้เลยแล้วมาเจอกันนะ !!\n** อีเว้นท์นี้ไม่จำกัดอายุผู้เข้าชม กรุณาพกบัตรประชาชนมาลงทะเบียนเพื่อรับริสแบนด์ ทางร้านขอสงวนสิทธิ์ไม่จำหน่ายเครื่องดื่มแอลกอฮอล์ให้ผู้ที่มีอายุต่ำกว่า 20 ปี**`,
+    eventType: 'ในร่ม',
+    ticketing: 'จำหน่ายผ่าน ticket melon',
+    ticketLink: 'https://www.ticketmelon.com/sample',
+    alcohol: 'มีแอลกอฮอล์จำหน่าย',
+    ageRestriction: 'อนุญาติทุกช่วงอายุ',
+    date: '2025-07-01',
+    doorOpenTime: '19:00',
+    endEventTime: '23:00', },
+  { day: '01', month: 'August', genre: 'Hip hop', title: 'Tipsy & Tired', desc: 'Additional talk', image: '/img/tipyandtired.jpg' },
+  { day: '03', month: 'August', genre: 'Country', title: 'SRWKS.', desc: 'Photography', image: '/img/srwkslive.jpg' },
+];
 
 const daysInMonthMap = {
   January: 31, February: 28, March: 31, April: 30, May: 31, June: 30,
@@ -18,10 +33,8 @@ const indexToMonthName = Object.keys(monthNameToIndex).reduce((acc, k) => {
 function getStartDayIndex(monthName, year) {
   const monthIndex = monthNameToIndex[monthName];
   const d = new Date(year, monthIndex, 1);
-  // JS: 0=Sun..6=Sat -> shift ให้ Mon=0..Sun=6
-  return (d.getDay() + 6) % 7;
+  return (d.getDay() + 6) % 7; // Mon=0..Sun=6
 }
-
 function pad2(n) {
   return String(n).padStart(2, '0');
 }
@@ -29,94 +42,36 @@ function pad2(n) {
 export default function Event() {
   const now = new Date();
   const [year] = useState(now.getFullYear());
-  const [month, setMonth] = useState(indexToMonthName[now.getMonth()]); // 'July' ...
-  const [events, setEvents] = useState([]);              // ดิบจาก backend
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState('');
-
-  const [selectedEvent, setSelectedEvent] = useState(null); // array ของอีเวนต์ในวันนั้น
+  const [month, setMonth] = useState(indexToMonthName[now.getMonth()]);
+  const [events] = useState(allEvents); // ใช้ allEvents ตรง ๆ
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [showGenrePopup, setShowGenrePopup] = useState(false);
-  const [selectedGenre, setSelectedGenre] = useState(null); // null = ทุกแนว
+  const [selectedGenre, setSelectedGenre] = useState(null);
 
-  // โหลดอีเวนต์ครั้งเดียว
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setErr('');
-        const res = await api.get('/events'); // backend แนะนำ include: { venue: true }
-        if (!alive) return;
-        setEvents(Array.isArray(res.data) ? res.data : []);
-      } catch (e) {
-        if (!alive) return;
-        setErr(extractErrorMessage(e, 'โหลดอีเวนต์ไม่สำเร็จ'));
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => { alive = false; };
-  }, []);
-
-  // map อีเวนต์ดิบ -> โครงที่หน้าปฏิทินต้องใช้ (ให้หน้าตาเหมือน death code แต่เป็นข้อมูลจริง)
-  const normalized = useMemo(() => {
-    return events
-      .filter(ev => !!ev?.date) // ต้องมีวันที่
-      .map(ev => {
-        const d = new Date(ev.date);
-        const mName = indexToMonthName[d.getMonth()];
-        const day = pad2(d.getDate());
-        const genre = ev.genre || ev.venue?.genre || '—';
-        return {
-          id: ev.id,
-          day,
-          month: mName,
-          genre,
-          title: ev.name || `Event #${ev.id}`,
-          desc: ev.description || '',
-          image: ev.posterUrl || ev.venue?.profilePhotoUrl || '/img/graphic-3.png',
-          condition: ev.conditions || '',
-          eventType: ev.eventType || 'N/A',
-          ticketing: ev.ticketing || 'N/A',
-          ticketLink: ev.ticketLink || '',
-          alcohol: ev.alcoholPolicy || 'N/A',
-          ageRestriction: ev.ageRestriction || 'N/A',
-          date: ev.date || '',
-          doorOpenTime: ev.doorOpenTime || '',
-          endEventTime: ev.endTime || '',
-          venueName: ev.venue?.name || '',
-        };
-      });
-  }, [events]);
-
-  // สร้างชุด genre จากข้อมูลจริง
+  // สร้างชุด genre
   const genres = useMemo(() => {
     const s = new Set();
-    normalized.forEach(e => e.genre && s.add(e.genre));
+    events.forEach(e => e.genre && s.add(e.genre));
     return Array.from(s).sort();
-  }, [normalized]);
+  }, [events]);
 
   // กรองตามเดือน + แนว
   const filteredEvents = useMemo(() => {
-    return normalized.filter(e =>
+    return events.filter(e =>
       e.month === month && (selectedGenre ? e.genre === selectedGenre : true)
     );
-  }, [normalized, month, selectedGenre]);
+  }, [events, month, selectedGenre]);
 
   const days = daysInMonthMap[month];
   const startDayIndex = getStartDayIndex(month, year);
 
-  // group ตามวัน (string '01'..)
+  // group ตามวัน
   const eventsByDay = useMemo(() => {
     const m = new Map();
     filteredEvents.forEach(e => {
       if (!m.has(e.day)) m.set(e.day, []);
       m.get(e.day).push(e);
     });
-    // เรียงเวลาในวันเดียวกัน
-    for (const arr of m.values()) {
-      arr.sort((a, b) => new Date(a.date) - new Date(b.date));
-    }
     return m;
   }, [filteredEvents]);
 
@@ -127,11 +82,7 @@ export default function Event() {
 
       <div className="month-select">
         <label htmlFor="month">Select Month: </label>
-        <select
-          id="month"
-          value={month}
-          onChange={e => setMonth(e.target.value)}
-        >
+        <select id="month" value={month} onChange={e => setMonth(e.target.value)}>
           {Object.keys(daysInMonthMap).map(m => (
             <option key={m} value={m}>{m}</option>
           ))}
@@ -145,11 +96,6 @@ export default function Event() {
         >
           <img src="/img/panel.png" className="btn-full-image" />
         </a>
-
-        <div style={{ marginLeft: 12, fontSize: 12, color: '#b00020' }}>
-          {err && <>* {err}</>}
-          {loading && <>กำลังโหลด…</>}
-        </div>
       </div>
 
       <div className="calendar-header">
@@ -176,7 +122,7 @@ export default function Event() {
               {dayEvents.length > 0 && (
                 <div className="event-summaries">
                   {dayEvents.map((ev) => (
-                    <div key={ev.id} className="event-title-short">
+                    <div key={ev.title} className="event-title-short">
                       {ev.title}
                     </div>
                   ))}
@@ -193,14 +139,13 @@ export default function Event() {
           <div className="popup-content" onClick={e => e.stopPropagation()}>
             <button className="close-btn" onClick={() => setSelectedEvent(null)}>×</button>
             <h2>{selectedEvent[0].day} {selectedEvent[0].month}</h2>
-
             {selectedEvent.map((ev) => (
-              <div key={ev.id} className="popup-event">
+              <div key={ev.title} className="popup-event">
                 <h3>{ev.title}</h3>
                 <img src={ev.image} alt={ev.title} className="popup-image" />
                 {ev.venueName && <p><strong>สถานที่:</strong> {ev.venueName}</p>}
                 <p><strong>Description:</strong> {ev.desc || 'No description provided.'}</p>
-                {ev.condition &&
+                {ev.condition && 
                   <p><strong>Condition:</strong><br />
                     {ev.condition.split('\n').map((line, idx) => <span key={idx}>{line}<br /></span>)}
                   </p>}
@@ -218,7 +163,6 @@ export default function Event() {
                 <hr />
               </div>
             ))}
-
           </div>
         </div>
       )}
