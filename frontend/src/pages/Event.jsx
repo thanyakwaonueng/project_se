@@ -1,6 +1,9 @@
+// frontend/src/pages/Event.jsx
 import { useEffect, useMemo, useState } from 'react';
+import api from '../lib/api';
 import '../css/Event.css';
 
+/* ---------- เดดโค้ดเดิม (คงไว้) ---------- */
 const allEvents = [
   { day: '01', month: 'August', genre: 'Pop', title: 'ผลัดกันเล่น ผลัดการฟัง',
     desc: 'ผลัดกันเล่น ผลัดการฟังม่วน ๆ เน้อ', image: '/img/at cnxog.jpg',
@@ -17,6 +20,7 @@ const allEvents = [
   { day: '03', month: 'August', genre: 'Country', title: 'SRWKS.', desc: 'Photography', image: '/img/srwkslive.jpg' },
 ];
 
+/* ---------- ตัวช่วยสำหรับปฏิทิน (เหมือนเดิม) ---------- */
 const daysInMonthMap = {
   January: 31, February: 28, March: 31, April: 30, May: 31, June: 30,
   July: 31, August: 31, September: 30, October: 31, November: 30, December: 31,
@@ -29,43 +33,95 @@ const indexToMonthName = Object.keys(monthNameToIndex).reduce((acc, k) => {
   acc[monthNameToIndex[k]] = k;
   return acc;
 }, {});
-
 function getStartDayIndex(monthName, year) {
   const monthIndex = monthNameToIndex[monthName];
   const d = new Date(year, monthIndex, 1);
-  return (d.getDay() + 6) % 7; // Mon=0..Sun=6
+  // ให้จันทร์เป็น 0
+  return (d.getDay() + 6) % 7;
 }
-function pad2(n) {
-  return String(n).padStart(2, '0');
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+/* ---------- แปลงข้อมูลจากแบ็กเอนด์ -> รูปแบบเดิมของ UI ---------- */
+function normalizeEvent(ev) {
+  const dt = ev?.date ? new Date(ev.date) : null;
+  const month = dt ? indexToMonthName[dt.getMonth()] : null;
+  const day = dt ? pad2(dt.getDate()) : null;
+
+  return {
+    day,
+    month,
+    genre: ev?.genre || ev?.venue?.genre || 'N/A',
+    title: ev?.name ?? `Event #${ev?.id ?? ''}`,
+    desc: ev?.description || '',
+    image: ev?.posterUrl || '/img/graphic-2.png',
+    condition: ev?.conditions || '',
+    eventType: ev?.eventType || 'N/A',
+    ticketing: ev?.ticketing || 'N/A',
+    ticketLink: ev?.ticketLink || '',
+    alcohol: ev?.alcoholPolicy || 'N/A',
+    ageRestriction: ev?.ageRestriction || 'N/A',
+    date: ev?.date || 'N/A',
+    doorOpenTime: ev?.doorOpenTime || 'N/A',
+    endEventTime: ev?.endTime || 'N/A', // map -> endEventTime
+    venueName: ev?.venue?.name || '',
+  };
 }
 
 export default function Event() {
   const now = new Date();
   const [year] = useState(now.getFullYear());
   const [month, setMonth] = useState(indexToMonthName[now.getMonth()]);
-  const [events] = useState(allEvents); // ใช้ allEvents ตรง ๆ
+
+  // เริ่มต้นด้วย "เดดโค้ด" ก่อน แล้วค่อยผสานข้อมูลจริงที่ดึงมา
+  const [events, setEvents] = useState(allEvents);
+
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showGenrePopup, setShowGenrePopup] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState(null);
 
-  // สร้างชุด genre
+  /* ---------- ดึงข้อมูลจริงแล้ว "ผสาน" กับเดดโค้ด ---------- */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get('/events'); // แนะนำให้ฝั่ง backend include: { venue: true }
+        const arr = Array.isArray(res.data) ? res.data : [];
+        const mapped = arr.map(normalizeEvent).filter(e => e.month && e.day);
+
+        // รวมเดดโค้ด + ของจริง แล้ว de-dup ด้วย key (เดือน|วัน|ชื่อ)
+        const merged = [...allEvents, ...mapped];
+        const seen = new Set();
+        const deduped = merged.filter(e => {
+          const key = `${e.month}|${e.day}|${e.title}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        if (!cancelled) setEvents(deduped);
+      } catch (err) {
+        // เงียบ ๆ ไว้เพื่อให้ UI เดิมไม่เปลี่ยน (ยังแสดงเดดโค้ดได้)
+        console.warn('Load /events failed:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  /* ---------- genres สำหรับ popup filter (จากชุดรวม) ---------- */
   const genres = useMemo(() => {
     const s = new Set();
-    events.forEach(e => e.genre && s.add(e.genre));
+    events.forEach(e => e.genre && e.genre !== 'N/A' && s.add(e.genre));
     return Array.from(s).sort();
   }, [events]);
 
-  // กรองตามเดือน + แนว
+  /* ---------- กรองตามเดือน + แนว ---------- */
   const filteredEvents = useMemo(() => {
     return events.filter(e =>
       e.month === month && (selectedGenre ? e.genre === selectedGenre : true)
     );
   }, [events, month, selectedGenre]);
 
-  const days = daysInMonthMap[month];
-  const startDayIndex = getStartDayIndex(month, year);
-
-  // group ตามวัน
+  /* ---------- group เป็นรายวัน ---------- */
   const eventsByDay = useMemo(() => {
     const m = new Map();
     filteredEvents.forEach(e => {
@@ -74,6 +130,9 @@ export default function Event() {
     });
     return m;
   }, [filteredEvents]);
+
+  const days = daysInMonthMap[month];
+  const startDayIndex = getStartDayIndex(month, year);
 
   return (
     <div className="container">
@@ -122,7 +181,7 @@ export default function Event() {
               {dayEvents.length > 0 && (
                 <div className="event-summaries">
                   {dayEvents.map((ev) => (
-                    <div key={ev.title} className="event-title-short">
+                    <div key={`${ev.title}-${ev.day}`} className="event-title-short">
                       {ev.title}
                     </div>
                   ))}
@@ -133,22 +192,30 @@ export default function Event() {
         })}
       </div>
 
-      {/* Popup event detail */}
+      {/* Popup event detail (เหมือนเดิม) */}
       {selectedEvent && (
         <div className="popup-overlay" onClick={() => setSelectedEvent(null)}>
           <div className="popup-content" onClick={e => e.stopPropagation()}>
             <button className="close-btn" onClick={() => setSelectedEvent(null)}>×</button>
             <h2>{selectedEvent[0].day} {selectedEvent[0].month}</h2>
+
             {selectedEvent.map((ev) => (
-              <div key={ev.title} className="popup-event">
+              <div key={`${ev.title}-${ev.day}-detail`} className="popup-event">
                 <h3>{ev.title}</h3>
-                <img src={ev.image} alt={ev.title} className="popup-image" />
+                <img
+                  src={ev.image}
+                  alt={ev.title}
+                  className="popup-image"
+                  onError={(e) => { e.currentTarget.src = '/img/graphic-3.png'; }}
+                />
                 {ev.venueName && <p><strong>สถานที่:</strong> {ev.venueName}</p>}
                 <p><strong>Description:</strong> {ev.desc || 'No description provided.'}</p>
-                {ev.condition && 
-                  <p><strong>Condition:</strong><br />
+                {ev.condition && (
+                  <p>
+                    <strong>Condition:</strong><br />
                     {ev.condition.split('\n').map((line, idx) => <span key={idx}>{line}<br /></span>)}
-                  </p>}
+                  </p>
+                )}
                 <p><strong>Genre:</strong> {ev.genre}</p>
                 <p><strong>Event Type:</strong> {ev.eventType}</p>
                 <p><strong>Ticketing:</strong> {ev.ticketing}</p>
@@ -163,11 +230,12 @@ export default function Event() {
                 <hr />
               </div>
             ))}
+
           </div>
         </div>
       )}
 
-      {/* Popup genre filter */}
+      {/* Popup genre filter (เหมือนเดิม) */}
       {showGenrePopup && (
         <div className="popup-overlay" onClick={() => setShowGenrePopup(false)}>
           <div className="popup-content" onClick={e => e.stopPropagation()}>
