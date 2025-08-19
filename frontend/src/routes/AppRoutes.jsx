@@ -24,6 +24,7 @@ export default function AppRoutes() {
           <Route path="/about" element={<About />} />
 
           <Route path="/page_artists" element={<Artist />} />
+          <Route path="/page_artists/:slug" element={<Artist />} />
           <Route path="/page_venues" element={<Venue />} />
           <Route path="/page_venues/map" element={<VenueMap />} />
           <Route path="/page_events" element={<Event />} />

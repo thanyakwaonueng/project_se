@@ -1,0 +1,512 @@
+/* ==========================================================================
+   ARTIST PAGE – CLEANED STYLES
+   - ใช้กับ JSX ปัจจุบันในไฟล์ Artist.jsx
+   - ลบสไตล์เก่า: group-header*, group-stats/stat*, artist-card* (เวอร์ชันเก่า)
+   - คงเลย์เอาต์ HERO แบบ 3 คอลัมน์ (รูป | ข้อมูล | Spotify)
+   ========================================================================== */
+
+
+/* ========== 0) BASE / TYPOGRAPHY ========== */
+
+/* คอนเทนเนอร์หลักของหน้า Artist ทั้งหมด */
+.artist-container {
+  padding: 20px;
+  width: 100%;
+}
+
+/* ตั้งฟอนต์เฉพาะในหน้า Artist (ใช้ :where เพื่อลด specificity) */
+:where(.artist-container) {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+:where(.artist-container) * {
+  font-family: inherit; /* กันฟอร์มคอนโทรลบางตัวไม่สืบทอดฟอนต์ */
+}
+
+/* โฟกัสของปุ่ม - จำกัดขอบเขตในหน้านี้ + ใช้ focus-visible เพื่อ A11y */
+.artist-container :where(button):focus-visible {
+  outline: 2px solid #4f8cff;
+  outline-offset: 2px;
+}
+
+
+/* ========== 1) FILTER + SEARCH BAR (หน้า list วง) ========== */
+
+.seamless-filter-search {
+  display: flex;
+  width: 100%;
+  border-radius: 30px;
+  overflow: hidden;          /* ระวัง: อาจตัด ring เงาโฟกัสของลูก */
+  /* gap: 8px;                  เพิ่มช่องไฟเล็กน้อย */
+}
+
+.connected-filter-tabs {
+  display: flex;
+}
+
+.connected-filter-tab {
+  padding: 12px 150px;       /* เดสก์ท็อปกว้าง—จะลดบนจอเล็กด้านล่าง */
+  border: none;
+  background: #e0e0e0;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color .25s ease, color .25s ease, transform .06s ease;
+  white-space: nowrap;
+  position: relative;
+  border-radius: 20px;
+}
+.connected-filter-tab.active { background:#333; color:#fff; }
+.connected-filter-tab:not(.active):hover { background:#919191; }
+
+.connected-search-container {
+  display: flex;
+  align-items: center;
+  background: #e0e0e0;
+  flex-grow: 1;
+  padding: 0 15px;
+  border-radius: 20px;
+  border: 1px solid #eee;
+}
+.connected-search-box {
+  background: #e0e0e0;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  font-size: 14px;
+  outline: none;
+}
+.search-icon {
+  background: none;
+  border: none;
+  color: #666;
+  padding-left: 10px;
+}
+
+
+/* ========== 2) GROUP GRID (การ์ดวง) ========== */
+
+.group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 50px;
+  padding: 20px;
+}
+
+.group-card {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  cursor: pointer;
+  aspect-ratio: 1 / 1;
+  transition: transform .25s ease, box-shadow .25s ease;
+  background: #000;
+}
+.group-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.group-card-image,
+.group-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.group-card:hover .group-card-image img { transform: scale(1.05); }
+.group-card-image img { transition: transform .4s ease; }
+
+.group-card-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  color: #fff;
+  padding: 16px 20px;
+}
+.a-title-18 { font-size: 18px; font-weight: 800; margin: 0 0 6px; }
+.a-line-clamp2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+
+/* ========== 3) GROUP DETAIL VIEW (เลย์เอาต์ 3 คอลัมน์) ========== */
+
+.group-detail-view {
+  --accent: #4f8cff;    /* ปุ่ม/ไฮไลต์หลัก */
+  --accent-2: #ff6b6b;  /* สีรอง (ถ้าอยากทำ gradient) */
+  --text-1: #0f172a;    /* ตัวอักษรหลัก */
+  --text-2: #475569;    /* ตัวอักษรรอง */
+  --muted-bg: #f1f5f9;  /* พื้นหลังชิป */
+  --muted-bd: #e2e8f0;  /* เส้นขอบอ่อน */
+  --chip-tx: #334155;   /* สีข้อความในชิป */
+
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* ยูทิลิตีกล่องการ์ดบาง (ใช้กับ .a-card-min) */
+.a-card-min {
+  border-radius: 16px;
+  border: 1px solid #eee;
+  background: #fff;
+}
+
+/* ปุ่ม Back (เวอร์ชันใหม่) */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--muted-bd);
+  background: #fff;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: box-shadow .2s ease, transform .06s ease, background-color .2s ease;
+  margin-bottom: 14px;
+}
+.back-btn:hover { 
+  background: #fafafa; 
+  box-shadow: 0 4px 12px rgba(0,0,0,.06);
+ }
+.back-btn:active { 
+  transform: translateY(1px); 
+}
+
+/* HERO GRID: ซ้ายรูป | กลางข้อมูล | ขวา Spotify */
+.a-hero-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr 420px;
+  grid-template-areas: "photo info playlist";
+  gap: 24px;
+  align-items: start;
+  background: linear-gradient(180deg, #d1c237, #000000);
+  /* border: 1px solid var(--muted-bd); */
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 24px;
+}
+
+/* ซ้าย: รูป */
+.a-hero-photo { 
+  grid-area: photo; 
+  border-radius: 200px; 
+  overflow: hidden; 
+  background:#000; 
+}
+.a-hero-photo img { 
+  width:100%; 
+  aspect-ratio:1/1; 
+  object-fit:cover; 
+  display:block; 
+}
+.a-hero-emph { 
+  transform: translateZ(0); 
+}
+.a-shadow-sm { 
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 10); 
+}
+
+/* กลาง: ข้อมูล */
+.a-hero-info {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--text-1);
+  align-items: center;
+  text-align: center;
+}
+.a-title-28 {
+  font-size: clamp(24px, 2.2vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0;
+}
+.a-title-dark { color: var(--text-1); }
+
+.group-description {
+  margin: 2px 0 4px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-2);
+}
+
+/* KPI chips */
+.a-stats-row { display:flex; gap:10px; flex-wrap:wrap; margin:4px 0 6px; }
+.a-stat-chip {
+  display:inline-flex; flex-direction:column; justify-content:center;
+  min-width:110px; padding:10px 12px; border-radius:14px;
+  background: var(--muted-bg); border:1px solid var(--muted-bd);
+}
+.a-kpi { font-size:20px; font-weight:800; color:var(--text-1); line-height:1; }
+.a-kpi-label { font-size:12px; color:var(--chip-tx); opacity:.8; margin-top:6px; }
+
+/* ปุ่ม Follow/Unfollow */
+.a-btn {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .06s ease, filter .2s ease, box-shadow .2s ease, background-color .2s ease, color .2s ease;
+  align-self: center;
+}
+.a-btn:active { transform: translateY(1px); }
+.a-btn-primary { background: #ffffff; color:#c59225; box-shadow:0 8px 18px rgba(255, 213, 25, 0.35); }
+.a-btn-primary:hover { filter:saturate(1.06); box-shadow:0 12px 26px rgba(255, 183, 29, 0.45); }
+.a-btn-secondary { background:#c59225; color:#ffffff; box-shadow:0 8px 18px rgba(15,23,42,.28); }
+.a-btn-secondary:hover { filter:brightness(1.05); box-shadow:0 12px 26px rgba(15,23,42,.36); }
+
+/* ขวา: Spotify (sticky) */
+.a-hero-right { grid-area: playlist; position: sticky; top: 120px; }
+.a-spotify-box { margin-left:12px; margin-top:12px; border-radius:14px; overflow:hidden; background:#121212; box-shadow:0 10px 30px rgba(0,0,0,.18); }
+.a-spotify-embed { width:100%; height:520px; border:0; display:block; }
+
+/* Utilities: กว้างแบบเต็ม viewport */
+.a-bleed {
+  width: 100vw; max-width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding-inline: clamp(8px, 2vw, 28px);
+}
+.a-bleed .a-hero-grid {
+  grid-template-columns: minmax(280px,28vw) 1fr minmax(320px,26vw);
+  gap: clamp(16px, 2.5vw, 36px);
+}
+.a-bleed .a-spotify-embed { height: clamp(420px, 52vh, 640px); }
+:where(.artist-container.a-bleed) { overflow-x: clip; }
+
+.a-fullwide { width: 100%; }
+.members-title { margin: 40px 0 20px; font-size: 24px; }
+
+
+/* ========== 4) MEMBERS (การ์ดสมาชิกแบบเต็มภาพ) ========== */
+
+.artist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  padding: 20px;
+}
+
+.a-member-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.a-member-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.16); }
+.a-member-card:active { transform: translateY(-2px) scale(.98); }
+
+.a-member-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  transition: transform .4s ease, filter .4s ease;
+}
+.a-member-card:hover .a-member-img { transform: scale(1.05); filter: contrast(1.05) brightness(0.95); }
+
+.a-member-overlay {
+  position: absolute; left:0; right:0; bottom:0;
+  padding: 12px 14px;
+  background: linear-gradient(to top, rgba(0,0,0,.65), rgba(0,0,0,0));
+}
+.a-member-name { color:#fff; font-weight:800; font-size:16px; line-height:1.1; text-shadow:0 1px 2px rgba(0,0,0,.4); }
+
+
+/* ========== 5) MODAL (รายละเอียดสมาชิก) ========== */
+
+.artist-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 1000;
+  display: flex; justify-content: center; align-items: center;
+  backdrop-filter: blur(5px);
+}
+.artist-modal {
+  background: #fff;
+  border-radius: 15px;
+  width: 80%; max-width: 800px; max-height: 80vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.modal-content { display:flex; flex-direction:column; height:100%; position: relative; }
+.modal-image { width:100%; height:300px; flex-shrink:0; }
+.modal-image img { width:100%; height:100%; object-fit:cover; display:block; }
+.modal-info { padding:25px; overflow-y:auto; flex-grow:1; max-height: calc(80vh - 300px); }
+.modal-info h2 { font-size:24px; margin-bottom:10px; }
+.position, .birth { font-size:16px; margin-bottom:8px; }
+.details { font-size:15px; line-height:1.6; margin-bottom:15px; }
+
+.close-btn {
+  position: absolute; top: 15px; right: 15px;
+  background: rgba(0,0,0,0.5); border: none; color: #fff;
+  width: 30px; height: 30px; border-radius: 50%;
+  font-size: 18px; cursor: pointer;
+  display: grid; place-items: center;
+  transition: background .2s ease;
+}
+.close-btn:hover { background: rgba(0,0,0,0.8); }
+
+/* pop-in / fade-in animations */
+.a-modal-rel { position: relative; }
+.a-fade-in { animation: aFadeIn 240ms ease-out both; }
+@keyframes aFadeIn { from {opacity:0;} to {opacity:1;} }
+.a-pop-in { transform-origin: var(--a-pop-x, 50%) var(--a-pop-y, 50%); animation: aPopIn .6s cubic-bezier(.2,.8,.2,1.4) both; }
+@keyframes aPopIn {
+  0% { opacity: 0; transform: translateY(8px) scale(.92); }
+  60% { opacity: 1; transform: translateY(0)   scale(1.02); }
+  100%{ opacity: 1; transform: translateY(0)   scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .a-fade-in, .a-pop-in { animation: none !important; }
+  .a-member-card, .a-member-card:active { transform: none !important; }
+}
+
+
+/* ========== 6) SCHEDULE / SOCIALS / RIDER (เพิ่มใหม่ให้ครบตาม JSX) ========== */
+
+/* Section wrapper + title */
+.a-section { margin: 26px 0; }
+.a-section-title { font-size: 20px; font-weight: 800; margin: 0 0 12px; color: #0f172a; }
+
+/* Panel กล่องเนื้อหา */
+.a-panel {
+  /* border: 1px solid #972f2f; */
+  border-radius: 12px;
+  background: #1f1f1f;
+  padding: 12px;
+}
+
+/* Tabbar (Upcoming / Past) */
+.a-tabbar { display: flex; gap: 8px; margin-bottom: 10px; }
+.a-tab {
+  border: 1px solid #e5e9eb;
+  background: #f8fafc;
+  color: #c59225;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color .2s ease, color .2s ease, transform .06s ease;
+}
+.a-tab:hover { background:#eef2f7; }
+.a-tab.is-active {
+  background: #c59225;
+  color: #fff;
+  border-color: transparent;
+}
+
+/* Schedule list */
+.a-schedule-list { list-style: none; margin: 0; padding: 0; }
+.a-schedule-item {
+  display: grid;
+  grid-template-columns: 200px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 10px;
+  transition: background-color .2s ease;
+}
+.a-schedule-item:hover { 
+  background: #fffae4; 
+}
+.a-date { 
+  color:#c59225;
+  font-weight: 700;
+}
+.a-event-title { 
+  font-weight: 700; 
+  color:#c59225; 
+}
+.a-event-sub { 
+  font-size: 13px; 
+  color:#c59225; 
+  margin-top: 4px; 
+}
+.a-empty { 
+  padding: 16px; 
+  color:#c59225; 
+  font-style: italic; 
+}
+
+.a-link {
+  color: #c59225;
+  font-weight: 700;
+  text-decoration: none;
+}
+.a-link:hover { text-decoration: underline; }
+
+/* Social buttons (IG / YT / SP) */
+.a-socials { display:flex; gap:10px; flex-wrap:wrap; }
+.a-icon-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  width: 40px; height: 40px; border-radius: 10px;
+  background: #111827; color:#fff; text-decoration:none; font-weight:800;
+  transition: transform .06s ease, filter .2s ease, box-shadow .2s ease;
+}
+.a-icon-btn:hover { transform: translateY(-1px); filter: brightness(1.05); box-shadow: 0 6px 16px rgba(0,0,0,.18); }
+
+/* Rider */
+.a-text-dim { color:#6b7280; font-size:14px; margin: 0 0 10px; }
+.a-rider { border:1px solid #e5e7eb; border-radius:12px; background:#fff; padding:12px; }
+.a-rider-summary { font-weight:700; margin-bottom:8px; }
+.a-list { margin:0 0 10px 18px; }
+
+/* ========== 7) RESPONSIVE ========== */
+
+@media (max-width: 1024px) {
+  .a-hero-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "photo"
+      "info"
+      "playlist";
+  }
+  .a-hero-right { position: static; }
+  .a-spotify-embed { height: 380px; }
+}
+
+@media (max-width: 768px) {
+  .seamless-filter-search { flex-direction: column; }
+  .connected-filter-tabs { width: 100%; }
+  .connected-filter-tabs button { flex-grow: 1; text-align: center; padding: 12px 10px !important; }
+  .connected-search-container { border-radius: 20px; }
+
+  .artist-grid, .group-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .artist-modal { width: 90%; max-height: 90vh; }
+  .modal-image { height: 200px; }
+
+  .a-schedule-item { grid-template-columns: 1fr; align-items: start; }
+  .connected-filter-tab { padding: 12px 16px; } /* ลด padding ของแท็บบนจอเล็ก */
+}
+
+
+
+/* ===== HERO: Social icons ใต้ปุ่ม Follow ===== */
+.a-socials-inline { 
+  margin-top: 10px;
+}
+
+.a-hero-info .a-socials {
+  justify-content: center;   /* ให้ไอคอนอยู่กลางคอลัมน์ */
+  gap: 10px;
+}
+
+.a-hero-info .a-icon-btn {
+  width: 44px;
+  height: 44px;
+}
