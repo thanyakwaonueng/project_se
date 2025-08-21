@@ -25,15 +25,19 @@ export default function CreateVenue() {
   const [tiktokUrl, setTiktokUrl] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
 
+
+  // ✅ new fields added for the map feature 
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
 
   const navigate = useNavigate();
 
-  // Fetch current user profile info
   useEffect(() => {
-    axios.get('/me', { withCredentials: true })
+    axios.get('/api/auth/me', { withCredentials: true })
       .then(res => {
         const profile = res.data.venueProfile;
         if (profile) {
@@ -59,10 +63,13 @@ export default function CreateVenue() {
           setLineUrl(profile.lineUrl || '');
           setTiktokUrl(profile.tiktokUrl || '');
           setWebsiteUrl(profile.websiteUrl || '');
+          // ✅ new field for map feature
+          setLatitude(profile.latitude?.toString() || '');
+          setLongitude(profile.longitude?.toString() || '');
         }
       })
       .catch(err => {
-        console.error('Failed to fetch /me:', err);
+        console.error('Failed to fetch /auth/me:', err);
       });
   }, []);
 
@@ -94,6 +101,9 @@ export default function CreateVenue() {
         lineUrl: lineUrl.trim() || undefined,
         tiktokUrl: tiktokUrl.trim() || undefined,
         websiteUrl: websiteUrl.trim() || undefined,
+          // ✅ new field for map feature
+        latitude: latitude ? parseFloat(latitude) : undefined,
+        longitude: longitude ? parseFloat(longitude) : undefined,
       };
 
       const payload = Object.fromEntries(
@@ -102,13 +112,13 @@ export default function CreateVenue() {
         )
       );
 
-      const res = await axios.post('/venues', payload, {
+      const res = await axios.post('/api/venues', payload, {
         withCredentials: true,
         headers: { 'Content-Type': 'application/json' },
       });
 
       setLoading(false);
-      navigate(`/venues/${res.data.id}`);
+      navigate(`/api/venues/${res.data.id}`);
     } catch (err) {
       setLoading(false);
       setError(err.response?.data?.error || 'Failed to save venue');
@@ -117,153 +127,167 @@ export default function CreateVenue() {
   };
 
   return (
-    <form onSubmit={submit} style={{ maxWidth: 700 }}>
-      <h2>{hasProfile ? 'Edit Venue Profile' : 'Create Venue Profile'}</h2>
+    <div style={{ maxWidth: 720, margin: '24px auto', padding: 16 }}>
+      <h2 style={{ marginBottom: 12 }}>
+        {hasProfile ? 'Edit Venue Profile' : 'Create Venue Profile'}
+      </h2>
 
-      {error && <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>}
+      {error && (
+        <div style={{ background: '#ffeef0', color: '#86181d', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+          {error}
+        </div>
+      )}
 
-      <label>
-        Name *
-        <input value={name} onChange={e => setName(e.target.value)} required />
-      </label>
-      <br />
+      <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Name *</label>
+          <input className="form-control" value={name} onChange={e => setName(e.target.value)} required />
+        </div>
 
-      <label>
-        Location URL *
-        <input value={locationUrl} onChange={e => setLocationUrl(e.target.value)} required />
-      </label>
-      <br />
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Location URL *</label>
+          <input className="form-control" value={locationUrl} onChange={e => setLocationUrl(e.target.value)} required />
+        </div>
 
-      <label>
-        Genre *
-        <input value={genre} onChange={e => setGenre(e.target.value)} required />
-      </label>
-      <br />
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Genre *</label>
+          <input className="form-control" value={genre} onChange={e => setGenre(e.target.value)} required />
+        </div>
 
-      <label>
-        Description
-        <textarea value={description} onChange={e => setDescription(e.target.value)} />
-      </label>
-      <br />
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Description</label>
+          <textarea className="form-control" rows={4} value={description} onChange={e => setDescription(e.target.value)} />
+        </div>
 
-      <label>
-        Capacity
-        <input value={capacity} onChange={e => setCapacity(e.target.value.replace(/\D/g, ''))} />
-      </label>
-      <br />
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Capacity</label>
+          <input className="form-control" value={capacity} onChange={e => setCapacity(e.target.value.replace(/\D/g, ''))} />
+        </div>
 
-      <label>
-        Date Open
-        <input type="date" value={dateOpen} onChange={e => setDateOpen(e.target.value)} />
-      </label>
-      <br />
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Date Open</label>
+            <input type="date" className="form-control" value={dateOpen} onChange={e => setDateOpen(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Date Close</label>
+            <input type="date" className="form-control" value={dateClose} onChange={e => setDateClose(e.target.value)} />
+          </div>
+        </div>
 
-      <label>
-        Date Close
-        <input type="date" value={dateClose} onChange={e => setDateClose(e.target.value)} />
-      </label>
-      <br />
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Price Rate *</label>
+          <select className="form-select" value={priceRate} onChange={e => setPriceRate(e.target.value)} required>
+            <option value="BUDGET">BUDGET</option>
+            <option value="STANDARD">STANDARD</option>
+            <option value="PREMIUM">PREMIUM</option>
+            <option value="VIP">VIP</option>
+            <option value="LUXURY">LUXURY</option>
+          </select>
+        </div>
 
-      <label>
-        Price Rate *
-        <select value={priceRate} onChange={e => setPriceRate(e.target.value)} required>
-          <option value="BUDGET">BUDGET</option>
-          <option value="STANDARD">STANDARD</option>
-          <option value="PREMIUM">PREMIUM</option>
-          <option value="VIP">VIP</option>
-          <option value="LUXURY">LUXURY</option>
-        </select>
-      </label>
-      <br />
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Time Open</label>
+            <input type="time" className="form-control" value={timeOpen} onChange={e => setTimeOpen(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Time Close</label>
+            <input type="time" className="form-control" value={timeClose} onChange={e => setTimeClose(e.target.value)} />
+          </div>
+        </div>
 
-      <label>
-        Time Open
-        <input type="time" value={timeOpen} onChange={e => setTimeOpen(e.target.value)} />
-      </label>
-      <br />
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Alcohol Policy *</label>
+          <select className="form-select" value={alcoholPolicy} onChange={e => setAlcoholPolicy(e.target.value)} required>
+            <option value="SERVE">SERVE</option>
+            <option value="NONE">NONE</option>
+            <option value="BYOB">BYOB</option>
+          </select>
+        </div>
 
-      <label>
-        Time Close
-        <input type="time" value={timeClose} onChange={e => setTimeClose(e.target.value)} />
-      </label>
-      <br />
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Age Restriction</label>
+          <input className="form-control" value={ageRestriction} onChange={e => setAgeRestriction(e.target.value)} />
+        </div>
 
-      <label>
-        Alcohol Policy *
-        <select value={alcoholPolicy} onChange={e => setAlcoholPolicy(e.target.value)} required>
-          <option value="SERVE">SERVE</option>
-          <option value="NONE">NONE</option>
-          <option value="BYOB">BYOB</option>
-        </select>
-      </label>
-      <br />
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Profile Photo URL</label>
+          <input className="form-control" value={profilePhotoUrl} onChange={e => setProfilePhotoUrl(e.target.value)} />
+        </div>
 
-      <label>
-        Age Restriction
-        <input value={ageRestriction} onChange={e => setAgeRestriction(e.target.value)} />
-      </label>
-      <br />
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Photo URLs (comma separated)</label>
+          <input className="form-control" value={photoUrls} onChange={e => setPhotoUrls(e.target.value)} />
+        </div>
 
-      <label>
-        Profile Photo URL
-        <input value={profilePhotoUrl} onChange={e => setProfilePhotoUrl(e.target.value)} />
-      </label>
-      <br />
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Contact Email</label>
+            <input className="form-control" value={contactEmail} onChange={e => setContactEmail(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Contact Phone</label>
+            <input className="form-control" value={contactPhone} onChange={e => setContactPhone(e.target.value)} />
+          </div>
+        </div>
 
-      <label>
-        Photo URLs (comma separated)
-        <input value={photoUrls} onChange={e => setPhotoUrls(e.target.value)} />
-      </label>
-      <br />
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Facebook URL</label>
+          <input className="form-control" value={facebookUrl} onChange={e => setFacebookUrl(e.target.value)} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Instagram URL</label>
+          <input className="form-control" value={instagramUrl} onChange={e => setInstagramUrl(e.target.value)} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>LINE URL</label>
+          <input className="form-control" value={lineUrl} onChange={e => setLineUrl(e.target.value)} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>TikTok URL</label>
+          <input className="form-control" value={tiktokUrl} onChange={e => setTiktokUrl(e.target.value)} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Website URL</label>
+          <input className="form-control" value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)} />
+        </div>
 
-      <label>
-        Contact Email
-        <input value={contactEmail} onChange={e => setContactEmail(e.target.value)} />
-      </label>
-      <br />
+        {/* ✅ new latitude/longitude fields */}
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Latitude</label>
+            <input
+              className="form-control"
+              value={latitude}
+              onChange={e => setLatitude(e.target.value)}
+              placeholder="e.g. 13.7563"
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Longitude</label>
+            <input
+              className="form-control"
+              value={longitude}
+              onChange={e => setLongitude(e.target.value)}
+              placeholder="e.g. 100.5018"
+            />
+          </div>
+        </div>
 
-      <label>
-        Contact Phone
-        <input value={contactPhone} onChange={e => setContactPhone(e.target.value)} />
-      </label>
-      <br />
 
-      <label>
-        Facebook URL
-        <input value={facebookUrl} onChange={e => setFacebookUrl(e.target.value)} />
-      </label>
-      <br />
-
-      <label>
-        Instagram URL
-        <input value={instagramUrl} onChange={e => setInstagramUrl(e.target.value)} />
-      </label>
-      <br />
-
-      <label>
-        LINE URL
-        <input value={lineUrl} onChange={e => setLineUrl(e.target.value)} />
-      </label>
-      <br />
-
-      <label>
-        TikTok URL
-        <input value={tiktokUrl} onChange={e => setTiktokUrl(e.target.value)} />
-      </label>
-      <br />
-
-      <label>
-        Website URL
-        <input value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)} />
-      </label>
-      <br />
-
-      <button type="submit" disabled={loading}>
-        {loading
-          ? (hasProfile ? 'Updating…' : 'Creating…')
-          : (hasProfile ? 'Update Venue' : 'Create Venue')}
-      </button>
-    </form>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading
+              ? (hasProfile ? 'Updating…' : 'Creating…')
+              : (hasProfile ? 'Update Venue' : 'Create Venue')}
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => navigate('/')}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 

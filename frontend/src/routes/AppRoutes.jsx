@@ -11,6 +11,8 @@ import Logout from '../pages/Logout';
 import EventCreate from '../pages/EventCreate';
 import ArtistProfileForm from '../pages/ArtistProfileForm';
 import VenueProfileForm from '../pages/VenueProfileForm';
+import CreateArtist from '../pages/CreateArtist';
+import CreateVenue from '../pages/CreateVenue';
 import ProtectedRoute from '../components/ProtectedRoute';
 import EventDetail from '../pages/EventDetail';
 import VenueMap from '../pages/VenueMap';
@@ -42,17 +44,20 @@ export default function AppRoutes() {
           <Route
             path="/me/artist"
             element={
-              <ProtectedRoute allow={['ARTIST', 'ADMIN']}>
-                <ArtistProfileForm />
-              </ProtectedRoute>
+              //เดี๋ยวมาเปิดคืนให้ขี้เกียจแก้โรลตอนล้อกอินให้เป็นแอดมิน
+              //<ProtectedRoute allow={['ARTIST', 'ADMIN']}>
+              //</ProtectedRoute>
+                //<ArtistProfileForm />
+                <CreateArtist />
             }
           />
           <Route
             path="/me/venue"
             element={
-              <ProtectedRoute allow={['VENUE', 'ORGANIZER', 'ADMIN']}>
-                <VenueProfileForm />
-              </ProtectedRoute>
+              //<ProtectedRoute allow={['VENUE', 'ORGANIZER', 'ADMIN']}>
+              //</ProtectedRoute>
+                //<VenueProfileForm />
+                <CreateVenue/>
             }
           />
 

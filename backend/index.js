@@ -21,7 +21,7 @@ function authMiddleware(req, res, next) {
   if (!token) return res.sendStatus(401);
   try {
     const decoded = jwt.verify(token, SECRET);
-    req.user = decoded; // { id, role }
+    req.user = decoded; // { id, role, iat, exp }
     next();
   } catch (err) {
     console.error(err);
@@ -29,61 +29,12 @@ function authMiddleware(req, res, next) {
   }
 }
 
-/* ───────────────────────────── META ENUMS (for dropdowns) ───────────────── */
-async function fetchEnum(typeName) {
-  const rows = await prisma.$queryRawUnsafe(
-    `
-    SELECT e.enumlabel AS val
-    FROM pg_type t
-    JOIN pg_enum e ON t.oid = e.enumtypid
-    WHERE lower(t.typname) = $1
-    ORDER BY e.enumsortorder
-  `,
-    typeName.toLowerCase()
-  );
-  return Array.isArray(rows) ? rows.map((r) => String(r.val)) : [];
-}
-
-app.get('/meta/enums', async (_req, res) => {
-  try {
-    const [
-      roles,
-      bookingTypes,
-      eventTypes,
-      ticketingTypes,
-      alcoholPolicies,
-      priceRates,
-    ] = await Promise.all([
-      fetchEnum('UserRole'),
-      fetchEnum('BookingType'),
-      fetchEnum('EventType'),
-      fetchEnum('TicketingType'),
-      fetchEnum('AlcoholPolicy'),
-      fetchEnum('PriceRate'),
-    ]);
-    res.json({
-      roles,
-      bookingTypes,
-      eventTypes,
-      ticketingTypes,
-      alcoholPolicies,
-      priceRates,
-    });
-  } catch (e) {
-    console.error('ENUMS_ERROR', e);
-    res.status(500).json({ error: 'Failed to load enums' });
-  }
-});
-
 /* ───────────────────────────── AUTH ROUTES ───────────────────────────── */
 app.post('/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body || {};
-    if (!email || !password) {
-      return res.status(400).json({ error: 'email and password are required' });
-    }
-
+    const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
+
     if (!user) return res.status(401).json({ error: 'User not found' });
 
     const valid = await bcrypt.compare(password, user.passwordHash);
@@ -91,6 +42,7 @@ app.post('/auth/login', async (req, res) => {
 
     const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '1d' });
 
+    // ✅ Set cookie
     res.cookie('token', token, {
       httpOnly: true,
       sameSite: 'Lax',
@@ -133,28 +85,11 @@ app.get('/auth/me', authMiddleware, async (req, res) => {
 /* ───────────────────────────── USERS ───────────────────────────── */
 app.post('/users', async (req, res) => {
   try {
-    const { email, password, role } = req.body || {};
-    if (!email || !password) {
-      return res.status(400).json({ error: 'email and password are required' });
-    }
+    const { email, password, role } = req.body;
     const passwordHash = await bcrypt.hash(password, 10);
-
-    // 🔧 normalize เฉพาะตัวพิมพ์ (ยังคงให้ DB ตรวจ enum)
-    const roleNorm =
-      typeof role === 'string' && role.trim()
-        ? role.trim().toUpperCase()
-        : undefined;
-
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        ...(roleNorm ? { role: roleNorm } : {}), // ถ้าไม่มี role → ให้ DB ใส่ default (ถ้าตั้งไว้)
-      },
-    });
+    const user = await prisma.user.create({ data: { email, passwordHash, role } });
     res.status(201).json(user);
   } catch (err) {
-    console.error('USER_CREATE_ERROR', err);
     res.status(400).json({ error: err.message });
   }
 });
@@ -176,53 +111,46 @@ app.get('/users/:id', async (req, res) => {
 });
 
 /* ───────────────────────────── ARTISTS (POST = upsert by userId) ────────── */
-app.post(
-  '/artists',
-  authMiddleware,
-  requireRole('ARTIST', 'ADMIN'),
-  async (req, res) => {
-    try {
-      const { userId, bookingType, ...rest } = req.body || {};
-      if (!userId) return res.status(400).json({ error: 'userId is required' });
+app.post('/artists', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const data = req.body;
 
-      if (req.user.role === 'ARTIST' && userId !== req.user.id) {
-        return res.sendStatus(403);
-      }
+    // Check if profile already exists for this user
+    const existing = await prisma.artistProfile.findUnique({ where: { userId } });
 
-      const existing = await prisma.artistProfile.findFirst({ where: { userId } });
-      const data = {
-        ...rest,
-        ...(bookingType ? { bookingType } : {}),
-      };
-
-      let result;
-      if (existing) {
-        result = await prisma.artistProfile.update({
-          where: { id: existing.id },
-          data,
-        });
-      } else {
-        result = await prisma.artistProfile.create({
-          data: {
-            ...data,
-            user: { connect: { id: userId } },
-          },
-        });
-      }
-
-      res.status(existing ? 200 : 201).json(result);
-    } catch (err) {
-      console.error('ARTIST_UPSERT_ERROR', err);
-      res.status(400).json({ error: err.message });
+    if (existing) {
+      // Update existing profile
+      const updated = await prisma.artistProfile.update({
+        where: { userId },
+        data,
+      });
+      return res.json(updated);
     }
-  }
-);
 
-app.get('/artists', async (_req, res) => {
-  const artists = await prisma.artistProfile.findMany({
-    include: { user: true, events: true },
-  });
-  res.json(artists);
+    // Create new profile
+    const artist = await prisma.artistProfile.create({
+      data: {
+        ...data,
+        user: { connect: { id: userId } },
+      },
+    });
+
+    res.status(201).json(artist);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not create/update artist' });
+  }
+});
+
+app.get('/artists', async (req, res) => {
+  try {
+    const artists = await prisma.artistProfile.findMany({ include: { user: true, events: true } });
+    res.json(artists);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not fetch artists' });
+  }
 });
 
 app.get('/artists/:id', async (req, res) => {
@@ -235,47 +163,40 @@ app.get('/artists/:id', async (req, res) => {
 });
 
 /* ───────────────────────────── VENUES (POST = upsert by userId) ─────────── */
-app.post(
-  '/venues',
-  authMiddleware,
-  requireRole('VENUE', 'ADMIN', 'ORGANIZER'),
-  async (req, res) => {
-    try {
-      const { userId, alcoholPolicy, ...rest } = req.body || {};
-      if (!userId) return res.status(400).json({ error: 'userId is required' });
+app.post('/venues', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const data = req.body;
 
-      if (req.user.role !== 'ADMIN' && userId !== req.user.id) {
-        return res.sendStatus(403);
-      }
+    // Check if profile already exists for this user
+    const existing = await prisma.venueProfile.findUnique({
+      where: { userId },
+    });
 
-      const existing = await prisma.venueProfile.findFirst({ where: { userId } });
-      const data = {
-        ...rest,
-        ...(alcoholPolicy ? { alcoholPolicy } : {}),
-      };
-
-      let result;
-      if (existing) {
-        result = await prisma.venueProfile.update({
-          where: { id: existing.id },
-          data,
-        });
-      } else {
-        result = await prisma.venueProfile.create({
-          data: {
-            ...data,
-            user: { connect: { id: userId } },
-          },
-        });
-      }
-
-      res.status(existing ? 200 : 201).json(result);
-    } catch (err) {
-      console.error('VENUE_UPSERT_ERROR', err);
-      res.status(400).json({ error: err.message });
+    if (existing) {
+      // Update existing profile
+      const updated = await prisma.venueProfile.update({
+        where: { userId },
+        data,
+      });
+      return res.json(updated);
     }
+
+    // Create new profile
+    const venue = await prisma.venueProfile.create({
+      data: {
+        ...data,
+        user: { connect: { id: userId } },
+      },
+    });
+
+    res.status(201).json(venue);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not create/update venue' });
   }
-);
+});
 
 app.get('/venues', async (_req, res) => {
   const venues = await prisma.venueProfile.findMany({

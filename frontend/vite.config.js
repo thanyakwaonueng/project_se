@@ -16,6 +16,8 @@ export default defineConfig({
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
+
+      /*
       // Auth 
       '/auth': {
           target: 'http://backend:4000',
@@ -35,6 +37,7 @@ export default defineConfig({
           target: 'http://backend:4000',
           changeOrigin: true,
       }
+      */
 
     }
   }
