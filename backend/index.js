@@ -8,158 +8,12 @@ const cookieParser = require('cookie-parser');
 const { PrismaClient } = require('./generated/prisma');
 const prisma = new PrismaClient();
 
-const { requireRole, requireOwnershipOrAdmin } = require('./authz');
-const {
-  zodValidate,
-  loginSchema,
-  createUserSchema,
-  createEventSchema,
-  updateEventSchema,
-  createArtistSchema,
-  updateArtistSchema,
-  createVenueSchema,
-  updateVenueSchema,
-} = require('./validators');
+const { requireRole } = require('./authz');
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
 const port = process.env.PORT || 4000;
-
-/* ───────────────────────────── ENUM LOADER ───────────────────────────── */
-const ENUMS = {
-  USERROLE: new Set(),
-  BOOKINGTYPE: new Set(),
-  EVENTTYPE: new Set(),
-  TICKETINGTYPE: new Set(),
-  ALCOHOLPOLICY: new Set(),
-  PRICERATE: new Set(),
-};
-
-async function loadEnum(typeName) {
-  const rows = await prisma.$queryRawUnsafe(`
-    SELECT e.enumlabel AS val
-    FROM pg_type t
-    JOIN pg_enum e ON t.oid = e.enumtypid
-    WHERE lower(t.typname) = $1
-    ORDER BY e.enumsortorder
-  `, typeName.toLowerCase());
-  return Array.isArray(rows) ? rows.map(r => String(r.val)) : [];
-}
-
-async function loadEnums() {
-  try {
-    const [roles, bookingTypes, eventTypes, ticketingTypes, alcoholPolicies, priceRates] = await Promise.all([
-      loadEnum('UserRole'),
-      loadEnum('BookingType'),
-      loadEnum('EventType'),
-      loadEnum('TicketingType'),
-      loadEnum('AlcoholPolicy'),
-      loadEnum('PriceRate'),
-    ]);
-    if (roles.length) ENUMS.USERROLE = new Set(roles.map(v => v.toUpperCase()));
-    if (bookingTypes.length) ENUMS.BOOKINGTYPE = new Set(bookingTypes.map(v => v.toUpperCase()));
-    if (eventTypes.length) ENUMS.EVENTTYPE = new Set(eventTypes.map(v => v.toUpperCase()));
-    if (ticketingTypes.length) ENUMS.TICKETINGTYPE = new Set(ticketingTypes.map(v => v.toUpperCase()));
-    if (alcoholPolicies.length) ENUMS.ALCOHOLPOLICY = new Set(alcoholPolicies.map(v => v.toUpperCase()));
-    if (priceRates.length) ENUMS.PRICERATE = new Set(priceRates.map(v => v.toUpperCase()));
-
-    console.log('[Enums]', {
-      roles, bookingTypes, eventTypes, ticketingTypes, alcoholPolicies, priceRates,
-    });
-  } catch (e) {
-    console.warn('[Enums] load failed:', e?.message);
-  }
-}
-loadEnums();
-
-const allowedValues = (key) => Array.from(ENUMS[key] || new Set());
-
-/* ───────────────────────────── RESOLVERS ───────────────────────────── */
-function resolveRole(input) {
-  if (!input || typeof input !== 'string') return undefined;
-  const raw = input.trim();
-  const upper = raw.toUpperCase();
-  const allowed = ENUMS.USERROLE;
-  if (allowed.has(upper)) return upper;
-
-  const candidates = [];
-  if (/(^|[^a-z])(fan|listener|audience)([^a-z]|$)/i.test(raw)) candidates.push('FAN','LISTENER');
-  if (/(^|[^a-z])(artist|band|musician|performer)([^a-z]|$)/i.test(raw)) candidates.push('ARTIST','PERFORMER');
-  if (/(^|[^a-z])(venue|place|organizer|host)([^a-z]|$)/i.test(raw)) candidates.push('VENUE','ORGANIZER');
-  if (/(^|[^a-z])(admin|administrator|superadmin)([^a-z]|$)/i.test(raw)) candidates.push('ADMIN','SUPERADMIN');
-
-  for (const c of candidates) if (allowed.has(c)) return c;
-  return undefined;
-}
-
-function resolveBookingType(input) {
-  if (!input || typeof input !== 'string') return undefined;
-  const up = input.trim().toUpperCase();
-  const a = ENUMS.BOOKINGTYPE;
-  if (a.has(up)) return up;
-  const map = {
-    'FULL_BAND': ['FULL BAND','BAND'],
-    'TRIO': ['TRIO'],
-    'DUO': ['DUO'],
-    'SOLO': ['SOLO','ONE'],
-  };
-  for (const [canon, list] of Object.entries(map)) {
-    if (list.includes(up) && a.has(canon)) return canon;
-  }
-  return undefined;
-}
-
-function resolveAlcoholPolicy(input) {
-  if (!input || typeof input !== 'string') return undefined;
-  const up = input.trim().toUpperCase();
-  const a = ENUMS.ALCOHOLPOLICY;
-  if (a.has(up)) return up;
-  const map = {
-    'SERVE': ['SERVE','ALCOHOL','BAR'],
-    'NONE': ['NONE','NO','DRY'],
-    'BYOB': ['BYOB','BRING YOUR OWN'],
-  };
-  for (const [canon, list] of Object.entries(map)) {
-    if (list.includes(up) && a.has(canon)) return canon;
-  }
-  return undefined;
-}
-
-function resolveEventType(input) {
-  if (!input || typeof input !== 'string') return undefined;
-  const up = input.trim().toUpperCase();
-  const a = ENUMS.EVENTTYPE;
-  if (a.has(up)) return up;
-  const map = {
-    'OUTDOOR': ['OUTDOOR','OUT-SIDE','OPEN AIR'],
-    'INDOOR': ['INDOOR','INSIDE'],
-    'HYBRID': ['HYBRID','MIXED'],
-  };
-  for (const [canon, list] of Object.entries(map)) {
-    if (list.includes(up) && a.has(canon)) return canon;
-  }
-  return undefined;
-}
-
-function resolveTicketingType(input) {
-  if (!input || typeof input !== 'string') return undefined;
-  const up = input.trim().toUpperCase().replace(/\s|-/g, '');
-  const a = new Set(Array.from(ENUMS.TICKETINGTYPE).map(v => v.replace(/-/g,'')));
-  if (a.has(up)) return Array.from(ENUMS.TICKETINGTYPE).find(v => v.replace(/-/g,'') === up);
-
-  const map = {
-    'FREE': ['FREE'],
-    'DONATION': ['DONATION','TIP'],
-    'TICKET_MELON': ['TICKETMELON','MELON'],
-    'DIRECT_CONTACT': ['DIRECTCONTACT','DIRECT','CONTACT','DM'],
-    'ONSITE_SALES': ['ONSITESALES','ONSITE','ATDOOR','WALKIN','WALK-IN'],
-  };
-  for (const [canon, list] of Object.entries(map)) {
-    if (list.includes(up) && ENUMS.TICKETINGTYPE.has(canon)) return canon;
-  }
-  return undefined;
-}
 
 /* ───────────────────────────── AUTH MIDDLEWARE ───────────────────────────── */
 function authMiddleware(req, res, next) {
@@ -167,18 +21,68 @@ function authMiddleware(req, res, next) {
   if (!token) return res.sendStatus(401);
   try {
     const decoded = jwt.verify(token, SECRET);
-    req.user = decoded; // { id, role, iat, exp }
+    req.user = decoded; // { id, role }
     next();
-  } catch (err){
+  } catch (err) {
     console.error(err);
     return res.sendStatus(403);
   }
 }
 
-/* ───────────────────────────── AUTH ROUTES ───────────────────────────── */
-app.post('/auth/login', zodValidate(loginSchema), async (req, res) => {
+/* ───────────────────────────── META ENUMS (for dropdowns) ───────────────── */
+async function fetchEnum(typeName) {
+  const rows = await prisma.$queryRawUnsafe(
+    `
+    SELECT e.enumlabel AS val
+    FROM pg_type t
+    JOIN pg_enum e ON t.oid = e.enumtypid
+    WHERE lower(t.typname) = $1
+    ORDER BY e.enumsortorder
+  `,
+    typeName.toLowerCase()
+  );
+  return Array.isArray(rows) ? rows.map((r) => String(r.val)) : [];
+}
+
+app.get('/meta/enums', async (_req, res) => {
   try {
-    const { email, password } = req.body;
+    const [
+      roles,
+      bookingTypes,
+      eventTypes,
+      ticketingTypes,
+      alcoholPolicies,
+      priceRates,
+    ] = await Promise.all([
+      fetchEnum('UserRole'),
+      fetchEnum('BookingType'),
+      fetchEnum('EventType'),
+      fetchEnum('TicketingType'),
+      fetchEnum('AlcoholPolicy'),
+      fetchEnum('PriceRate'),
+    ]);
+    res.json({
+      roles,
+      bookingTypes,
+      eventTypes,
+      ticketingTypes,
+      alcoholPolicies,
+      priceRates,
+    });
+  } catch (e) {
+    console.error('ENUMS_ERROR', e);
+    res.status(500).json({ error: 'Failed to load enums' });
+  }
+});
+
+/* ───────────────────────────── AUTH ROUTES ───────────────────────────── */
+app.post('/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'email and password are required' });
+    }
+
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(401).json({ error: 'User not found' });
 
@@ -190,7 +94,7 @@ app.post('/auth/login', zodValidate(loginSchema), async (req, res) => {
     res.cookie('token', token, {
       httpOnly: true,
       sameSite: 'Lax',
-      secure: false, // prod: true + SameSite=None + HTTPS
+      secure: false, // production: true + SameSite=None + HTTPS
       maxAge: 24 * 60 * 60 * 1000,
     });
 
@@ -226,32 +130,28 @@ app.get('/auth/me', authMiddleware, async (req, res) => {
   }
 });
 
-// meta enums
-app.get('/meta/enums', (_req, res) => {
-  res.json({
-    roles: allowedValues('USERROLE'),
-    bookingTypes: allowedValues('BOOKINGTYPE'),
-    eventTypes: allowedValues('EVENTTYPE'),
-    ticketingTypes: allowedValues('TICKETINGTYPE'),
-    alcoholPolicies: allowedValues('ALCOHOLPOLICY'),
-    priceRates: allowedValues('PRICERATE'),
-  });
-});
-
 /* ───────────────────────────── USERS ───────────────────────────── */
-app.post('/users', zodValidate(createUserSchema), async (req, res) => {
+app.post('/users', async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password, role } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'email and password are required' });
+    }
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const mapped = resolveRole(role);
-    const data = {
-      email,
-      passwordHash,
-      ...(mapped ? { role: mapped } : {}),
-    };
+    // 🔧 normalize เฉพาะตัวพิมพ์ (ยังคงให้ DB ตรวจ enum)
+    const roleNorm =
+      typeof role === 'string' && role.trim()
+        ? role.trim().toUpperCase()
+        : undefined;
 
-    const user = await prisma.user.create({ data });
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        ...(roleNorm ? { role: roleNorm } : {}), // ถ้าไม่มี role → ให้ DB ใส่ default (ถ้าตั้งไว้)
+      },
+    });
     res.status(201).json(user);
   } catch (err) {
     console.error('USER_CREATE_ERROR', err);
@@ -259,7 +159,7 @@ app.post('/users', zodValidate(createUserSchema), async (req, res) => {
   }
 });
 
-app.get('/users', authMiddleware, async (req, res) => {
+app.get('/users', authMiddleware, async (_req, res) => {
   const users = await prisma.user.findMany({
     include: { artistProfile: true, venueProfile: true },
   });
@@ -275,42 +175,50 @@ app.get('/users/:id', async (req, res) => {
   user ? res.json(user) : res.status(404).send('User not found');
 });
 
-/* ───────────────────────────── ARTISTS ───────────────────────────── */
+/* ───────────────────────────── ARTISTS (POST = upsert by userId) ────────── */
 app.post(
   '/artists',
   authMiddleware,
   requireRole('ARTIST', 'ADMIN'),
-  zodValidate(createArtistSchema),
   async (req, res) => {
     try {
-      const { userId, bookingType, ...rest } = req.body;
+      const { userId, bookingType, ...rest } = req.body || {};
+      if (!userId) return res.status(400).json({ error: 'userId is required' });
 
       if (req.user.role === 'ARTIST' && userId !== req.user.id) {
         return res.sendStatus(403);
       }
 
-      const bt = resolveBookingType(bookingType);
-      if (!bt) {
-        return res.status(400).json({
-          error: `Invalid bookingType; allowed values: ${allowedValues('BOOKINGTYPE').join(', ') || '(none loaded)'}`,
+      const existing = await prisma.artistProfile.findFirst({ where: { userId } });
+      const data = {
+        ...rest,
+        ...(bookingType ? { bookingType } : {}),
+      };
+
+      let result;
+      if (existing) {
+        result = await prisma.artistProfile.update({
+          where: { id: existing.id },
+          data,
+        });
+      } else {
+        result = await prisma.artistProfile.create({
+          data: {
+            ...data,
+            user: { connect: { id: userId } },
+          },
         });
       }
 
-      const artist = await prisma.artistProfile.create({
-        data: {
-          ...rest,
-          bookingType: bt,
-          user: { connect: { id: userId } },
-        },
-      });
-      res.status(201).json(artist);
+      res.status(existing ? 200 : 201).json(result);
     } catch (err) {
+      console.error('ARTIST_UPSERT_ERROR', err);
       res.status(400).json({ error: err.message });
     }
   }
 );
 
-app.get('/artists', async (req, res) => {
+app.get('/artists', async (_req, res) => {
   const artists = await prisma.artistProfile.findMany({
     include: { user: true, events: true },
   });
@@ -326,80 +234,50 @@ app.get('/artists/:id', async (req, res) => {
   artist ? res.json(artist) : res.status(404).send('Artist not found');
 });
 
-app.put(
-  '/artists/:id',
-  authMiddleware,
-  zodValidate(updateArtistSchema),
-  requireOwnershipOrAdmin(async (req) => {
-    const id = +req.params.id;
-    const a = await prisma.artistProfile.findUnique({ where: { id } });
-    return a && a.userId === req.user.id;
-  }),
-  async (req, res) => {
-    try {
-      const id = +req.params.id;
-      const data = { ...req.body };
-
-      if (typeof data.bookingType === 'string') {
-        const bt = resolveBookingType(data.bookingType);
-        if (!bt) {
-          return res.status(400).json({
-            error: `Invalid bookingType; allowed values: ${allowedValues('BOOKINGTYPE').join(', ') || '(none loaded)'}`,
-          });
-        }
-        data.bookingType = bt;
-      }
-
-      // ห้ามแก้ owner
-      delete data.userId;
-
-      const artist = await prisma.artistProfile.update({
-        where: { id },
-        data,
-      });
-      res.json(artist);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
-    }
-  }
-);
-
-/* ───────────────────────────── VENUES ───────────────────────────── */
+/* ───────────────────────────── VENUES (POST = upsert by userId) ─────────── */
 app.post(
   '/venues',
   authMiddleware,
   requireRole('VENUE', 'ADMIN', 'ORGANIZER'),
-  zodValidate(createVenueSchema),
   async (req, res) => {
     try {
-      const { userId, ...rest } = req.body;
+      const { userId, alcoholPolicy, ...rest } = req.body || {};
+      if (!userId) return res.status(400).json({ error: 'userId is required' });
 
       if (req.user.role !== 'ADMIN' && userId !== req.user.id) {
         return res.sendStatus(403);
       }
 
-      const ap = resolveAlcoholPolicy(rest.alcoholPolicy);
-      if (!ap) {
-        return res.status(400).json({
-          error: `Invalid alcoholPolicy; allowed values: ${allowedValues('ALCOHOLPOLICY').join(', ') || '(none loaded)'}`,
+      const existing = await prisma.venueProfile.findFirst({ where: { userId } });
+      const data = {
+        ...rest,
+        ...(alcoholPolicy ? { alcoholPolicy } : {}),
+      };
+
+      let result;
+      if (existing) {
+        result = await prisma.venueProfile.update({
+          where: { id: existing.id },
+          data,
+        });
+      } else {
+        result = await prisma.venueProfile.create({
+          data: {
+            ...data,
+            user: { connect: { id: userId } },
+          },
         });
       }
 
-      const venue = await prisma.venueProfile.create({
-        data: {
-          ...rest,
-          alcoholPolicy: ap,
-          user: { connect: { id: userId } }, // ✅ ใช้ connect เท่านั้น
-        },
-      });
-      res.status(201).json(venue);
+      res.status(existing ? 200 : 201).json(result);
     } catch (err) {
+      console.error('VENUE_UPSERT_ERROR', err);
       res.status(400).json({ error: err.message });
     }
   }
 );
 
-app.get('/venues', async (req, res) => {
+app.get('/venues', async (_req, res) => {
   const venues = await prisma.venueProfile.findMany({
     include: { user: true, events: true },
   });
@@ -415,87 +293,99 @@ app.get('/venues/:id', async (req, res) => {
   venue ? res.json(venue) : res.status(404).send('Venue not found');
 });
 
-app.put(
-  '/venues/:id',
-  authMiddleware,
-  zodValidate(updateVenueSchema),
-  requireOwnershipOrAdmin(async (req) => {
-    const id = +req.params.id;
-    const v = await prisma.venueProfile.findUnique({ where: { id } });
-    return v && v.userId === req.user.id;
-  }),
-  async (req, res) => {
-    try {
-      const id = +req.params.id;
-      const { userId, ...rest } = req.body; // ✅ กันไม่ให้แก้ owner
-
-      const data = { ...rest };
-      if (typeof data.alcoholPolicy === 'string') {
-        const ap = resolveAlcoholPolicy(data.alcoholPolicy);
-        if (!ap) {
-          return res.status(400).json({
-            error: `Invalid alcoholPolicy; allowed values: ${allowedValues('ALCOHOLPOLICY').join(', ') || '(none loaded)'}`,
-          });
-        }
-        data.alcoholPolicy = ap;
-      }
-
-      const venue = await prisma.venueProfile.update({
-        where: { id },
-        data,
-      });
-      res.json(venue);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
-    }
-  }
-);
-
-/* ───────────────────────────── EVENTS ───────────────────────────── */
+/* ───────────────────────────── EVENTS (POST create or update if id) ───────
+   - ถ้ามี body.id → update (ต้องเป็นของ venue ตัวเอง เว้นแต่ ADMIN)
+   - ถ้าไม่มี id → create (ต้องสร้างใน venue ที่เป็นของตัวเอง เว้นแต่ ADMIN)
+*/
 app.post(
   '/events',
   authMiddleware,
   requireRole('VENUE', 'ADMIN', 'ORGANIZER'),
-  zodValidate(createEventSchema),
   async (req, res) => {
     try {
-      const { artistIds = [], venueId, ...rest } = req.body;
+      const {
+        id,
+        artistIds = [],
+        venueId,
+        eventType,
+        ticketing,
+        alcoholPolicy,
+        title,
+        ...rest
+      } = req.body || {};
 
-      // alias: title → name
-      if (!rest.name && typeof rest.title === 'string') rest.name = rest.title;
-      delete rest.title;
+      if (id) {
+        const current = await prisma.event.findUnique({
+          where: { id: Number(id) },
+          include: { venue: true },
+        });
+        if (!current) return res.status(404).json({ error: 'Event not found' });
 
-      // map/validate enums
-      const et = resolveEventType(rest.eventType);
-      const tk = resolveTicketingType(rest.ticketing);
-      const ap = resolveAlcoholPolicy(rest.alcoholPolicy);
-      if (!et) return res.status(400).json({ error: `Invalid eventType; allowed: ${allowedValues('EVENTTYPE').join(', ')}` });
-      if (!tk) return res.status(400).json({ error: `Invalid ticketing; allowed: ${allowedValues('TICKETINGTYPE').join(', ')}` });
-      if (!ap) return res.status(400).json({ error: `Invalid alcoholPolicy; allowed: ${allowedValues('ALCOHOLPOLICY').join(', ')}` });
-      rest.eventType = et; rest.ticketing = tk; rest.alcoholPolicy = ap;
+        if (req.user.role !== 'ADMIN') {
+          if (!current.venue || current.venue.userId !== req.user.id) {
+            return res.sendStatus(403);
+          }
+        }
 
-      // ownership (ถ้าไม่ใช่ ADMIN ต้องเป็น venue ของตัวเอง)
+        const data = {
+          ...rest,
+          ...(rest.name ? { name: rest.name } : (typeof title === 'string' ? { name: title } : {})),
+        };
+        if (eventType) data.eventType = eventType;
+        if (ticketing) data.ticketing = ticketing;
+        if (alcoholPolicy) data.alcoholPolicy = alcoholPolicy;
+
+        if (typeof venueId === 'number' && req.user.role !== 'ADMIN') {
+          const newVenue = await prisma.venueProfile.findUnique({ where: { id: venueId } });
+          if (!newVenue || newVenue.userId !== req.user.id) return res.sendStatus(403);
+        }
+
+        const updated = await prisma.event.update({
+          where: { id: Number(id) },
+          data: {
+            ...data,
+            venue: typeof venueId === 'number' ? { connect: { id: venueId } } : undefined,
+            artists: Array.isArray(artistIds)
+              ? { set: artistIds.map((aid) => ({ id: aid })) }
+              : undefined,
+          },
+          include: { venue: true, artists: true },
+        });
+        return res.json(updated);
+      }
+
+      if (!venueId) return res.status(400).json({ error: 'venueId is required' });
+
       if (req.user.role !== 'ADMIN') {
         const venue = await prisma.venueProfile.findUnique({ where: { id: venueId } });
         if (!venue || venue.userId !== req.user.id) return res.sendStatus(403);
       }
 
-      const event = await prisma.event.create({
+      const data = {
+        ...rest,
+        name: rest.name || (typeof title === 'string' ? title : undefined),
+      };
+        if (eventType) data.eventType = eventType;
+        if (ticketing) data.ticketing = ticketing;
+        if (alcoholPolicy) data.alcoholPolicy = alcoholPolicy;
+
+      const created = await prisma.event.create({
         data: {
-          ...rest,
+          ...data,
           venue: { connect: { id: venueId } },
-          artists: artistIds.length ? { connect: artistIds.map(id => ({ id })) } : undefined,
+          artists: artistIds.length ? { connect: artistIds.map((id) => ({ id })) } : undefined,
         },
         include: { venue: true, artists: true },
       });
-      res.status(201).json(event);
+      res.status(201).json(created);
     } catch (err) {
+      console.error('EVENT_UPSERT_ERROR', err);
       res.status(400).json({ error: err.message });
     }
   }
 );
 
-app.get('/events', async (req, res) => {
+app.get('/events', async (_req, res) => {
   const events = await prisma.event.findMany({
     include: { venue: true, artists: true },
   });
@@ -510,68 +400,6 @@ app.get('/events/:id', async (req, res) => {
   });
   ev ? res.json(ev) : res.status(404).send('Event not found');
 });
-
-app.put(
-  '/events/:id',
-  authMiddleware,
-  requireRole('VENUE', 'ADMIN', 'ORGANIZER'),
-  zodValidate(updateEventSchema),
-  async (req, res) => {
-    try {
-      const id = +req.params.id;
-
-      const current = await prisma.event.findUnique({
-        where: { id },
-        include: { venue: true },
-      });
-      if (!current) return res.status(404).json({ error: 'Event not found' });
-
-      if (req.user.role !== 'ADMIN') {
-        if (!current.venue || current.venue.userId !== req.user.id) return res.sendStatus(403);
-      }
-
-      const data = { ...req.body };
-      if (!data.name && typeof data.title === 'string') data.name = data.title;
-      delete data.title;
-
-      if (typeof data.eventType === 'string') {
-        const et = resolveEventType(data.eventType);
-        if (!et) return res.status(400).json({ error: `Invalid eventType; allowed: ${allowedValues('EVENTTYPE').join(', ')}` });
-        data.eventType = et;
-      }
-      if (typeof data.ticketing === 'string') {
-        const tk = resolveTicketingType(data.ticketing);
-        if (!tk) return res.status(400).json({ error: `Invalid ticketing; allowed: ${allowedValues('TICKETINGTYPE').join(', ')}` });
-        data.ticketing = tk;
-      }
-      if (typeof data.alcoholPolicy === 'string') {
-        const ap = resolveAlcoholPolicy(data.alcoholPolicy);
-        if (!ap) return res.status(400).json({ error: `Invalid alcoholPolicy; allowed: ${allowedValues('ALCOHOLPOLICY').join(', ')}` });
-        data.alcoholPolicy = ap;
-      }
-
-      if (typeof data.venueId === 'number' && req.user.role !== 'ADMIN') {
-        const newVenue = await prisma.venueProfile.findUnique({ where: { id: data.venueId } });
-        if (!newVenue || newVenue.userId !== req.user.id) return res.sendStatus(403);
-      }
-
-      const event = await prisma.event.update({
-        where: { id },
-        data: {
-          ...data,
-          venue: typeof data.venueId === 'number' ? { connect: { id: data.venueId } } : undefined,
-          artists: Array.isArray(data.artistIds)
-            ? { set: data.artistIds.map(aid => ({ id: aid })) }
-            : undefined,
-        },
-        include: { venue: true, artists: true },
-      });
-      res.json(event);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
-    }
-  }
-);
 
 /* ───────────────────────────── HEALTH ───────────────────────────── */
 app.get('/', (_req, res) => res.send('🎵 API is up!'));

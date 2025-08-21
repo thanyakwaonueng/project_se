@@ -52,11 +52,11 @@ export default function Signup() {
         <div>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Role</label>
           <select className="form-select" value={role} onChange={(e) => setRole(e.target.value)}>
-            <option value="artist">ARTIST</option>
-            <option value="venue">VENUE</option>
+            <option value="ARTIST">ARTIST</option>
+            <option value="VENUE">VENUE</option>
             <option value="fan">FAN</option>
-            <option value="organizer">ORGANIZER</option>
-            <option value="admin">ADMIN</option>
+            <option value="ORGANIZER">ORGANIZER</option>
+            <option value="ADMIN">ADMIN</option>
           </select>
           <small>ระบบจะ map ให้ตรง enum อัตโนมัติ</small>
         </div>
