@@ -1,38 +1,22 @@
 /* body {
   padding-top: 50px;
 } */
- 
 
 .logo {
-  width: 68px;
+  width: 80px;
   height: auto;
 }
 
 #nav-style {
   font-size: 15px;
-
 }
 
-.navbar-dark {
-  background-color: #1c1c1c;
+.navbar {
   width: 100%;
-  position: sticky;
   top: 0;
-  z-index: 999;
-  padding: 6px 0; 
-  /* padding: 14px 0; */
+  padding: 20px 0;
   transition: all 0.3s ease;
 }
-
-.navbar-small {
-  padding: 4px 2px;
-}
-
-.navbar-small .logo {
-  width: 70px !important;
-  transition: width 0.3s ease;
-}
-
 
 .form-inline-nav {
   display: flex;
@@ -47,7 +31,7 @@
 .language-dropdown-btn {
   display: flex;
   align-items: center;
-  color: #1c1c1c;
+  color: #ffffff;
   text-decoration: none;
   background: none;
   border: none;
@@ -58,7 +42,6 @@
 }
 
 .language-dropdown-btn::after {
-  content: "▼";
   font-size: 0.6rem;
   margin-left: 6px;
   position: relative;
@@ -67,7 +50,7 @@
 }
 
 .hover-dropdown {
-  position: relative; 
+  position: relative;
 }
 
 .hover-dropdown .dropdown-menu {
@@ -82,7 +65,6 @@
   padding: 0.5rem 0;
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
   min-width: 8rem;
-  
 }
 
 /* Show dropdown on hover */
@@ -91,58 +73,178 @@
 }
 
 #nav-search {
-    border-radius: 20px;
-    background-color: #e7ecf0
-    
+  border-radius: 20px;
+  background-color: #e7ecf0;
 }
-
-#nav-style {
-    color: #f8f4ed;
-}
-
 
 #nav-signup-btn {
-    border-radius: 20px;
-    font-size: 15px;
-    /* background-color: #67b1f9; */
-    background-color: transparent;
-    border: 1px solid #aaa;
-    margin-left: 10px;
-    color: #ffffff;
-    transition: all 0.3s ease; /* เพิ่ม transition เพื่อให้เอฟเฟกต์ลื่นขึ้น */
-    /* font-weight: bold; */
+  border-radius: 20px;
+  font-size: 15px;
+  background-color: transparent;
+  border: 1px solid #aaa;
+  margin-left: 10px;
+  color: #ffffff;
+  transition: all 0.3s ease;
 }
 
 #nav-signup-btn:hover {
   background-color: #d6efff;
   color: #1c1c1c;
-  border: 1px solid #d6efff !important; 
-  /* transform: scale(1.1); */
+  border: 1px solid #d6efff !important;
 }
 
 #nav-signup-btn:active {
-  background-color: #808080; 
+  background-color: #808080;
   color: #ffffff;
-  transform: scale(0.95); 
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); 
+  transform: scale(0.95);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
-.nav-item {
-  display: block;
+.divider {
+  width: 80%;
+  height: 1px;
+  background-color: #231f20;
+  margin: 20px 20px;
+  opacity: 1.8;
+  border-radius: 2px;
 }
 
-.nav-item.nav-link {
-  display: block;             /* ให้กินพื้นที่เต็มแถบ */
+.navbar-right-inner {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.navbar-menu {
+  display: flex;
+  font-size: 16px;
+  gap: 30px;
+}
+
+/* Custom black navbar toggler */
+.custom-toggler {
+  border: none;
+}
+
+.custom-toggler .navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(0, 0, 0, 1)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+.custom-toggler:focus {
+  box-shadow: none;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 992px) {
+  .navbar-menu-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px 0;
+  }
+  
+  .navbar-menu-link {
+    height: auto;
+    padding: 10px 0;
+    justify-content: center;
+  }
+  
+  .navbar-collapse {
+    background-color: #b4b4b4;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+  
+  .language-dropdown-btn {
+    justify-content: center;
+    padding: 10px 0;
+    color: #ffffff !important;
+  }
+  
+  .dropdown-menu {
+    position: static !important;
+    transform: none !important;
+    margin: 10px 0;
+    background-color: #2c2c2c;
+    border: none;
+  }
+  
+  .dropdown-item {
+    color: #ffffff;
+    text-align: center;
+  }
+  
+  .dropdown-item:hover {
+    background-color: #3c3c3c;
+  }
+  
+  .navbar-auth-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 15px;
+  }
+  
+  #nav-signup-btn {
+    margin-left: 0;
+    text-align: center;
+  }
+}
+
+/* Desktop styles */
+@media (min-width: 993px) {
+  .navbar-menu-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+  }
+  
+  .navbar-auth-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+}
+
+/* ทำให้ link เป็น relative และซ่อน overflow */
+.navbar-menu-link {
+  color: #ffffff;
   position: relative;
+  overflow: hidden;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  outline: none;
   text-decoration: none;
-  color: #eaeaea;
-  height: 100%;
-  padding: 10px 15px;     
-  transition: all 0.3s ease-in-out;
 }
 
-.nav-item.nav-link:hover {
-  background-color: #ffffff; 
-  color: #1c1c1c!important;       
+.navbar-menu-link:focus,
+.navbar-menu-link:active {
+  outline: none;
+  box-shadow: none;
+}
 
+/* ตัวหนังสือเดิม */
+.navbar-menu-link .navbar-menu-text:first-child {
+  color: #1c1c1c;
+  display: block;
+  transition: transform 0.3s ease-in-out;
+}
+
+.navbar-menu-link .navbar-menu-text:last-child {
+  color: #1c1c1c;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* effect hover */
+.navbar-menu-link:hover .navbar-menu-text:first-child {
+  transform: translateY(-100%);
+}
+
+.navbar-menu-link:hover .navbar-menu-text:last-child {
+  transform: translateY(-100%);
 }

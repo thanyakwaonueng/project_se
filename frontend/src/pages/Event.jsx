@@ -137,7 +137,7 @@ export default function Event() {
   return (
     <div className="container">
       <h1 className="topic">EVENTS</h1>
-      <div className="divider"></div>
+      {/* <div className="divider"></div> */}
 
       <div className="month-select">
         <label htmlFor="month">Select Month: </label>

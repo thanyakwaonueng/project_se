@@ -3,6 +3,7 @@ import '../css/Home.css';
 
 export default function Home() {
   return (
+    
     <div className="container-1">
       <div className="text-section">
         <h1 className="overlay-text-1">Chiang Mai Original</h1>

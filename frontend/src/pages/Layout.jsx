@@ -9,7 +9,17 @@ export default function Layout() {
     <AuthProvider>
       <div className="d-flex flex-column" style={{ minHeight: '100vh' }}>
         <Navbar />
-        <main style={{ flex: 1 }}>
+          <div
+            style={{
+              width: "80%",
+              height: "1.2px",
+              backgroundColor: "#080808ff",
+              margin: "-30px auto", 
+            }}
+          ></div>
+
+          <main style={{ flex: 1 }}>
+          
           <Outlet />
         </main>
         <Footer />
