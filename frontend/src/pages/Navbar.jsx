@@ -80,9 +80,8 @@ export default function Navbar() {
             <div className="navbar-menu-text">LOGIN</div>
           </a>
 
-          <a href="/signup" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
-            <div className="navbar-menu-text">SIGN UP</div>
-            <div className="navbar-menu-text">SIGN UP</div>
+          <a href="/signup" className="navbar-menu-link w-inline-block" id="nav-signup-btn" onClick={closeMobileMenu}>
+            SIGN UP
           </a>
         </>
       );
