@@ -18,7 +18,6 @@ export default function Navbar() {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  // Close mobile menu when a link is clicked
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
@@ -125,8 +124,9 @@ export default function Navbar() {
   }
 
   return (
-    <nav className={`navbar navbar-expand-lg navbar-dark `}>
-      <div className="container">
+    <nav className={`navbar navbar-expand-lg navbar-dark full-width-navbar ${isScrolled ? 'navbar-small shadow' : ''}`}>
+      {/* ใช้ container-fluid แทน container และเพิ่มคลาส full-width-navbar */}
+      <div className="container-fluid navbar-container">
         {/* Logo and mobile menu toggle */}
         <div className="d-flex justify-content-between w-50 align-items-center">
           <Link to="/" className="navbar-brand" onClick={closeMobileMenu}>
@@ -175,7 +175,6 @@ export default function Navbar() {
           </div>
         </div>
       </div>
-      
     </nav>
   );
 }

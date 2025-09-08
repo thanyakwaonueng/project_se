@@ -11,10 +11,10 @@ export default function Layout() {
         <Navbar />
           <div
             style={{
-              width: "80%",
+              width: "90%",
               height: "1.2px",
               backgroundColor: "#080808ff",
-              margin: "-30px auto", 
+              margin: "30px auto", 
             }}
           ></div>
 
