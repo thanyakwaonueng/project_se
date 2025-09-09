@@ -23,7 +23,7 @@ async function main() {
       label: "ADOR",
       instagramUrl: "https://instagram.com/newjeans_official",
       spotifyUrl: "https://open.spotify.com/artist/6HvZYsbFfjnjFrWF950C9d",
-      profilePhotoUrl: "https://i.scdn.co/image/ab6761610000e5eb5ad6314e7a1db1c57a97dc64"
+      profilePhotoUrl: "https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg"
     },
     {
       name: "IU",
@@ -35,7 +35,7 @@ async function main() {
       label: "EDAM Entertainment",
       instagramUrl: "https://instagram.com/dlwlrma",
       spotifyUrl: "https://open.spotify.com/artist/3HqSLMAZ3g3d5poNaI7GOU",
-      profilePhotoUrl: "https://i.scdn.co/image/ab6761610000e5eb0b4f98ad5b5c6b6b29c83bb8"
+      profilePhotoUrl: "https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg"
     },
   ];
 

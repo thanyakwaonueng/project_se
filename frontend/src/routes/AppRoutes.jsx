@@ -13,6 +13,7 @@ import ArtistProfileForm from '../pages/ArtistProfileForm';
 import VenueProfileForm from '../pages/VenueProfileForm';
 import CreateArtist from '../pages/CreateArtist';
 import CreateVenue from '../pages/CreateVenue';
+import CreateEvent from '../pages/CreateEvent';
 import ProtectedRoute from '../components/ProtectedRoute';
 import EventDetail from '../pages/EventDetail';
 import VenueMap from '../pages/VenueMap';
@@ -58,6 +59,12 @@ export default function AppRoutes() {
               //</ProtectedRoute>
                 //<VenueProfileForm />
                 <CreateVenue/>
+            }
+          />
+          <Route
+            path="/me/event"
+            element={
+              <CreateEvent/>
             }
           />
 

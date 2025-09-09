@@ -163,49 +163,85 @@ app.get('/artists/:id', async (req, res) => {
 });
 
 app.get("/groups", async (req, res) => {
-  const artists = await prisma.artistProfile.findMany({
-    include: { events: { include: { venue: true } } }
-  });
+  try {
+    // fetch artists and their artistEvents -> event -> venue
+    const artists = await prisma.artistProfile.findMany({
+      include: {
+        artistEvents: {
+          include: {
+            event: {
+              include: { venue: true }
+            }
+          }
+        }
+      }
+    });
 
-  const groups = artists.map(a => ({
-    id: a.id,
-    slug: a.name.toLowerCase().replace(/\s+/g, "-"),  // generate slug
-    name: a.name,
-    image: a.profilePhotoUrl ?? "/img/default.jpg",
-    description: a.description ?? "",
-    details: a.genre ?? "",
-    stats: {
-      members: a.memberCount ?? 1,
-      debut: a.foundingYear ? String(a.foundingYear) : "N/A",
-      followers: "N/A" // (if you have a followers table/field later)
-    },
-    followersCount: 0, // placeholder
-    artists: [],       // if you want members, you’ll need a `Member` model
-    socials: {
-      instagram: a.instagramUrl,
-      youtube: a.youtubeUrl,
-      spotify: a.spotifyUrl
-    },
-    schedule: a.events.map(e => ({
-      id: e.id,
-      dateISO: e.date.toISOString(),
-      title: e.name,
-      venue: "",   // you can include `venue` in the query if needed
-      city: "",
-      ticketUrl: e.ticketLink ?? "#"
-    })),
-    techRider: {
-      summary: "",      // need a field in schema if you want to store this
-      items: [],
-      downloadUrl: a.riderUrl ?? ""
-    },
-    playlistEmbedUrl: a.spotifyUrl
-      ? a.spotifyUrl.replace("open.spotify.com/artist", "open.spotify.com/embed/artist")
-      : null
-  }));
+    const groups = artists.map(a => {
+      // build schedule from the join rows (artistEvents)
+      const schedule = (Array.isArray(a.artistEvents) ? a.artistEvents : [])
+        .map(ae => {
+          const e = ae.event;
+          if (!e) return null; // defensive: if join row exists but event missing
+          return {
+            id: e.id,
+            dateISO: e.date.toISOString(),
+            title: e.name,
+            venue: e.venue?.name ?? "",
+            city: e.venue?.locationUrl ? "" : "", // replace with logic if you store city separately
+            ticketUrl: e.ticketLink ?? "#",
+            // optionally include metadata from the join model (role, order, fee, etc.)
+            performanceRole: ae.role ?? null,
+            performanceOrder: ae.order ?? null,
+            performanceFee: ae.fee ?? null
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => new Date(a.dateISO) - new Date(b.dateISO));
 
-  res.json(groups);
+      return {
+        id: a.id,
+        slug: a.name.toLowerCase().replace(/\s+/g, "-"),
+        name: a.name,
+        //image: a.profilePhotoUrl ?? "/img/default.jpg",
+        image: a.profilePhotoUrl ?? "https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg",
+        description: a.description ?? "",
+        details: a.genre ?? "",
+        stats: {
+          members: a.memberCount ?? 1,
+          debut: a.foundingYear ? String(a.foundingYear) : "N/A",
+          followers: "N/A"
+        },
+        followersCount: 0,
+        artists: [],
+
+        socials: {
+          instagram: a.instagramUrl,
+          youtube: a.youtubeUrl,
+          spotify: a.spotifyUrl
+        },
+
+        schedule, // mapped and sorted
+
+        techRider: {
+          summary: "", // add fields in schema if you want real data
+          items: [],
+          downloadUrl: a.riderUrl ?? ""
+        },
+
+        playlistEmbedUrl: a.spotifyUrl
+          ? a.spotifyUrl.replace("open.spotify.com/artist", "open.spotify.com/embed/artist")
+          : null
+      };
+    });
+
+    res.json(groups);
+  } catch (err) {
+    console.error("GET /groups error:", err);
+    res.status(500).json({ error: "Failed to fetch groups" });
+  }
 });
+
 
 /* ───────────────────────────── VENUES (POST = upsert by userId) ─────────── */
 app.post('/venues', authMiddleware, async (req, res) => {
@@ -263,109 +299,107 @@ app.get('/venues/:id', async (req, res) => {
    - ถ้ามี body.id → update (ต้องเป็นของ venue ตัวเอง เว้นแต่ ADMIN)
    - ถ้าไม่มี id → create (ต้องสร้างใน venue ที่เป็นของตัวเอง เว้นแต่ ADMIN)
 */
-app.post(
-  '/events',
-  authMiddleware,
-  requireRole('VENUE', 'ADMIN', 'ORGANIZER'),
-  async (req, res) => {
-    try {
-      const {
-        id,
-        artistIds = [],
-        venueId,
-        eventType,
-        ticketing,
-        alcoholPolicy,
-        title,
-        ...rest
-      } = req.body || {};
 
-      if (id) {
-        const current = await prisma.event.findUnique({
-          where: { id: Number(id) },
-          include: { venue: true },
+/* ───────────────────────────── EVENTS ─────────── */
+app.post('/events', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const data = req.body;
+
+    //make sure this user has venue profile
+    const venue = await prisma.venueProfile.findUnique({
+      where: { userId },
+    });
+
+    if(!venue){
+        return res.status(400).json({ error: "Venue profile not found for this user" });
+    }
+
+    let event;
+
+    if(data.id){ //event already exist -> check credential -> then do update if user own this event
+
+      //check if event exists and belongs to this user(venue, admin, sp-admin)
+      const existing = await prisma.event.findUnique({
+        where: { id: data.id },
+      });
+
+      if(existing && existing.venueId === venue.id){
+        //update existing
+        event = await prisma.event.update({
+          where: {id: data.id},
+          data,
         });
-        if (!current) return res.status(404).json({ error: 'Event not found' });
-
-        if (req.user.role !== 'ADMIN') {
-          if (!current.venue || current.venue.userId !== req.user.id) {
-            return res.sendStatus(403);
-          }
-        }
-
-        const data = {
-          ...rest,
-          ...(rest.name ? { name: rest.name } : (typeof title === 'string' ? { name: title } : {})),
-        };
-        if (eventType) data.eventType = eventType;
-        if (ticketing) data.ticketing = ticketing;
-        if (alcoholPolicy) data.alcoholPolicy = alcoholPolicy;
-
-        if (typeof venueId === 'number' && req.user.role !== 'ADMIN') {
-          const newVenue = await prisma.venueProfile.findUnique({ where: { id: venueId } });
-          if (!newVenue || newVenue.userId !== req.user.id) return res.sendStatus(403);
-        }
-
-        const updated = await prisma.event.update({
-          where: { id: Number(id) },
+      } else { 
+        // create new (ignore the passed id to prevent conflict) 
+        const { id, ...createData } = data;
+        event = await prisma.event.create({
           data: {
-            ...data,
-            venue: typeof venueId === 'number' ? { connect: { id: venueId } } : undefined,
-            artists: Array.isArray(artistIds)
-              ? { set: artistIds.map((aid) => ({ id: aid })) }
-              : undefined,
+            ...createData, 
+            venue: { connect: { id: venue.id } },
           },
-          include: { venue: true, artists: true },
         });
-        return res.json(updated);
       }
-
-      if (!venueId) return res.status(400).json({ error: 'venueId is required' });
-
-      if (req.user.role !== 'ADMIN') {
-        const venue = await prisma.venueProfile.findUnique({ where: { id: venueId } });
-        if (!venue || venue.userId !== req.user.id) return res.sendStatus(403);
-      }
-
-      const data = {
-        ...rest,
-        name: rest.name || (typeof title === 'string' ? title : undefined),
-      };
-        if (eventType) data.eventType = eventType;
-        if (ticketing) data.ticketing = ticketing;
-        if (alcoholPolicy) data.alcoholPolicy = alcoholPolicy;
-
-      const created = await prisma.event.create({
+    } else {
+      // no id provided -> always create
+      event = await prisma.event.create({
         data: {
           ...data,
-          venue: { connect: { id: venueId } },
-          artists: artistIds.length ? { connect: artistIds.map((id) => ({ id })) } : undefined,
+          venue: { connect: { id: venue.id} },
         },
-        include: { venue: true, artists: true },
       });
-      res.status(201).json(created);
-    } catch (err) {
-      console.error('EVENT_UPSERT_ERROR', err);
-      res.status(400).json({ error: err.message });
     }
+
+    return res.json(event);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not create/update event' });
   }
-);
+});
 
+/* ───────────────────────────── EVENTS (GET all) ─────────── */
 app.get('/events', async (_req, res) => {
-  const events = await prisma.event.findMany({
-    include: { venue: true, artists: true },
-  });
-  res.json(events);
+  try {
+    const events = await prisma.event.findMany({
+      include: {
+        venue: true,
+        artistEvents: {
+          include: { artist: true },
+        },
+      },
+    });
+    res.json(events);
+  } catch (err) {
+    console.error('GET /events error:', err);
+    res.status(500).json({ error: 'Could not fetch events' });
+  }
 });
 
+/* ───────────────────────────── EVENT (GET by id) ─────────── */
 app.get('/events/:id', async (req, res) => {
-  const id = +req.params.id;
-  const ev = await prisma.event.findUnique({
-    where: { id },
-    include: { venue: true, artists: true },
-  });
-  ev ? res.json(ev) : res.status(404).send('Event not found');
+  try {
+    const id = +req.params.id;
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        venue: true,
+        artistEvents: {
+          include: { artist: true },
+        },
+      },
+    });
+
+    event
+      ? res.json(event)
+      : res.status(404).send('Event not found');
+  } catch (err) {
+    console.error('GET /events/:id error:', err);
+    res.status(500).json({ error: 'Could not fetch event' });
+  }
 });
+
+
 
 /* ───────────────────────────── HEALTH ───────────────────────────── */
 app.get('/', (_req, res) => res.send('🎵 API is up!'));

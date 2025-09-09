@@ -66,8 +66,9 @@ model ArtistProfile {
 
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId           Int       @unique
-
-  events           Event[]   @relation("ArtistPerformances")
+    
+  // new explicit relation
+  artistEvents     ArtistEvent[]
 }
 
 model VenueProfile {
@@ -151,9 +152,34 @@ model Event {
 
   venue            VenueProfile   @relation("VenueEvents", fields: [venueId], references: [id], onDelete: Cascade)
   venueId          Int
-
-  artists          ArtistProfile[] @relation("ArtistPerformances")
+    
+  // new explicit relation
+  artistEvents     ArtistEvent[]
 }
+
+// new join model that get from a fucking GPT
+model ArtistEvent {
+  artistId  Int
+  eventId   Int
+
+  // metadata fields you wanted
+  role      String?    // "headliner" | "support" etc
+  fee       Int?       // use integer cents if you're storing money, or Decimal
+  order     Int?       // lineup order
+  status    String?    // or make this an enum
+  notes     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // relations
+  artist    ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  event     Event         @relation(fields: [eventId],  references: [id], onDelete: Cascade)
+
+  @@id([artistId, eventId])   // composite PK prevents duplicate pair
+  @@index([eventId])
+  @@index([artistId])
+}
+
 
 enum EventType {
   OUTDOOR
