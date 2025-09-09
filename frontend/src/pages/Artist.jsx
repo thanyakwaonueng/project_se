@@ -9,6 +9,8 @@ const loadFollowed = () => { try { return JSON.parse(localStorage.getItem(FOLLOW
 const saveFollowed = (obj) => { try { localStorage.setItem(FOLLOW_KEY, JSON.stringify(obj)); } catch {} };
 
 /** ---------- Mock Data (มี playlist ของ NewJeans) ---------- */
+/**
+
 const groups = [
   {
     id: 1,
@@ -53,6 +55,8 @@ const groups = [
   }
 ];
 
+*/
+
 /** ---------- Utilities ---------- */
 const formatCompact = (n) => Intl.NumberFormat(undefined, { notation: "compact" }).format(n);
 const dtf = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -61,7 +65,9 @@ export default function Artist() {
 
   /** ----------BEGIN- Mock Data (version ไม่ hardcode, fetch มาจาก db) ---------- */
   /** ---------- ยังไม่เสร็จ เสร็จละค่อยเปิดคอมเม้น ---------- */
-
+  const [groups, setGroups] = useState([]);  
+  const [loadingGroups, setLoadingGroups] = useState(true);
+  const [groupsError, setGroupsError] = useState(null);
   /*
   */
   /** ----------END- Mock Data (version ไม่ hardcode, fetch มาจาก db) ---------- */
@@ -85,13 +91,43 @@ export default function Artist() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const lastFocusRef = useRef(null);
+    
+  // fetched on mount for populating groups
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchGroups = async () => {
+      setLoadingGroups(true);
+      setGroupsError(null);
+      try {
+        // NOTE: use the route your backend exposes:
+        const res = await axios.get("/api/groups", { withCredentials: true });
+        if (!cancelled) {
+          setGroups(res.data || []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setGroupsError(err);
+          console.error("Error fetching groups:", err);
+        }
+      } finally {
+        if (!cancelled) setLoadingGroups(false);
+      }
+    };
+
+    fetchGroups();
+
+    return () => { cancelled = true; };
+  }, []);
+
+
 
   // เปิดวงตาม /page_artists/:slug
   useEffect(() => {
     if (!slug) { setSelectedGroup(null); return; }
     const found = groups.find(g => g.slug === slug);
     setSelectedGroup(found || null);
-  }, [slug]);
+  }, [slug, groups]); //KUYY GU GAE TONG NII, Tanya add groups to that left fucking array
 
   // จำสถานะ follow
   useEffect(() => { saveFollowed(followed); }, [followed]);
@@ -130,7 +166,7 @@ export default function Artist() {
       );
       return inGroup || inMembers;
     });
-  }, [activeFilter, searchQuery]);
+  }, [groups, activeFilter, searchQuery]); //KUYY GU GAE TONG NII, Tanya add groups to that left fucking array
 
   // สร้าง Upcoming / Past list
   const now = new Date();
