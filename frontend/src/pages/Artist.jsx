@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import axios from 'axios';
 import "../css/Artist.css";
 
 /** ---------- LocalStorage: สถานะการติดตาม ---------- */
@@ -57,6 +58,17 @@ const formatCompact = (n) => Intl.NumberFormat(undefined, { notation: "compact" 
 const dtf = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
 export default function Artist() {
+
+  /** ----------BEGIN- Mock Data (version ไม่ hardcode, fetch มาจาก db) ---------- */
+  /** ---------- ยังไม่เสร็จ เสร็จละค่อยเปิดคอมเม้น ---------- */
+
+  /*
+  */
+  /** ----------END- Mock Data (version ไม่ hardcode, fetch มาจาก db) ---------- */
+
+
+
+
   // รายการวง (All/Popular/New + Search)
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");

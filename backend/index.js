@@ -162,6 +162,51 @@ app.get('/artists/:id', async (req, res) => {
   artist ? res.json(artist) : res.status(404).send('Artist not found');
 });
 
+app.get("/groups", async (req, res) => {
+  const artists = await prisma.artistProfile.findMany({
+    include: { events: { include: { venue: true } } }
+  });
+
+  const groups = artists.map(a => ({
+    id: a.id,
+    slug: a.name.toLowerCase().replace(/\s+/g, "-"),  // generate slug
+    name: a.name,
+    image: a.profilePhotoUrl ?? "/img/default.jpg",
+    description: a.description ?? "",
+    details: a.genre ?? "",
+    stats: {
+      members: a.memberCount ?? 1,
+      debut: a.foundingYear ? String(a.foundingYear) : "N/A",
+      followers: "N/A" // (if you have a followers table/field later)
+    },
+    followersCount: 0, // placeholder
+    artists: [],       // if you want members, you’ll need a `Member` model
+    socials: {
+      instagram: a.instagramUrl,
+      youtube: a.youtubeUrl,
+      spotify: a.spotifyUrl
+    },
+    schedule: a.events.map(e => ({
+      id: e.id,
+      dateISO: e.date.toISOString(),
+      title: e.name,
+      venue: "",   // you can include `venue` in the query if needed
+      city: "",
+      ticketUrl: e.ticketLink ?? "#"
+    })),
+    techRider: {
+      summary: "",      // need a field in schema if you want to store this
+      items: [],
+      downloadUrl: a.riderUrl ?? ""
+    },
+    playlistEmbedUrl: a.spotifyUrl
+      ? a.spotifyUrl.replace("open.spotify.com/artist", "open.spotify.com/embed/artist")
+      : null
+  }));
+
+  res.json(groups);
+});
+
 /* ───────────────────────────── VENUES (POST = upsert by userId) ─────────── */
 app.post('/venues', authMiddleware, async (req, res) => {
   try {

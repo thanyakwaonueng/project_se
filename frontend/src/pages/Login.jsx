@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../lib/auth';
-import { extractErrorMessage } from '../lib/api';
+//import { useAuth } from '../lib/auth';
+//import { extractErrorMessage } from '../lib/api';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  //const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
@@ -14,14 +15,15 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setErr('');
-    setBusy(true);
     try {
-      await login(email, password);
-      navigate('/');
-    } catch (e2) {
-      setErr(extractErrorMessage(e2, 'Login failed'));
-    } finally {
-      setBusy(false);
+      const res = await axios.post('/api/auth/login', {
+        email,
+        password,
+      });
+
+      navigate('/'); // redirect
+    } catch (err) {
+      setError(err.response?.data?.error || 'Login failed');
     }
   };
 

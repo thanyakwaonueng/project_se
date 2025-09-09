@@ -1,29 +1,42 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../lib/auth';
-import { extractErrorMessage } from '../lib/api';
+//import { useAuth } from '../lib/auth';
+//import { extractErrorMessage } from '../lib/api';
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { signup } = useAuth();
+  //const { signup } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('artist'); // ดีฟอลต์
+  const [role, setRole] = useState('ARTIST'); // ดีฟอลต์
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setErr('');
-    setBusy(true);
     try {
-      await signup(email, password, role);
-      navigate('/');
-    } catch (e2) {
-      setErr(extractErrorMessage(e2, 'Sign up failed'));
-    } finally {
-      setBusy(false);
+      await axios.post('/api/users', {
+        email,
+        password,
+        role,
+      });
+
+      // Auto login after signup (optional)
+      try {
+        const res = await axios.post('/api/auth/login', {
+          email,
+          password,
+        });
+      } catch (err) {
+        setErr(err.response?.data?.error || 'Login failed');
+      }
+
+      navigate('/'); // redirect
+    } catch (err) {
+      setErr(err.response?.data?.error || 'Signup failed');
     }
   };
 
@@ -54,7 +67,7 @@ export default function Signup() {
           <select className="form-select" value={role} onChange={(e) => setRole(e.target.value)}>
             <option value="ARTIST">ARTIST</option>
             <option value="VENUE">VENUE</option>
-            <option value="fan">FAN</option>
+            <option value="FAN">FAN</option>
             <option value="ORGANIZER">ORGANIZER</option>
             <option value="ADMIN">ADMIN</option>
           </select>
