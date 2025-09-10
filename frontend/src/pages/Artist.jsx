@@ -186,6 +186,15 @@ export default function Artist() {
       {/* ====== รายการวงทั้งหมด ====== */}
       {!selectedGroup ? (
         <>
+          <h1 className="artist-heading">
+              Melody <br />
+            <span className="memories-line">& Memories</span>
+          </h1>
+
+          <h6 className="artist-heading-detail">
+            Music is the language of emotions when words are not enough.
+          </h6>
+
           {/* Filter + Search */}
           <div className="seamless-filter-search a-card-min">
             <div className="connected-filter-tabs" role="tablist" aria-label="artist filters">
@@ -213,36 +222,37 @@ export default function Artist() {
 
           {/* Grid รายการวง */}
           <div className="group-grid">
-            {filteredGroups.map(group => (
-              <Link
-                key={group.id}
-                to={`/page_artists/${group.slug}`}
-                className="group-card a-card-min"
-                ref={lastFocusRef}
-                onClick={() => { setSelectedGroup(group); }}
-              >
-                <div className="group-card-image">
-                  <img
-                    src={group.image}
-                    alt={group.name}
-                    loading="lazy"
-                    onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
-                  />
+            {filteredGroups.map(group => (  
+              <div key={group.id} className="group-card-wrap" ref={lastFocusRef}>
+                <Link
+                  to={`/page_artists/${group.slug}`}
+                  className="group-card a-card-min"
+                  onClick={() => { setSelectedGroup(group); }}
+                >
+                  <div className="group-card-image">
+                    <img
+                      src={group.image}
+                      alt={group.name}
+                      loading="lazy"
+                      onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
+                    />
+                  </div>
+                </Link>
+
+                {/* ชื่อวงอยู่นอกการ์ด */}
+                <div className="group-card-caption">
+                  <h3>{group.name}</h3>
                 </div>
-                <div className="group-card-overlay">
-                  <h3 className="a-title-18">{group.name}</h3>
-                  <p className="a-line-clamp2">{group.description}</p>
-                </div>
-              </Link>
+              </div>
             ))}
           </div>
         </>
       ) : (
         /* ====== รายละเอียดวง (เลย์เอาต์ 3 คอลัมน์) ====== */
         <div className="group-detail-view a-fullwide">
-          <button onClick={() => { setSelectedGroup(null); navigate("/page_artists"); }} className="back-btn">
+          {/* <button onClick={() => { setSelectedGroup(null); navigate("/page_artists"); }} className="back-btn">
             ← Back to Groups
-          </button>
+          </button> */}
 
           {/* HERO GRID: ซ้ายรูป · กลางข้อมูล/ปุ่ม · ขวา Spotify */}
           <div className="a-hero-grid">
