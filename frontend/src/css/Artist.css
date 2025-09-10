@@ -28,53 +28,96 @@
   outline-offset: 2px;
 }
 
+/* ===== HEADING เหนือ filter ===== */
+.artist-heading {
+  font-family: 'Poppins', sans-serif; /* หรือใช้ฟอนต์เดียวกับ heading ของเว็บ */
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: #231f20;
+  text-align: left;     
+  margin: 0px 0 0px;    /* ระยะด้านบนและล่าง */
+  line-height: 1.5;
+  padding-left: 80px;
+}
+
+/* จัด Melody เป็นกลาง แต่ Memories เคาะไปทางขวา */
+.artist-heading .memories-line {
+  display: inline-block;
+  margin-left: 60px;  /* ปรับตรงนี้เพื่อเคาะไปขวา */
+}
+
+.artist-heading-detail {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  color: #717171;           /* เทาอ่อนอ่านง่าย */
+  text-align: left;
+  margin-bottom: 60px;   /* เว้นล่างก่อน filter bar */
+  line-height: 1.4;
+  padding-left: 80px;
+  margin-left: 60px;  /* ปรับตรงนี้เพื่อเคาะไปขวา */
+}
+
 
 /* ========== 1) FILTER + SEARCH BAR (หน้า list วง) ========== */
 
-.seamless-filter-search {
-  display: flex;
-  width: 100%;
-  border-radius: 30px;
-  overflow: hidden;          /* ระวัง: อาจตัด ring เงาโฟกัสของลูก */
-  /* gap: 8px;                  เพิ่มช่องไฟเล็กน้อย */
-}
-
-.connected-filter-tabs {
-  display: flex;
-}
-
-.connected-filter-tab {
-  padding: 12px 150px;       /* เดสก์ท็อปกว้าง—จะลดบนจอเล็กด้านล่าง */
-  border: none;
-  background: #e0e0e0;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color .25s ease, color .25s ease, transform .06s ease;
-  white-space: nowrap;
-  position: relative;
-  border-radius: 20px;
-}
-.connected-filter-tab.active { background:#333; color:#fff; }
-.connected-filter-tab:not(.active):hover { background:#919191; }
-
-.connected-search-container {
+.artist-container .seamless-filter-search {
   display: flex;
   align-items: center;
-  background: #e0e0e0;
-  flex-grow: 1;
-  padding: 0 15px;
-  border-radius: 20px;
-  border: 1px solid #eee;
+  background: transparent;/* ไม่มีพื้นหลังทั้งแทบ */
+  border: 0;
+  border-radius: 0;
+  overflow: visible;       /* ไม่ตัดลูกๆ */
+  padding: 0;              /* ไม่ให้ดูเป็นแถบ */
+  padding-left: 40px;
+  padding-right: 40px;
 }
-.connected-search-box {
-  background: #e0e0e0;
+
+.artist-container .connected-filter-tabs {
+  display: flex;
+  gap: 30px;               /* ระยะระหว่างปุ่มแต่ละอัน */
+  background: transparent; /* กันไม่ให้มีสีฉาบหลังปุ่ม */
+}
+
+.artist-container .connected-filter-tab {
+  font-family: 'Poppins', sans-serif;
+  padding: 12px 140px;   /* ลดลงจาก 80px เพื่อไม่กว้างเกิน */
+  border: 1px solid #000; /* ขอบสีดำ */
+  background: #f6f6f6;
+  font-size: 14px;
+  border-radius: 30px;
+  transition: background-color .4s ease, color .4s ease, transform .4s ease;
+}
+
+.artist-container .connected-filter-tab.active { 
+  background:#333; color:#fff; 
+}
+
+.artist-container .connected-filter-tab:not(.active):hover { 
+  background:#b6b6b6; 
+}
+
+.artist-container .connected-search-container {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  background: transparent; /* ไม่ทึบทั้งแถบ */
+  border: 1px solid #000;
+  flex-grow: 1;
+  padding: 0 12px;
+  border-radius: 4px;
+  margin-left: 30px; 
+}
+.artist-container .connected-search-box {
+  font-family: 'Poppins', sans-serif;
+  background: transparent; /* ไม่ใส่สีพื้นให้ดูเป็นกล่องจริงๆ */
   width: 100%;
   padding: 12px;
   border: none;
   font-size: 14px;
   outline: none;
 }
-.search-icon {
+.artist-container .search-icon {
   background: none;
   border: none;
   color: #666;
@@ -86,50 +129,92 @@
 
 .group-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 50px;
-  padding: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* ยืดเป็นผืนผ้า */
+  column-gap: 70px;   /* ระยะห่างแนวนอน (ซ้าย-ขวา) */
+  row-gap: 40px;       /* ระยะห่างแนวตั้ง (บน-ล่าง) */
+  padding: 40px;
+  padding-left: 40px;
+  padding-right: 40px;
 }
 
 .group-card {
   position: relative;
+  border: 1px solid #000000 !important;  /* กรอบการ์ด */
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background: #fff;
   cursor: pointer;
-  aspect-ratio: 1 / 1;
-  transition: transform .25s ease, box-shadow .25s ease;
-  background: #000;
-}
-.group-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  transition: all 0.8s ease;
 }
 
-.group-card-image,
+.group-card:hover {
+  /* transform: translateY(-5px); */
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  /* border-color: #000; */
+}
+
+/* สัดส่วนรูป */
+.group-card-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;       /* ผืนผ้าแนวนอน */
+  overflow: hidden;
+}
+
 .group-card-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform .6s ease;
 }
-.group-card:hover .group-card-image img { transform: scale(1.05); }
-.group-card-image img { transition: transform .4s ease; }
 
-.group-card-overlay {
+.group-card:hover .group-card-image img { 
+  transform: scale(1.05); 
+}
+
+.group-card-image img { 
+  transition: transform .4s ease;
+}
+
+.group-card-wrap {
+  display: flex;
+  flex-direction: column;
+  /* align-items: center;   */
+  gap: 18px;             
+}
+
+.group-card-caption {
+  width: 100%;          /* กินเต็มความกว้างการ์ด */
+  text-align: left;     /* จัดตัวอักษรชิดซ้าย */
+  padding-left: 12px;   /* ขยับเข้ามาทางขวานิดหน่อย */
+}
+
+.group-card-caption h3 {
+  font-family: 'Poppins', sans-serif;
+  margin: 0;
+  font-size: 18px;
+  /* font-weight: 700; */
+  color: #231f20;
+}
+
+/* .group-card-overlay {
   position: absolute;
   inset: auto 0 0 0;
   background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
   color: #fff;
   padding: 16px 20px;
 }
-.a-title-18 { font-size: 18px; font-weight: 800; margin: 0 0 6px; }
+
+.a-title-18 { 
+  font-size: 18px; font-weight: 800; margin: 0 0 6px; 
+}
+
 .a-line-clamp2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
+} */
 
 
 /* ========== 3) GROUP DETAIL VIEW (เลย์เอาต์ 3 คอลัมน์) ========== */
@@ -346,7 +431,7 @@
 .modal-image img { width:100%; height:100%; object-fit:cover; display:block; }
 .modal-info { padding:25px; overflow-y:auto; flex-grow:1; max-height: calc(80vh - 300px); }
 .modal-info h2 { font-size:24px; margin-bottom:10px; }
-.position, .birth { font-size:16px; margin-bottom:8px; }
+.position{ font-size:16px; margin-bottom:8px; }
 .details { font-size:15px; line-height:1.6; margin-bottom:15px; }
 
 .close-btn {
