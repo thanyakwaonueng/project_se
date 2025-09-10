@@ -100,7 +100,7 @@ model VenueProfile {
   tiktokUrl       String?
   websiteUrl      String?
 
-  // ✅ พิกัดสำหรับแผนที่
+  //  พิกัดสำหรับแผนที่
   latitude  Float?
   longitude Float?
 
@@ -168,10 +168,10 @@ model ArtistEvent {
   eventId  Int
 
   // metadata fields you wanted
-  role      String? // "headliner" | "support" etc
-  fee       Int? // use integer cents if you're storing money, or Decimal
-  order     Int? // lineup order
-  status    String? // or make this an enum
+  role      String?    // "headliner" | "support" etc
+  fee       Int?       // use integer cents if you're storing money, or Decimal
+  order     Int?       // lineup order
+  status   ArtistEventStatus @default(PENDING)
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -183,6 +183,12 @@ model ArtistEvent {
   @@id([artistId, eventId]) // composite PK prevents duplicate pair
   @@index([eventId])
   @@index([artistId])
+}
+
+enum ArtistEventStatus {
+  PENDING   // venue invited, waiting for artist approval
+  ACCEPTED  // artist approved
+  DECLINED  // artist rejected
 }
 
 enum EventType {
@@ -199,12 +205,22 @@ enum TicketingType {
   ONSITE_SALES
 }
 
+
+
+
+
+
+
+
+//สถานะคำขอ
 enum RequestStatus {
   PENDING
   APPROVED
   REJECTED
 }
 
+
+//เก็บคำขอเป็น artist,venue,ORGANIZER
 model RoleRequest {
   id            Int           @id @default(autoincrement())
   user          User          @relation("RoleRequestUser", fields: [userId], references: [id]) // ⬅️ ตั้งชื่อ relation
@@ -222,6 +238,15 @@ model RoleRequest {
   @@index([userId])
   @@index([status])
 }
+
+
+
+
+
+
+
+
+//ตารางnoti
 
 model Notification {
   id        Int      @id @default(autoincrement())
