@@ -423,6 +423,63 @@ app.get('/events/:id', async (req, res) => {
 });
 
 
+/* ───────────────────────────── VENUE SENDS INVITE TO ARTIST ─────────── */
+
+app.post('/artist-events/invite', authMiddleware, async (req, res) => {
+  try {
+    const { artistId, eventId, ...rest } = req.body;
+
+    const invite = await prisma.artistEvent.upsert({
+      where: { artistId_eventId: { artistId, eventId } },
+      update: { ...rest, status: "PENDING" },
+      create: { artistId, eventId, ...rest, status: "PENDING" },
+    });
+
+    res.status(201).json(invite);
+  } catch (err) {
+    console.error("Invite error:", err);
+    res.status(500).json({ error: "Could not send invite" });
+  }
+});
+
+/* ───────────────────────────── ARTIST RESPONDS TO INVITE(APPROVE/DECLINE) ─────────── */
+
+app.post('/artist-events/respond', authMiddleware, async (req, res) => {
+  try {
+    const { artistId, eventId, decision } = req.body; // decision: "ACCEPTED" or "DECLINED"
+
+    if (!["ACCEPTED", "DECLINED"].includes(decision)) {
+      return res.status(400).json({ error: "Invalid decision" });
+    }
+
+    const updated = await prisma.artistEvent.update({
+      where: { artistId_eventId: { artistId, eventId } },
+      data: { status: decision },
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error("Respond error:", err);
+    res.status(500).json({ error: "Could not respond to invite" });
+  }
+});
+
+/* ───────────────────────────── GET PENDING INVITES FOR AN ARTIST ─────────── */
+
+app.get('/artist-events/pending/:artistId', authMiddleware, async (req, res) => {
+  try {
+    const { artistId } = req.params;
+    const pending = await prisma.artistEvent.findMany({
+      where: { artistId: Number(artistId), status: "PENDING" },
+      include: { event: true, artist: true },
+    });
+    res.json(pending);
+  } catch (err) {
+    console.error("Get pending invites error:", err);
+    res.status(500).json({ error: "Could not fetch pending invites" });
+  }
+});
+
 
 /* ───────────────────────────── HEALTH ───────────────────────────── */
 app.get('/', (_req, res) => res.send('🎵 API is up!'));

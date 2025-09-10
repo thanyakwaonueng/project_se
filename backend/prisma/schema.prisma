@@ -166,7 +166,7 @@ model ArtistEvent {
   role      String?    // "headliner" | "support" etc
   fee       Int?       // use integer cents if you're storing money, or Decimal
   order     Int?       // lineup order
-  status    String?    // or make this an enum
+  status   ArtistEventStatus @default(PENDING)
   notes     String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
@@ -180,6 +180,11 @@ model ArtistEvent {
   @@index([artistId])
 }
 
+enum ArtistEventStatus {
+  PENDING   // venue invited, waiting for artist approval
+  ACCEPTED  // artist approved
+  DECLINED  // artist rejected
+}
 
 enum EventType {
   OUTDOOR
