@@ -8,23 +8,47 @@ const cookieParser = require('cookie-parser');
 const { PrismaClient } = require('./generated/prisma');
 const prisma = new PrismaClient();
 
-const { requireRole } = require('./authz');
+//const { requireRole } = require('./authz');
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
 const port = process.env.PORT || 4000;
 
+/* ───────────────────────────── HELPERS / AUTHZ ───────────────────────────── */
+// roles ที่อนุญาตให้ "ยื่นคำขออัปเกรด"
+const ALLOW_REQUEST_ROLES = ['ARTIST', 'VENUE', 'ORGANIZER'];
+
+// middleware ตรวจสิทธิ์ ADMIN
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'ADMIN') return res.sendStatus(403);
+  next();
+}
+
+// helper สร้าง Notification (รองรับทั้ง prisma และ tx ภายใน $transaction)
+async function notify(client, userId, type, message, data = null) {
+  return client.notification.create({
+    data: { userId, type, message, data },
+  });
+}
+
+
 /* ───────────────────────────── AUTH MIDDLEWARE ───────────────────────────── */
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   const token = req.cookies.token;
   if (!token) return res.sendStatus(401);
   try {
-    const decoded = jwt.verify(token, SECRET);
-    req.user = decoded; // { id, role, iat, exp }
+    const decoded = jwt.verify(token, SECRET); // { id, role, ... } ใน token อาจจะเก่า
+    // โหลด role + email ล่าสุดจาก DB ทุกครั้ง เพื่อกัน token เก่า
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, role: true, email: true },
+    });
+    if (!user) return res.sendStatus(401);
+    req.user = { id: user.id, role: user.role, email: user.email }; // ✅ มี email แล้ว
     next();
   } catch (err) {
-    console.error(err);
+    console.error('AUTH_MIDDLEWARE_ERROR', err);
     return res.sendStatus(403);
   }
 }
@@ -398,6 +422,179 @@ app.get('/events/:id', async (req, res) => {
     res.status(500).json({ error: 'Could not fetch event' });
   }
 });
+
+
+
+
+
+/* ───────────────────────────── ROLE REQUESTS ───────────────────────────── */
+
+// ผู้ใช้ยื่นคำขออัปเกรดสิทธิ์
+app.post('/role-requests', authMiddleware, async (req, res) => {
+  try {
+    const { role, reason } = req.body; // ARTIST | VENUE | ORGANIZER
+    if (!ALLOW_REQUEST_ROLES.includes(role)) {
+      return res.status(400).json({ error: 'Invalid requested role' });
+    }
+
+    // กันคำขอค้างซ้ำ
+    const exist = await prisma.roleRequest.findFirst({
+      where: { userId: req.user.id, status: 'PENDING' },
+    });
+    if (exist) return res.status(400).json({ error: 'You already have a pending request' });
+
+    const rr = await prisma.roleRequest.create({
+      data: { userId: req.user.id, requestedRole: role, reason: reason || null },
+    });
+
+    // แจ้งเตือน ADMIN ทุกคน
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+    await Promise.all(
+      admins.map((a) =>
+        notify(
+          prisma,
+          a.id,
+          'role_request.new',
+          `New role request: ${req.user.email} -> ${role}`,
+          { roleRequestId: rr.id }
+        )
+      )
+    );
+
+    res.json(rr);
+  } catch (e) {
+    console.error('CREATE_ROLE_REQUEST_ERROR', e);
+    res.status(400).json({ error: 'Create role request failed' });
+  }
+});
+
+// ADMIN ดูคำขอที่รออนุมัติ
+app.get('/role-requests', authMiddleware, requireAdmin, async (_req, res) => {
+  try {
+    const list = await prisma.roleRequest.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { id: true, email: true, role: true } } },
+    });
+    res.json(list);
+  } catch (e) {
+    console.error('LIST_ROLE_REQUEST_ERROR', e);
+    res.status(400).json({ error: 'Fetch role requests failed' });
+  }
+});
+
+// ADMIN อนุมัติคำขอ
+app.post('/role-requests/:id/approve', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { note } = req.body;
+
+    const rr = await prisma.roleRequest.findUnique({ where: { id } });
+    if (!rr || rr.status !== 'PENDING') return res.status(404).json({ error: 'Request not found' });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.roleRequest.update({
+        where: { id: rr.id },
+        data: {
+          status: 'APPROVED',
+          reviewedById: req.user.id,
+          reviewNote: note || null,
+          reviewedAt: new Date(),
+        },
+      });
+      await tx.user.update({ where: { id: rr.userId }, data: { role: rr.requestedRole } });
+      await notify(
+        tx,
+        rr.userId,
+        'role_request.approved',
+        `Your role was approved: ${rr.requestedRole}`,
+        { roleRequestId: rr.id }
+      );
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('APPROVE_ROLE_REQUEST_ERROR', e);
+    res.status(400).json({ error: 'Approve failed' });
+  }
+});
+
+// ADMIN ปฏิเสธคำขอ
+app.post('/role-requests/:id/reject', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { note } = req.body;
+
+    const rr = await prisma.roleRequest.findUnique({ where: { id } });
+    if (!rr || rr.status !== 'PENDING') return res.status(404).json({ error: 'Request not found' });
+
+    await prisma.roleRequest.update({
+      where: { id: rr.id },
+      data: {
+        status: 'REJECTED',
+        reviewedById: req.user.id,
+        reviewNote: note || null,
+        reviewedAt: new Date(),
+      },
+    });
+
+    await notify(
+      prisma,
+      rr.userId,
+      'role_request.rejected',
+      `Your role request was rejected`,
+      { roleRequestId: rr.id, note }
+    );
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('REJECT_ROLE_REQUEST_ERROR', e);
+    res.status(400).json({ error: 'Reject failed' });
+  }
+});
+
+/* ───────────────────────────── NOTIFICATIONS ───────────────────────────── */
+
+// ดึงแจ้งเตือน (รองรับ ?unread=1)
+app.get('/notifications', authMiddleware, async (req, res) => {
+  try {
+    const where = { userId: req.user.id };
+    if (String(req.query.unread) === '1') where.isRead = false;
+
+    const list = await prisma.notification.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
+    res.json(list);
+  } catch (e) {
+    console.error('GET_NOTIFICATIONS_ERROR', e);
+    res.status(400).json({ error: 'Fetch notifications failed' });
+  }
+});
+
+// mark read
+app.post('/notifications/:id/read', authMiddleware, async (req, res) => {
+  try {
+    await prisma.notification.update({
+      where: { id: Number(req.params.id) },
+      data: { isRead: true },
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('MARK_READ_NOTIFICATION_ERROR', e);
+    res.status(400).json({ error: 'Mark read failed' });
+  }
+});
+
+
+
+
+
+
+
+
+
 
 
 

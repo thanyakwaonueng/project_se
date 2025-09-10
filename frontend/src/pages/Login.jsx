@@ -23,7 +23,7 @@ export default function Login() {
 
       navigate('/'); // redirect
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+      setErr(err.response?.data?.error || 'Login failed');
     }
   };
 

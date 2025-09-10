@@ -6,39 +6,38 @@ import { useNavigate } from 'react-router-dom';
 
 export default function Signup() {
   const navigate = useNavigate();
-  //const { signup } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('ARTIST'); // ดีฟอลต์
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setErr('');
+    setBusy(true);
     try {
-      await axios.post('/api/users', {
-        email,
-        password,
-        role,
-      });
+      // สมัคร: backend จะบังคับ role = FAN เสมอ
+      await axios.post('/api/users', { email, password });
 
-      // Auto login after signup (optional)
+      // Auto login หลังสมัคร (ต้องส่ง cookie กลับมาด้วย)
       try {
-        const res = await axios.post('/api/auth/login', {
-          email,
-          password,
-        });
-      } catch (err) {
-        setErr(err.response?.data?.error || 'Login failed');
+        await axios.post(
+          '/api/auth/login',
+          { email, password },
+          { withCredentials: true }
+        );
+        navigate('/'); // สำเร็จ → กลับหน้าแรก
+      } catch (loginErr) {
+        setErr(loginErr?.response?.data?.error || 'Login failed');
       }
-
-      navigate('/'); // redirect
-    } catch (err) {
-      setErr(err.response?.data?.error || 'Signup failed');
+    } catch (signupErr) {
+      setErr(signupErr?.response?.data?.error || 'Signup failed');
+    } finally {
+      setBusy(false);
     }
   };
+
 
   return (
     <div style={{ maxWidth: 480, margin: '40px auto', padding: 16 }}>
@@ -52,27 +51,36 @@ export default function Signup() {
       <form onSubmit={handleSignup} style={{ display: 'grid', gap: 12 }}>
         <div>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Email</label>
-          <input type="email" className="form-control" autoComplete="username"
-            value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
+          <input
+            type="email"
+            className="form-control"
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            required
+            disabled={busy}
+          />
         </div>
 
         <div>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Password</label>
-          <input type="password" className="form-control" autoComplete="new-password"
-            value={password} onChange={(e) => setPassword(e.target.value)} placeholder="อย่างน้อย 6 ตัวอักษร" required />
+          <input
+            type="password"
+            className="form-control"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="อย่างน้อย 6 ตัวอักษร"
+            minLength={6}
+            required
+            disabled={busy}
+          />
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Role</label>
-          <select className="form-select" value={role} onChange={(e) => setRole(e.target.value)}>
-            <option value="ARTIST">ARTIST</option>
-            <option value="VENUE">VENUE</option>
-            <option value="FAN">FAN</option>
-            <option value="ORGANIZER">ORGANIZER</option>
-            <option value="ADMIN">ADMIN</option>
-          </select>
-          <small>ระบบจะ map ให้ตรง enum อัตโนมัติ</small>
-        </div>
+        {/* หมายเหตุ: ระบบจะตั้งค่า role เป็น FAN อัตโนมัติหลังสมัคร
+            ถ้าต้องการสิทธิ์ ARTIST/VENUE/ORGANIZER ให้ไปขออัปเกรดสิทธิ์ภายหลังที่เมนู "Request role upgrade"
+            ใน Account dropdown (ที่ Navbar) */}
 
         <button type="submit" className="btn btn-primary" disabled={busy}>
           {busy ? 'Creating account…' : 'Sign Up'}

@@ -19,6 +19,11 @@ import EventDetail from '../pages/EventDetail';
 import VenueMap from '../pages/VenueMap';
 import MyEvents from '../pages/MyEvents';
 
+import RoleUpgradePage from '../pages/RoleUpgradePage';
+import AdminRoleRequestsPage from '../pages/AdminRoleRequestsPage';
+
+
+
 export default function AppRoutes() {
   return (
     <Router>
@@ -66,11 +71,29 @@ export default function AppRoutes() {
           />
           <Route
             path="/me/event"
-            element={
-              <CreateEvent/>
-            }
+            element={<CreateEvent/>}
           />
           <Route path="/me/event/:eventId" element={<CreateEvent />} />
+
+          {/* ✅ ใหม่: ผู้ใช้ที่ล็อกอินแล้วสามารถยื่นขออัปเกรดสิทธิ์ได้ทุก role */}
+          <Route
+            path="/me/role_upgrade"
+            element={
+              <ProtectedRoute allow={['FAN', 'ARTIST', 'VENUE', 'ORGANIZER', 'ADMIN']}>
+                <RoleUpgradePage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ✅ ใหม่: หน้าแอดมินตรวจคำขอ/อนุมัติ/ปฏิเสธ */}
+          <Route
+            path="/admin/role_requests"
+            element={
+              <ProtectedRoute allow={['ADMIN']}>
+                <AdminRoleRequestsPage />
+              </ProtectedRoute>
+            }
+          />
 
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import '../css/Navbar.css';
+import NotificationBell from './NotificationBell';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -104,6 +105,24 @@ export default function Navbar() {
           </li>
           <li><hr className="dropdown-divider" /></li>
 
+          {/* เมนูยื่นขออัปเกรดสิทธิ์ สำหรับผู้ใช้ที่ไม่ใช่ ADMIN */}
+          {user.role !== 'ADMIN' && (
+            <li>
+              <Link className="dropdown-item" to="/me/role_upgrade" onClick={closeMobileMenu}>
+                Request role upgrade
+              </Link>
+            </li>
+          )}
+
+          {/* เมนูของ ADMIN ไปหน้าอนุมัติคำขอ */}
+          {user.role === 'ADMIN' && (
+            <li>
+              <Link className="dropdown-item" to="/admin/role_requests" onClick={closeMobileMenu}>
+                Role requests (Admin)
+              </Link>
+            </li>
+          )}
+
           {(user.role === 'ARTIST' || user.role === 'ADMIN') && (
             <li><Link className="dropdown-item" to="/me/artist" onClick={closeMobileMenu}>My Artist</Link></li>
           )}
@@ -131,11 +150,11 @@ export default function Navbar() {
           <Link to="/" className="navbar-brand" onClick={closeMobileMenu}>
             <img src="/img/logo_black.png" className="logo" alt="logo" />
           </Link>
-          
-          {/* Hamburger menu for mobile with black icon */}
-          <button 
-            className="navbar-toggler custom-toggler" 
-            type="button" 
+
+        {/* Hamburger menu for mobile with black icon */}
+          <button
+            className="navbar-toggler custom-toggler"
+            type="button"
             onClick={toggleMobileMenu}
             aria-label="Toggle navigation"
           >
@@ -168,6 +187,9 @@ export default function Navbar() {
 
             {/* Dropdowns */}
             <div className="navbar-auth-section">
+              {/* กระดิ่งแจ้งเตือน: แสดงเฉพาะเมื่อผู้ใช้ล็อกอินแล้ว */}
+              {user ? <NotificationBell /> : null}
+
               <AuthButtons user={user} loading={loading} />
               <LanguageDropdown />
             </div>

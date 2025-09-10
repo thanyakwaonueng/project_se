@@ -9,15 +9,20 @@ datasource db {
 }
 
 model User {
-  id              Int             @id @default(autoincrement())
-  email           String          @unique
-  passwordHash    String
-  role            UserRole        @default(FAN)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(FAN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  artistProfile   ArtistProfile?
-  venueProfile    VenueProfile?
+  artistProfile ArtistProfile?
+  venueProfile  VenueProfile?
+
+  // back-relations ใหม่
+  roleRequests     RoleRequest[]  @relation("RoleRequestUser") // ผู้ใช้คนนี้เป็นเจ้าของคำขอ
+  reviewedRequests RoleRequest[]  @relation("RoleRequestReviewedBy") // ผู้ใช้คนนี้ (แอดมิน) เป็นผู้รีวิว
+  notifications    Notification[] @relation("UserNotifications") // การแจ้งเตือนของผู้ใช้
 }
 
 enum UserRole {
@@ -30,82 +35,82 @@ enum UserRole {
 }
 
 model ArtistProfile {
-  id               Int       @id @default(autoincrement())
-  name             String
-  description      String?
-  genre            String
-  subGenre         String?
-  bookingType      BookingType
-  foundingYear     Int?
-  label            String?
-  isIndependent    Boolean   @default(true)
-  memberCount      Int?
-  contactEmail     String?
-  contactPhone     String?
-  priceMin         Float?
-  priceMax         Float?
-  photoUrl         String?
-  videoUrl         String?
-  profilePhotoUrl  String?
-  rateCardUrl      String?
-  epkUrl           String?
-  riderUrl         String?
+  id              Int         @id @default(autoincrement())
+  name            String
+  description     String?
+  genre           String
+  subGenre        String?
+  bookingType     BookingType
+  foundingYear    Int?
+  label           String?
+  isIndependent   Boolean     @default(true)
+  memberCount     Int?
+  contactEmail    String?
+  contactPhone    String?
+  priceMin        Float?
+  priceMax        Float?
+  photoUrl        String?
+  videoUrl        String?
+  profilePhotoUrl String?
+  rateCardUrl     String?
+  epkUrl          String?
+  riderUrl        String?
 
-  spotifyUrl       String?
-  youtubeUrl       String?
-  appleMusicUrl    String?
-  facebookUrl      String?
-  instagramUrl     String?
-  soundcloudUrl    String?
-  shazamUrl        String?
-  bandcampUrl      String?
-  tiktokUrl        String?
+  spotifyUrl    String?
+  youtubeUrl    String?
+  appleMusicUrl String?
+  facebookUrl   String?
+  instagramUrl  String?
+  soundcloudUrl String?
+  shazamUrl     String?
+  bandcampUrl   String?
+  tiktokUrl     String?
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId           Int       @unique
-    
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int  @unique
+
   // new explicit relation
-  artistEvents     ArtistEvent[]
+  artistEvents ArtistEvent[]
 }
 
 model VenueProfile {
-  id               Int       @id @default(autoincrement())
-  name             String
-  locationUrl      String
-  genre            String
-  description      String?
-  capacity         Int?
-  dateOpen         DateTime?
-  dateClose        DateTime?
-  priceRate        PriceRate?
-  timeOpen         String?
-  timeClose        String?
-  alcoholPolicy    AlcoholPolicy
-  ageRestriction   String?
-  profilePhotoUrl  String?
-  photoUrls        String[]
-  contactEmail     String?
-  contactPhone     String?
-  facebookUrl      String?
-  instagramUrl     String?
-  lineUrl          String?
-  tiktokUrl        String?
-  websiteUrl       String?
+  id              Int           @id @default(autoincrement())
+  name            String
+  locationUrl     String
+  genre           String
+  description     String?
+  capacity        Int?
+  dateOpen        DateTime?
+  dateClose       DateTime?
+  priceRate       PriceRate?
+  timeOpen        String?
+  timeClose       String?
+  alcoholPolicy   AlcoholPolicy
+  ageRestriction  String?
+  profilePhotoUrl String?
+  photoUrls       String[]
+  contactEmail    String?
+  contactPhone    String?
+  facebookUrl     String?
+  instagramUrl    String?
+  lineUrl         String?
+  tiktokUrl       String?
+  websiteUrl      String?
 
   // ✅ พิกัดสำหรับแผนที่
-  latitude         Float?
-  longitude        Float?
+  latitude  Float?
+  longitude Float?
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId           Int       @unique
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int  @unique
 
-  events           Event[]   @relation("VenueEvents")
+  events Event[] @relation("VenueEvents")
 
   @@index([latitude, longitude])
 }
@@ -132,54 +137,53 @@ enum AlcoholPolicy {
 }
 
 model Event {
-  id               Int            @id @default(autoincrement())
-  name             String
-  description      String?
-  posterUrl        String?
-  conditions       String?
-  eventType        EventType
-  ticketing        TicketingType
-  ticketLink       String?
-  alcoholPolicy    AlcoholPolicy
-  ageRestriction   String?
-  date             DateTime
-  doorOpenTime     String?
-  endTime          String?
-  genre            String?
+  id             Int           @id @default(autoincrement())
+  name           String
+  description    String?
+  posterUrl      String?
+  conditions     String?
+  eventType      EventType
+  ticketing      TicketingType
+  ticketLink     String?
+  alcoholPolicy  AlcoholPolicy
+  ageRestriction String?
+  date           DateTime
+  doorOpenTime   String?
+  endTime        String?
+  genre          String?
 
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  venue            VenueProfile   @relation("VenueEvents", fields: [venueId], references: [id], onDelete: Cascade)
-  venueId          Int
-    
+  venue   VenueProfile @relation("VenueEvents", fields: [venueId], references: [id], onDelete: Cascade)
+  venueId Int
+
   // new explicit relation
-  artistEvents     ArtistEvent[]
+  artistEvents ArtistEvent[]
 }
 
 // new join model that get from a fucking GPT
 model ArtistEvent {
-  artistId  Int
-  eventId   Int
+  artistId Int
+  eventId  Int
 
   // metadata fields you wanted
-  role      String?    // "headliner" | "support" etc
-  fee       Int?       // use integer cents if you're storing money, or Decimal
-  order     Int?       // lineup order
-  status    String?    // or make this an enum
+  role      String? // "headliner" | "support" etc
+  fee       Int? // use integer cents if you're storing money, or Decimal
+  order     Int? // lineup order
+  status    String? // or make this an enum
   notes     String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // relations
-  artist    ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
-  event     Event         @relation(fields: [eventId],  references: [id], onDelete: Cascade)
+  artist ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  event  Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
-  @@id([artistId, eventId])   // composite PK prevents duplicate pair
+  @@id([artistId, eventId]) // composite PK prevents duplicate pair
   @@index([eventId])
   @@index([artistId])
 }
-
 
 enum EventType {
   OUTDOOR
@@ -193,4 +197,42 @@ enum TicketingType {
   TICKET_MELON
   DIRECT_CONTACT
   ONSITE_SALES
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model RoleRequest {
+  id            Int           @id @default(autoincrement())
+  user          User          @relation("RoleRequestUser", fields: [userId], references: [id]) // ⬅️ ตั้งชื่อ relation
+  userId        Int
+  requestedRole UserRole
+  status        RequestStatus @default(PENDING)
+  reason        String?
+  reviewedBy    User?         @relation("RoleRequestReviewedBy", fields: [reviewedById], references: [id])
+  reviewedById  Int?
+  reviewNote    String?
+  reviewedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation("UserNotifications", fields: [userId], references: [id]) // ⬅️ ตั้งชื่อ relation
+  userId    Int
+  type      String
+  message   String
+  data      Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([createdAt])
 }
