@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
 export default function CreateEvent() {
+  const { eventId } = useParams(); // 👈 grabs the ":id" part from the URL (e.g., /me/event/4 → id = "4")
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [posterUrl, setPosterUrl] = useState('');
@@ -22,13 +24,19 @@ export default function CreateEvent() {
   const [hasEvent, setHasEvent] = useState(false);
 
   const navigate = useNavigate();
-
+  /*
   // If you want edit mode like artist form:
   // (optional) fetch an existing event if editing
   useEffect(() => {
     // Example: load event if editing
     // axios.get('/api/events/123').then(res => { ...set values... })
   }, []);
+  */
+  useEffect(() => {
+    if (eventId) {
+      setHasEvent(true);
+    }
+  }, [eventId]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -50,6 +58,7 @@ export default function CreateEvent() {
         doorOpenTime: doorOpenTime.trim() || undefined,
         endTime: endTime.trim() || undefined,
         genre: genre.trim() || undefined,
+        id: eventId ? parseInt(eventId, 10) : undefined,
       };
 
       const payload = Object.fromEntries(
@@ -165,7 +174,7 @@ export default function CreateEvent() {
           <button type="submit" disabled={loading} className="btn btn-primary">
             {loading ? (hasEvent ? 'Updating…' : 'Creating…') : (hasEvent ? 'Update Event' : 'Create Event')}
           </button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate('/')}>
+          <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>
             Cancel
           </button>
         </div>

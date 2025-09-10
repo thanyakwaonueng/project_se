@@ -138,7 +138,15 @@ export default function EventDetail() {
       </div>
 
       <div style={{ marginTop: 20, display: 'flex', gap: 8 }}>
-        <Link to="/page_events" className="btn btn-secondary">กลับไปหน้า Events</Link>
+      {location.pathname.startsWith("/my_events") ? (
+        <Link to="/my_events" className="btn btn-secondary">
+          ไปหน้าเมื่อกี้
+        </Link>
+      ) : (
+        <Link to="/page_events" className="btn btn-secondary">
+          กลับไปหน้า Events
+        </Link>
+      )}
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ import CreateEvent from '../pages/CreateEvent';
 import ProtectedRoute from '../components/ProtectedRoute';
 import EventDetail from '../pages/EventDetail';
 import VenueMap from '../pages/VenueMap';
+import MyEvents from '../pages/MyEvents';
 
 export default function AppRoutes() {
   return (
@@ -32,6 +33,8 @@ export default function AppRoutes() {
           <Route path="/page_venues/map" element={<VenueMap />} />
           <Route path="/page_events" element={<Event />} />
           <Route path="/page_events/:id" element={<EventDetail />} />
+          <Route path="/my_events" element={<MyEvents />} />
+          <Route path="/my_events/:id" element={<EventDetail />} />
 
           <Route
             path="/page_events/new"
@@ -67,6 +70,7 @@ export default function AppRoutes() {
               <CreateEvent/>
             }
           />
+          <Route path="/me/event/:eventId" element={<CreateEvent />} />
 
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
