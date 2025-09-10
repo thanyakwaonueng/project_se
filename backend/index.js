@@ -38,7 +38,7 @@ app.post('/auth/login', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'User not found' });
 
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!valid) return res.status(401).json({ error: "Password isn't correct!" });
 
     const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '1d' });
 
@@ -82,15 +82,38 @@ app.get('/auth/me', authMiddleware, async (req, res) => {
   }
 });
 
+/*------------Function for checking email by using Regex-----------*/ 
+function validateEmail(email) {
+  const regex = //Regex สำหรับเช็ค email
+   /^(([^<>()[\]\.,;:\s@\"]+(\.[^<>()[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
+  return regex.test(email);
+}
+
 /* ───────────────────────────── USERS ───────────────────────────── */
 app.post('/users', async (req, res) => {
   try {
+    
     const { email, password, role } = req.body;
+
+    const user_db = await prisma.user.findUnique({where: {email: email},})
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({ data: { email, passwordHash, role } });
-    res.status(201).json(user);
+
+    //Password check
+    if(!password || password.length < 6){ //Password สั้นเกินไป
+      return res.status(400).json({error: "Password ต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป!"})
+    }
+    
+    //Email and User check
+    if(user_db){ //User already exist! can't sign up
+      return res.status(400).json({error: "This User is already exist!"})
+    } else if(!validateEmail(email)){  
+      return res.status(400).json({error: "Invalid email!"})
+    }else{ //New User
+      const user = await prisma.user.create({ data: { email, passwordHash, role } });
+      return res.status(201).json(user);
+    }
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    return res.status(400).json({ error: err.message });
   }
 });
 

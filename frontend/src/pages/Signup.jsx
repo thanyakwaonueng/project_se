@@ -17,6 +17,11 @@ export default function Signup() {
   const handleSignup = async (e) => {
     e.preventDefault();
     setErr('');
+
+    if (password.length < 6) { //Check password length
+      setErr("Password ต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป!");
+      return;
+    }
     try {
       await axios.post('/api/users', {
         email,
