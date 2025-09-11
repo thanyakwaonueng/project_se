@@ -1,0 +1,335 @@
+/* ==========================================================================
+   ARTIST PROFILE — HERO LAYOUT (ตามภาพตัวอย่าง)
+   ซ้าย: รูป + meta ใต้รูป | ขวา: ชื่อใหญ่มาก + ดีเทล
+   ========================================================================== */
+
+.a-hero-grid {
+  display: grid;
+  grid-template-columns: 320px 56px minmax(520px, 1fr); /* ซ้าย 320 | ช่องว่าง 56 | ขวา 1fr */
+  grid-template-areas:
+    "photo . name"
+    "photo . detail"
+    "meta  . detail";
+  align-items: start;
+  column-gap: 0;               /* เราใช้คอลัมน์ว่างเป็นตัวคั่นอยู่แล้ว */
+  padding: 40px 40px 24px;
+  padding-left: 160px;         /* ระยะถอยจากขอบซ้ายให้คล้ายภาพ */
+  box-sizing: border-box;
+}
+
+/* ============================
+   PHOTO (ซ้าย)
+   ============================ */
+.a-hero-photo {
+  grid-area: photo;
+  border-radius: 0;
+  overflow: hidden;
+  box-shadow: 0 10px 26px rgba(0,0,0,.14);
+  max-width: 320px;
+  width: 100%;
+  margin: 0;
+  transition: transform .8s ease, box-shadow .8s ease;
+}
+.a-hero-photo img {
+  width: 100%;
+  aspect-ratio: 1/1;
+  object-fit: cover;
+  display: block;
+  transition: transform .8s ease;
+}
+.a-hero-photo:hover { box-shadow: 0 12px 28px rgba(0,0,0,.18); }
+.a-hero-photo:hover img { transform: scale(1.05); }
+
+/* =========================================
+   META ใต้รูป (LISTEN ON / DATE / SHARE)
+   ========================================= */
+.a-hero-photo-meta {
+  grid-area: meta;
+  max-width: 320px;
+  width: 100%;
+  margin: 0;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* แถว LISTEN ON */
+.a-hero-photo-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.caption-text {
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #231f20;
+  letter-spacing: 1px;
+}
+.caption-icons { display: flex; gap: 10px; }
+.caption-btn-emoji {
+  font-size: 20px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: grayscale(20%);
+  transition: transform .2s ease, filter .2s ease;
+}
+.caption-link { text-decoration: none; color: inherit; outline: none; border: none; }
+.caption-link:hover,
+.caption-btn-emoji:hover { transform: scale(1.15); filter: grayscale(0%); }
+.caption-emoji-only { cursor: default; }
+
+/* เส้นคั่น */
+.a-hero-photo-line { height: 2px; background: #231f20; }
+
+/* แถว DATE */
+.a-hero-photo-date {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #231f20;
+}
+.date-label { font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 700; }
+.date-value { font-style: italic; color: #444; }
+
+/* แถว SHARE */
+.a-hero-photo-share {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #231f20;
+}
+.share-label { font-weight: 700; }
+.share-icons { display: flex; gap: 10px; }
+.share-link {
+  text-decoration: none;
+  font-size: 18px;
+  transition: transform .2s ease;
+}
+.share-link:hover { transform: scale(1.2); }
+
+/* ============================
+   เนื้อหาฝั่งขวา (ชื่อ + ดีเทล)
+   ============================ */
+.a-hero-name {
+  grid-area: name;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  text-transform: uppercase;     /* โทนหัวเรื่องตามภาพ */
+  letter-spacing: 6px;
+  color: #231f20;
+  line-height: 1.08;
+  margin-top: -6px;              /* ดึงขึ้นเล็กน้อยให้แนบเส้นบน */
+  margin-bottom: 8px;            /* ระยะ “ชื่อ ↔ ดีเทล” (ปรับได้) */
+  font-size: 120px;
+}
+.a-hero-detail {
+  grid-area: detail;
+  max-width: 800px;
+  font-size: 18px;
+  line-height: 2;
+  color: #3e3e3e;
+  margin-top: 8px;
+}
+
+/* ============================
+   UTILITIES / TWEAKS
+   ============================ */
+
+/* ปรับ “ระยะห่างระหว่างรูป ↔ ข้อความทางขวา”
+   — ถ้าอยากปรับง่ายๆ ให้แก้ตัวเลข 56px ใน grid-template-columns ด้านบน
+   — หรือใช้วิธีนี้แทน (ไม่ใช้คอลัมน์ว่าง) แล้วใช้ column-gap:
+   .a-hero-grid { grid-template-columns: 320px minmax(520px,1fr); column-gap: 56px; } */
+/* ========== SCHEDULE (Tabs) — Bar ใต้ฮีโร่ ========== */
+/* ถ้า a-section อยู่ "ใน" .a-hero-grid */
+.a-hero-grid .a-section{
+  grid-area: schedule;  /* จะมีผลเมื่อ .a-hero-grid กำหนดแถว 'schedule' */
+  width: 100%;
+  max-width: calc(var(--photo-w, 320px) + var(--gap, 56px) + var(--detail-max, 820px));
+  justify-self: start;  /* ชิดซ้ายเท่ารูป */
+  margin-top: 20px;
+}
+
+/* ถ้า a-section อยู่ "นอก" .a-hero-grid (พี่น้องถัดมา) */
+.a-hero-grid + .a-section,
+.a-hero-grid ~ .a-section{
+  padding-left: 160px;    /* ให้ขอบซ้ายตรงกับรูปในฮีโร่ */
+  padding-right: 40px;    /* เผื่อขอบขวาเท่าคอนเทนต์ */
+  box-sizing: border-box;
+  margin-top: 12px;
+}
+.a-hero-grid + .a-section .a-panel,
+.a-hero-grid ~ .a-section .a-panel{
+  width: 100%;
+  max-width: calc(var(--photo-w, 320px) + var(--gap, 56px) + var(--detail-max, 820px));
+}
+
+/* หัวข้อเล็กๆ ก่อนแทบ */
+.a-section-title{
+  font-family: 'Poppins', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  margin: 0 0 10px 4px;
+  color: #231f20;
+  letter-spacing: .3px;
+}
+
+/* แทบแผงด้านใน */
+.a-panel{
+  background: #f4f4f6;
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06) inset, 0 4px 10px rgba(0,0,0,.04);
+}
+
+/* แถบแท็บ */
+.a-tabbar{
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.a-tab{
+  appearance: none;
+  border: 0;
+  background: #ffffff;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.a-tab:hover{ transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.08); }
+.a-tab.is-active{ background: #231f20; color: #fff; }
+
+/* รายการตารางงาน */
+.a-schedule-list{
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.a-schedule-item{
+  display: grid;
+  grid-template-columns: 150px 1fr auto; /* วันที่ | รายการ | ปุ่ม */
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.a-date{
+  font-weight: 700;
+  color: #231f20;
+  font-size: 14px;
+}
+.a-event{ min-width: 0; }
+.a-event-title{
+  font-weight: 700;
+  color: #231f20;
+  font-size: 14px;
+  line-height: 1.25;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.a-event-sub{
+  color: #666;
+  font-size: 13px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ปุ่ม Tickets */
+.a-link{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #231f20;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.15);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.a-link:hover{ transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.2); }
+
+.a-empty{
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #fafafa;
+  color: #777;
+  text-align: center;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 1200px){
+  .a-hero-grid + .a-section,
+  .a-hero-grid ~ .a-section{ padding-left: 80px; }          /* ซ้ายถอยให้น้อยลงตามฮีโร่ */
+  .a-schedule-item{ grid-template-columns: 140px 1fr auto; }
+}
+@media (max-width: 992px){
+  /* มือถือให้ยืดเต็มคอนเทนเนอร์ */
+  .a-hero-grid .a-section{ max-width: 100%; }
+  .a-hero-grid + .a-section,
+  .a-hero-grid ~ .a-section{
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .a-schedule-item{
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "date btn"
+      "event btn";
+    align-items: start;
+  }
+  .a-date{ grid-area: date; }
+  .a-event{ grid-area: event; }
+  .a-link{ grid-area: btn; }
+}
+
+
+
+/* ===== ETA row (ใต้ Date) ===== */
+.a-hero-photo-eta{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:14px;
+  color:#231f20;
+}
+
+.eta-label{
+  font-family:'Poppins',sans-serif;
+  font-size:14px;
+  font-weight:700;
+}
+
+.eta-link{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  text-decoration:none;
+  color:#231f20;
+}
+
+.eta-icon{
+  font-size:18px;
+  line-height:1;
+  transition:transform .15s ease;
+}
+
+.eta-link:hover .eta-icon{ 
+    transform:scale(1.12); 
+}
