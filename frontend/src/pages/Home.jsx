@@ -157,7 +157,7 @@ function EventCard({ image, title, date, desc, genre }) {
     <div className="homepage-content">
       <div className="header-homepage">
         <div className="container-1">
-          <h1 className="topic-1">SOUND & SOUL</h1>
+          <h1 className="topic-1">SOUND & CROWD</h1>
         </div>
         <div className="news-box">
           <h1 className="news">NEWS!!</h1>
