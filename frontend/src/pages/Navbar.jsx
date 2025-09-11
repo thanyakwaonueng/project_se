@@ -15,13 +15,8 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
-  };
+  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   // Dropdown เปลี่ยนภาษา
   function LanguageDropdown() {
@@ -69,9 +64,7 @@ export default function Navbar() {
 
   // ปุ่ม Login/Signup หรือ Account Dropdown
   function AuthButtons({ user, loading }) {
-    if (loading) {
-      return <span className="nav-item nav-link">กำลังตรวจสอบ…</span>;
-    }
+    if (loading) return <span className="nav-item nav-link">กำลังตรวจสอบ…</span>;
 
     if (!user) {
       return (
@@ -112,7 +105,7 @@ export default function Navbar() {
             </Link>
           </li>
 
-          {/* เมนูยื่นขออัปเกรดสิทธิ์ สำหรับผู้ใช้ที่ไม่ใช่ ADMIN */}
+          {/* เมนูยื่นขออัปเกรดสิทธิ์ */}
           {user.role !== 'ADMIN' && (
             <li>
               <Link className="dropdown-item" to="/me/role_upgrade" onClick={closeMobileMenu}>
@@ -172,21 +165,17 @@ export default function Navbar() {
               <div className="navbar-menu-text">EVENT</div>
             </a>
 
-            <a href="/page_venues" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
+            {/* 🔁 เหลือเมนู VENUE อย่างเดียว (รวม list + map) */}
+            <a href="/page_venues/map" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
               <div className="navbar-menu-text">VENUE</div>
               <div className="navbar-menu-text">VENUE</div>
             </a>
 
-            <a href="/page_venues/map" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
-              <div className="navbar-menu-text">MAP</div>
-              <div className="navbar-menu-text">MAP</div>
-            </a>
+            {/* (ลบ MAP ออก) */}
 
             {/* Dropdowns */}
             <div className="navbar-auth-section">
-              {/* กระดิ่งแจ้งเตือน: แสดงเฉพาะเมื่อผู้ใช้ล็อกอินแล้ว */}
               {user ? <NotificationBell /> : null}
-
               <AuthButtons user={user} loading={loading} />
               <LanguageDropdown />
             </div>
