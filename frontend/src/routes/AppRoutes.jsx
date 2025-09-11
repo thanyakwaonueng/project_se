@@ -19,6 +19,8 @@ import EventDetail from '../pages/EventDetail';
 import VenueMap from '../pages/VenueMap';
 import MyEvents from '../pages/MyEvents';
 
+
+import AccountSetupPage from '../pages/AccountSetupPage';
 import RoleUpgradePage from '../pages/RoleUpgradePage';
 import AdminRoleRequestsPage from '../pages/AdminRoleRequestsPage';
 
@@ -74,6 +76,21 @@ export default function AppRoutes() {
             element={<CreateEvent/>}
           />
           <Route path="/me/event/:eventId" element={<CreateEvent />} />
+
+
+
+          {/* ✅ ใหม่: Account Setup หลังสมัคร/แก้โปรไฟล์ได้ */}
+          <Route
+            path="/account_setup"
+            element={
+              <ProtectedRoute allow={['FAN','ARTIST','VENUE','ORGANIZER','ADMIN']}>
+                <AccountSetupPage />
+              </ProtectedRoute>
+            }
+          />
+
+
+
 
           {/* ✅ ใหม่: ผู้ใช้ที่ล็อกอินแล้วสามารถยื่นขออัปเกรดสิทธิ์ได้ทุก role */}
           <Route

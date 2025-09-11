@@ -105,20 +105,18 @@ export default function Navbar() {
           </li>
           <li><hr className="dropdown-divider" /></li>
 
+          {/* ✅ เมนูแก้ไขโปรไฟล์ */}
+          <li>
+            <Link className="dropdown-item" to="/account_setup" onClick={closeMobileMenu}>
+              Profile / Edit
+            </Link>
+          </li>
+
           {/* เมนูยื่นขออัปเกรดสิทธิ์ สำหรับผู้ใช้ที่ไม่ใช่ ADMIN */}
           {user.role !== 'ADMIN' && (
             <li>
               <Link className="dropdown-item" to="/me/role_upgrade" onClick={closeMobileMenu}>
                 Request role upgrade
-              </Link>
-            </li>
-          )}
-
-          {/* เมนูของ ADMIN ไปหน้าอนุมัติคำขอ */}
-          {user.role === 'ADMIN' && (
-            <li>
-              <Link className="dropdown-item" to="/admin/role_requests" onClick={closeMobileMenu}>
-                Role requests (Admin)
               </Link>
             </li>
           )}
@@ -143,7 +141,6 @@ export default function Navbar() {
 
   return (
     <nav className={`navbar navbar-expand-lg navbar-dark full-width-navbar ${isScrolled ? 'navbar-small shadow' : ''}`}>
-      {/* ใช้ container-fluid แทน container และเพิ่มคลาส full-width-navbar */}
       <div className="container-fluid navbar-container">
         {/* Logo and mobile menu toggle */}
         <div className="d-flex justify-content-between w-50 align-items-center">
@@ -151,7 +148,7 @@ export default function Navbar() {
             <img src="/img/logo_black.png" className="logo" alt="logo" />
           </Link>
 
-        {/* Hamburger menu for mobile with black icon */}
+          {/* Hamburger menu for mobile with black icon */}
           <button
             className="navbar-toggler custom-toggler"
             type="button"

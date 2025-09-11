@@ -19,11 +19,37 @@ model User {
   artistProfile ArtistProfile?
   venueProfile  VenueProfile?
 
+  profile         UserProfile?
+
+
+
   // back-relations ใหม่
   roleRequests     RoleRequest[]  @relation("RoleRequestUser") // ผู้ใช้คนนี้เป็นเจ้าของคำขอ
   reviewedRequests RoleRequest[]  @relation("RoleRequestReviewedBy") // ผู้ใช้คนนี้ (แอดมิน) เป็นผู้รีวิว
   notifications    Notification[] @relation("UserNotifications") // การแจ้งเตือนของผู้ใช้
 }
+
+
+model UserProfile {
+  id             Int       @id @default(autoincrement())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int       @unique
+
+  displayName    String?
+  firstName      String?
+  lastName       String?
+  bio            String?
+  favoriteGenres String[]  // text[] (Postgres)
+
+  avatarUrl      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+
+
 
 enum UserRole {
   SUPERADMIN

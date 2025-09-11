@@ -669,6 +669,118 @@ app.post('/notifications/:id/read', authMiddleware, async (req, res) => {
 
 
 
+// ───────────────────────────── ONBOARDING / EDIT PROFILE ─────────────────────────────
+app.post('/me/setup', authMiddleware, async (req, res) => {
+  try {
+    const {
+      displayName, firstName, lastName, bio,
+      favoriteGenres,      // array หรือ string คั่น comma ก็ได้
+      desiredRole,         // ไม่บังคับส่งมา ถ้าไม่เปลี่ยน role
+    } = req.body;
+
+    // normalize genres
+    const genres = Array.isArray(favoriteGenres)
+      ? favoriteGenres.map((s) => String(s).trim()).filter(Boolean)
+      : typeof favoriteGenres === 'string'
+      ? favoriteGenres.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+
+    // upsert โปรไฟล์ (ใช้ได้ทั้งสร้างครั้งแรกและแก้ไข)
+    await prisma.userProfile.upsert({
+      where: { userId: req.user.id },
+      update: { displayName, firstName, lastName, bio, favoriteGenres: genres },
+      create: { userId: req.user.id, displayName, firstName, lastName, bio, favoriteGenres: genres },
+    });
+
+    // สร้าง role request ก็ต่อเมื่อ "ผู้ใช้ร้องขอเปลี่ยน role" และ "ต่างจาก role ปัจจุบัน" และ "ไม่มี pending อยู่"
+    let createdRoleRequest = null;
+    if (desiredRole) {
+      const me = await prisma.user.findUnique({ where: { id: req.user.id } });
+      const REQUESTABLE = ['ARTIST', 'VENUE', 'ORGANIZER'];
+
+      const wantsUpgrade = REQUESTABLE.includes(desiredRole);
+      const roleChanged  = desiredRole !== me.role;
+
+      if (wantsUpgrade && roleChanged && me.role !== 'ADMIN') {
+        const pending = await prisma.roleRequest.findFirst({
+          where: { userId: req.user.id, status: 'PENDING' },
+        });
+        if (!pending) {
+          createdRoleRequest = await prisma.roleRequest.create({
+            data: { userId: req.user.id, requestedRole: desiredRole, reason: 'Requested via profile edit' },
+          });
+
+          // แจ้งเตือนแอดมิน
+          const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+          await Promise.all(
+            admins.map((a) =>
+              prisma.notification.create({
+                data: {
+                  userId: a.id,
+                  type: 'role_request.new',
+                  message: `New role request: ${me.email} -> ${desiredRole}`,
+                  data: { roleRequestId: createdRoleRequest.id },
+                },
+              })
+            )
+          );
+        }
+      }
+    }
+
+    res.json({ ok: true, createdRoleRequest: Boolean(createdRoleRequest) });
+  } catch (e) {
+    console.error('POST /me/setup error', e);
+    res.status(400).json({ error: 'Save profile failed' });
+  }
+});
+
+
+// Edit profile only (ไม่ยุ่ง desiredRole)
+app.patch('/me/profile', authMiddleware, async (req, res) => {
+ try {
+    const { displayName, firstName, lastName, bio, favoriteGenres } = req.body;
+    const genres = Array.isArray(favoriteGenres)
+      ? favoriteGenres.map((s) => String(s).trim()).filter(Boolean)
+      : typeof favoriteGenres === 'string'
+      ? favoriteGenres.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+
+    await prisma.userProfile.upsert({
+      where: { userId: req.user.id },
+     update: { displayName, firstName, lastName, bio, favoriteGenres: genres },
+      create: { userId: req.user.id, displayName, firstName, lastName, bio, favoriteGenres: genres },
+    });
+
+    res.json({ ok: true });
+ } catch (e) {
+    console.error('PATCH /me/profile error', e);
+    res.status(400).json({ error: 'Update profile failed' });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
