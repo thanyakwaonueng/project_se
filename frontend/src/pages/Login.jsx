@@ -21,7 +21,7 @@ export default function Login() {
         password,
       });
 
-      navigate('/'); // redirect
+      window.location.assign('/'); // redirect
     } catch (err) {
       setErr(err.response?.data?.error || 'Login failed');
     }

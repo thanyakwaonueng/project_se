@@ -31,7 +31,7 @@ export default function Signup() {
           { email, password },
           { withCredentials: true }
         );
-        navigate('/'); // สำเร็จ → กลับหน้าแรก
+        window.location.assign('/account_setup'); // สำเร็จ → กลับหน้าแรก
       } catch (loginErr) {
         setErr(loginErr?.response?.data?.error || 'Login failed');
       }
