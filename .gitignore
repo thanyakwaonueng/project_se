@@ -1,3 +1,5 @@
+backend/prisma/migrations
+prisma/migrations
 migrations/
 # ========================
 # Node / Next.js
