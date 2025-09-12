@@ -165,7 +165,10 @@ function EventCard({ image, title, date, desc, genre }) {
             <span>The mega concert CHIANG MAI ORIGINAL tickets are on sale now! ✨ | New artist updates every week | Special early bird promo 🎟️</span>
           </div>
         </div>
-        <img src="https://images.pexels.com/photos/1238941/pexels-photo-1238941.jpeg" className="vinyl-picture"/>
+
+        <div className="vinyl-picture-box">
+          <img src="https://images.pexels.com/photos/1238941/pexels-photo-1238941.jpeg" className="vinyl-picture"/>
+        </div>
 
       </div>
 
@@ -182,11 +185,11 @@ function EventCard({ image, title, date, desc, genre }) {
         </div>
       </div>
 
-      <div className="divider"></div>
+      <div className="divider-nextcontent"></div>
 
       <div className="artist-content">
           <div className="artist-header">
-            <h1 className="topic-2">Latest Artists</h1>
+            <h1 className="latest-artists">Latest Artists</h1>
             <a href="/page_artists">
               <h2>Explore more artists ↗</h2>
             </a>
