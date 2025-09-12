@@ -200,7 +200,7 @@ app.post('/artists', authMiddleware, async (req, res) => {
 
 app.get('/artists', async (req, res) => {
   try {
-    const artists = await prisma.artistProfile.findMany({ include: { user: true, events: true } });
+    const artists = await prisma.artistProfile.findMany({ include: { user: true } });
     res.json(artists);
   } catch (err) {
     res.status(500).json({ error: 'Could not fetch artists' });
@@ -211,7 +211,7 @@ app.get('/artists/:id', async (req, res) => {
   const id = +req.params.id;
   const artist = await prisma.artistProfile.findUnique({
     where: { id },
-    include: { user: true, events: true },
+    include: { user: true },
   });
   artist ? res.json(artist) : res.status(404).send('Artist not found');
 });
