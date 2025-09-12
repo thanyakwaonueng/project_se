@@ -38,7 +38,7 @@ export default function InviteArtist() {
         order: form.order ? Number(form.order) : undefined,
       };
 
-      const res = await axios.post("/artist-events/invite", payload, {
+      const res = await axios.post("/api/artist-events/invite", payload, {
         withCredentials: true,
       });
 

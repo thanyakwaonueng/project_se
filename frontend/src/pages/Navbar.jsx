@@ -121,7 +121,8 @@ export default function Navbar() {
           {(user.role === 'ORGANIZE' || user.role === 'ADMIN') && (
             <>
               <li><Link className="dropdown-item" to="/me/venue" onClick={closeMobileMenu}>My Venue</Link></li>
-              <li><Link className="dropdown-item" to="/page_events/new" onClick={closeMobileMenu}>Create Event</Link></li>
+              <li><Link className="dropdown-item" to="/me/event" onClick={closeMobileMenu}>Create Event</Link></li>
+              <li><Link className="dropdown-item" to="/my_events" onClick={closeMobileMenu}>My Event</Link></li>
             </>
           )}
 

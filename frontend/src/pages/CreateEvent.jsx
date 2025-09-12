@@ -24,18 +24,42 @@ export default function CreateEvent() {
   const [hasEvent, setHasEvent] = useState(false);
 
   const navigate = useNavigate();
-  /*
-  // If you want edit mode like artist form:
-  // (optional) fetch an existing event if editing
-  useEffect(() => {
-    // Example: load event if editing
-    // axios.get('/api/events/123').then(res => { ...set values... })
-  }, []);
-  */
+
   useEffect(() => {
     if (eventId) {
       setHasEvent(true);
     }
+  }, [eventId]);
+
+  // โหลดข้อมูลเดิม (ถ้ามี)
+  useEffect(() => {
+    const fetchEvent = async () => {
+      if (!eventId) return;
+
+      try {
+        const res = await axios.get(`/api/events/${eventId}`, { withCredentials: true });
+        const ev = res.data;
+
+        setName(ev.name || '');
+        setDescription(ev.description || '');
+        setPosterUrl(ev.posterUrl || '');
+        setConditions(ev.conditions || '');
+        setEventType(ev.eventType || 'INDOOR');
+        setTicketing(ev.ticketing || 'FREE');
+        setTicketLink(ev.ticketLink || '');
+        setAlcoholPolicy(ev.alcoholPolicy || 'NONE');
+        setAgeRestriction(ev.ageRestriction || '');
+        setDate(ev.date ? ev.date.split('T')[0] : ''); // keep only YYYY-MM-DD
+        setDoorOpenTime(ev.doorOpenTime || '');
+        setEndTime(ev.endTime || '');
+        setGenre(ev.genre || '');
+      } catch (err) {
+        console.error("Failed to fetch event:", err);
+        setError(err.response?.data?.error || 'Could not load event details');
+      }
+    };
+
+    fetchEvent();
   }, [eventId]);
 
   const submit = async (e) => {
