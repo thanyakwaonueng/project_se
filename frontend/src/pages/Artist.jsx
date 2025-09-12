@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from 'axios';
 import "../css/Artist.css";
+import "../css/Artist_profile.css";
 
 /** ---------- LocalStorage: สถานะการติดตาม ---------- */
 const FOLLOW_KEY = "artist.follow.v1";
@@ -187,8 +188,8 @@ export default function Artist() {
       {!selectedGroup ? (
         <>
           <h1 className="artist-heading">
-              Melody <br />
-            <span className="memories-line">& Memories</span>
+              MELODY & MEMORIES<br />
+            {/* <span className="memories-line">& MEMORIES</span> */}
           </h1>
 
           <h6 className="artist-heading-detail">
@@ -254,9 +255,9 @@ export default function Artist() {
             ← Back to Groups
           </button> */}
 
-          {/* HERO GRID: ซ้ายรูป · กลางข้อมูล/ปุ่ม · ขวา Spotify */}
+          {/* HERO GRID: ซ้ายรูป · กลางชื่อ/ข้อมูล · ขวา Spotify */}
           <div className="a-hero-grid">
-            {/* ซ้าย: รูปใหญ่ (เด่นขึ้น) */}
+            {/* ซ้าย: รูปใหญ่ */}
             <div className="a-hero-photo a-hero-emph a-shadow-sm">
               <img
                 src={selectedGroup.image}
@@ -265,13 +266,106 @@ export default function Artist() {
               />
             </div>
 
+             {/* กลาง: ชื่อ Artist ด้านขวาของรูป */}
+            <div className="a-hero-name">
+              {selectedGroup.name || "NewJeans"}
+            </div>
+
+            {/* Artist detail */}
+            <div className="a-hero-detail">
+              NewJeans is a South Korean girl group under ADOR, a subsidiary of HYBE Corporation. 
+              They debuted on July 22, 2022, with the single <em>Attention</em> and quickly gained global popularity. 
+              Known for their fresh music style, distinctive fashion, and simple yet powerful image, 
+              the group consists of five members: Minji, Hanni, Danielle, Haerin, and Hyein.
+            </div>
+
+
+
+            {/* กลุ่ม META ใต้รูป (ซ้ายคอลัมน์เดียวกับรูป) */}
+            <div className="a-hero-photo-meta">
+              {/* แถว LISTEN ON + emoji ลิงก์ */}
+              <div className="a-hero-photo-caption">
+                <span className="caption-text">LISTEN ON</span>
+                <div className="caption-icons">
+                  <a
+                    className="caption-link caption-btn-emoji"
+                    href="https://open.spotify.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Spotify"
+                    title="Spotify"
+                  >🎧</a>
+
+                  <a
+                    className="caption-link caption-btn-emoji"
+                    href="https://www.youtube.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="YouTube"
+                    title="YouTube"
+                  >▶️</a>
+
+                  {/* ไอคอนเฉย ๆ */}
+                  <span
+                    className="caption-emoji-only caption-btn-emoji"
+                    aria-hidden="true"
+                    title="Sound"
+                  >🔊</span>
+                </div>
+              </div>
+
+              {/* เส้นคั่น */}
+              <div className="a-hero-photo-line"></div>
+
+              {/* แถว Date */}
+              <div className="a-hero-photo-date">
+                <span className="date-label">Date</span>
+                <span className="date-value">September 11, 2025</span>
+              </div>
+
+
+              {/* แถว ETA */}
+              <div className="a-hero-photo-eta">
+                <span className="eta-label">ETA</span>
+                <a
+                  className="eta-link"
+                  href={selectedGroup?.etaPdfUrl || `/pdf/${selectedGroup?.slug || 'artist'}.pdf`}
+                  download
+                  title="Download ETA PDF"
+                  aria-label="Download ETA PDF"
+                  onClick={(e)=>e.stopPropagation()}
+                >
+                  <span className="eta-icon" aria-hidden="true">📄</span>
+                </a>
+              </div>
+
+              {/* แถว Share */}
+              <div className="a-hero-photo-share">
+                <span className="share-label">Share</span>
+                <div className="share-icons">
+                  <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer" className="share-link" title="Instagram">📸</a>
+                  <a href="https://twitter.com"           target="_blank" rel="noopener noreferrer" className="share-link" title="Twitter">🐦</a>
+                  <a href="https://facebook.com"          target="_blank" rel="noopener noreferrer" className="share-link" title="Facebook">📘</a>
+                </div>
+              </div>
+            </div>
+
+           
+
+
+
+
+
+
+
+
             {/* กลาง: ชื่อ/ข้อมูล/ปุ่ม + Socials ใต้ปุ่ม */}
-            <div className="a-hero-info">
+            {/* <div className="a-hero-info">
               <h1 className="a-title-28 a-title-dark">{selectedGroup.name}</h1>
-              <p className="group-description">{selectedGroup.details}</p>
+              <p className="group-description">{selectedGroup.details}</p> */}
 
               {/* KPI */}
-              <div className="a-stats-row">
+              {/* <div className="a-stats-row">
                 <div className="a-stat-chip">
                   <div className="a-kpi">
                     {formatCompact(selectedGroup.followersCount + (followed[selectedGroup.id] ? 1 : 0))}
@@ -286,18 +380,18 @@ export default function Artist() {
                   <div className="a-kpi">{selectedGroup.stats.debut}</div>
                   <div className="a-kpi-label">Debut</div>
                 </div>
-              </div>
+              </div> */}
 
               {/* ปุ่ม Follow/Unfollow */}
-              <button
+              {/* <button
                 className={`a-btn ${followed[selectedGroup.id] ? "a-btn-secondary" : "a-btn-primary"}`}
                 onClick={() => toggleFollow(selectedGroup.id)}
               >
                 {followed[selectedGroup.id] ? "Unfollow" : "Follow"}
-              </button>
+              </button> */}
 
               {/* Socials: มาอยู่ใต้ปุ่ม */}
-              {(selectedGroup.socials?.instagram || selectedGroup.socials?.youtube || selectedGroup.socials?.spotify) && (
+              {/* {(selectedGroup.socials?.instagram || selectedGroup.socials?.youtube || selectedGroup.socials?.spotify) && (
                 <div className="a-socials-inline">
                   <div className="a-socials">
                     {selectedGroup.socials?.instagram && (
@@ -312,10 +406,10 @@ export default function Artist() {
                   </div>
                 </div>
               )}
-            </div>
+            </div> */}
 
             {/* ขวา: Spotify (sticky) */}
-            {selectedGroup.playlistEmbedUrl && (
+            {/* {selectedGroup.playlistEmbedUrl && (
               <aside className="a-hero-right">
                 <div className="a-spotify-box">
                   <iframe
@@ -327,7 +421,7 @@ export default function Artist() {
                   ></iframe>
                 </div>
               </aside>
-            )}
+            )} */}
           </div>
 
           {/* ===== Schedule (Tabs) ===== */}
@@ -396,7 +490,7 @@ export default function Artist() {
           </section> */}
 
           {/* Members */}
-          <h2 className="members-title">Members</h2>
+          {/* <h2 className="members-title">Members</h2>
           <div className="artist-grid">
             {selectedGroup.artists.map(a => (
               <button
@@ -424,10 +518,10 @@ export default function Artist() {
                 </div>
               </button>
             ))}
-          </div>
+          </div> */}
 
           {/* Tech Rider / ETA */}
-          <section className="a-section">
+          {/* <section className="a-section">
             <h2 className="a-section-title">Equipment / Tech Rider (ETA)</h2>
             <p className="a-text-dim">สรุปอุปกรณ์หลักที่ต้องใช้สำหรับการแสดง</p>
             <div className="a-rider">
@@ -441,7 +535,7 @@ export default function Artist() {
                 </a>
               )}
             </div>
-          </section>
+          </section> */}
 
           {/* Members */}
           {/* <h2 className="members-title">Members</h2>
@@ -477,7 +571,7 @@ export default function Artist() {
       )}
 
       {/* ====== โมดัลสมาชิก (ป๊อปอัป) ====== */}
-      {selectedArtist && (
+      {/* {selectedArtist && (
         <div
           className="artist-modal-overlay a-fade-in"
           onClick={() => { setSelectedArtist(null); setTimeout(() => lastFocusRef.current?.focus?.(), 0); }}
@@ -510,7 +604,7 @@ export default function Artist() {
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }
