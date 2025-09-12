@@ -96,12 +96,21 @@ export default function MyEvents() {
                 >
                   Edit
                 </button>
+
                 <button
                   className="btn btn-sm btn-outline-danger"
                   onClick={() => navigate(`/my_events/${ev.id}`)}
                 >
                   View
                 </button>
+
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={() => navigate(`/me/invite_to_event/${ev.id}`)}
+                >
+                  invite
+                </button>
+
               </div>
             </div>
           ))}
@@ -110,4 +119,5 @@ export default function MyEvents() {
     </div>
   );
 }
+
 

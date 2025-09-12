@@ -18,6 +18,7 @@ import ProtectedRoute from '../components/ProtectedRoute';
 import EventDetail from '../pages/EventDetail';
 import VenueMap from '../pages/VenueMap';
 import MyEvents from '../pages/MyEvents';
+import InviteArtist from '../pages/InviteArtist';
 
 
 import AccountSetupPage from '../pages/AccountSetupPage';
@@ -73,11 +74,9 @@ export default function AppRoutes() {
                 <CreateVenue/>
             }
           />
-          <Route
-            path="/me/event"
-            element={<CreateEvent/>}
-          />
+          <Route path="/me/event" element={<CreateEvent/>} />
           <Route path="/me/event/:eventId" element={<CreateEvent />} />
+          <Route path="/me/invite_to_event/:eventId" element={<InviteArtist />} />
 
 
 
