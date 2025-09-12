@@ -94,7 +94,7 @@ export default function AppRoutes() {
 
 
 
-          {/* ✅ ใหม่: ผู้ใช้ที่ล็อกอินแล้วสามารถยื่นขออัปเกรดสิทธิ์ได้ทุก role */}
+          {/*ผู้ใช้ที่ล็อกอินแล้วสามารถยื่นขออัปเกรดสิทธิ์ได้ทุก role */}
           <Route
             path="/me/role_upgrade"
             element={
@@ -104,7 +104,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ ใหม่: หน้าแอดมินตรวจคำขอ/อนุมัติ/ปฏิเสธ */}
+          {/*หน้าแอดมินตรวจคำขอ/อนุมัติ/ปฏิเสธ */}
           <Route
             path="/admin/role_requests"
             element={

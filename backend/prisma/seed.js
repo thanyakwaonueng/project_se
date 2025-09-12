@@ -4,21 +4,55 @@ const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
+/** วันที่ภายใน "เดือนปัจจุบัน" ตาม day/hour/minute */
 function dInThisMonth(day, hour = 19, minute = 30) {
   const now = new Date();
-  // year, month (0-based)
   return new Date(now.getFullYear(), now.getMonth(), day, hour, minute, 0);
 }
 
 async function main() {
-  console.log('🌱 Seeding… (users, artists, venues: Chiang Mai, events in this month)');
+  console.log('🌱 Seeding… (users, artists, Chiang Mai venues, this-month events)');
 
-  // ---------- ล้างข้อมูล (dev เท่านั้น) ----------
+  // ---------- ล้างข้อมูลที่มีความสัมพันธ์ก่อน (dev เท่านั้น — อย่าใช้ใน prod) ----------
   await prisma.artistEvent.deleteMany();
   await prisma.event.deleteMany();
   await prisma.artistProfile.deleteMany();
   await prisma.venueProfile.deleteMany();
-  await prisma.user.deleteMany();
+
+  // เพื่อลดผลข้างเคียง เราไม่ลบผู้ใช้ทั้งหมด แต่ลบเฉพาะอีเมลที่จะ seed ทับ
+  const seedEmails = [
+    'admin@example.com',
+    'fan@example.com',
+    'newjeans@example.com','iu@example.com',
+    'blackpink@example.com','bts@example.com',
+    'ado@example.com','yoasobi@example.com',
+    'nimman.studio@venue.example',
+    'oldcity.arena@venue.example',
+    'riverside.stage@venue.example',
+    'thaphae.court@venue.example',
+    'changklan.wh@venue.example',
+    'santitham.loft@venue.example',
+    'onenimman.terr@venue.example',
+    'watgate.pav@venue.example',
+  ];
+  await prisma.user.deleteMany({ where: { email: { in: seedEmails } } });
+
+  // ---------- ผู้ใช้ระบบพื้นฐาน ----------
+  const adminUser = await prisma.user.create({
+    data: {
+      email: 'admin@example.com',
+      passwordHash: await bcrypt.hash('admin123', 10),
+      role: 'ADMIN',
+    }
+  });
+
+  const fanUser = await prisma.user.create({
+    data: {
+      email: 'fan@example.com',
+      passwordHash: await bcrypt.hash('password123', 10),
+      role: 'AUDIENCE',
+    }
+  });
 
   // ---------- Artists (6) ----------
   const artistDefs = [
@@ -93,9 +127,9 @@ async function main() {
         name: raw.name,
         description: raw.description || null,
         genre: raw.genre,
-        bookingType: raw.bookingType,
-        foundingYear: raw.foundingYear,
-        memberCount: raw.memberCount,
+        bookingType: raw.bookingType,          // enum BookingType
+        foundingYear: raw.foundingYear || null,
+        memberCount: raw.memberCount || null,
         label: raw.label || null,
         instagramUrl: raw.instagramUrl || null,
         youtubeUrl: raw.youtubeUrl || null,
@@ -107,7 +141,7 @@ async function main() {
     artistUsers.push({ user, artist });
   }
 
-  // ---------- Venues (Chiang Mai) ----------
+  // ---------- Venues (เชียงใหม่) — เจ้าของเป็น ORGANIZE ----------
   const venueDefs = [
     { email: 'nimman.studio@venue.example',   name: 'Nimman Studio',        lat: 18.79650, lng: 98.97890, genre: 'Indie/Alt' },
     { email: 'oldcity.arena@venue.example',   name: 'Old City Arena',       lat: 18.79410, lng: 98.98870, genre: 'Pop/Rock' },
@@ -125,14 +159,14 @@ async function main() {
       data: {
         email: v.email,
         passwordHash: await bcrypt.hash('password123', 10),
-        role: 'ORGANIZE',
+        role: 'ORGANIZE', // ⬅️ รวมหน้าที่ดูแล venue ไว้กับ ORGANIZE
       }
     });
     const vp = await prisma.venueProfile.create({
       data: {
         userId: u.id,
         name: v.name,
-        locationUrl: v.name,         // จะเปลี่ยนเป็นลิงก์แผนที่จริงภายหลังได้
+        locationUrl: v.name, // ในอนาคตจะเปลี่ยนเป็น Google Maps URL จริงได้
         genre: v.genre,
         alcoholPolicy: 'SERVE',
         latitude: v.lat,
@@ -146,16 +180,16 @@ async function main() {
 
   // ---------- Events (ทั้งหมดภายใน "เดือนนี้") ----------
   const eventsPlan = [
-    { name: 'Nimman Indie Night',      venue: 'Nimman Studio',       date: dInThisMonth(5, 20, 0),  type: 'INDOOR',  ticketing: 'FREE',          genre: 'Indie',    door: '19:00', end: '22:30' },
-    { name: 'Ping Riverside Jazz',     venue: 'Ping Riverside Stage',date: dInThisMonth(8, 19, 30), type: 'OUTDOOR', ticketing: 'ONSITE_SALES',  genre: 'Jazz',     door: '18:30', end: '21:30' },
-    { name: 'Old City Acoustic Eve',   venue: 'Old City Arena',      date: dInThisMonth(12, 18, 30),type: 'INDOOR',  ticketing: 'DIRECT_CONTACT',genre: 'Acoustic', door: '18:00', end: '21:00' },
-    { name: 'Tha Phae Folk Friday',    venue: 'Tha Phae Courtyard',  date: dInThisMonth(13, 19, 0), type: 'OUTDOOR', ticketing: 'DONATION',      genre: 'Folk',     door: '18:00', end: '22:00' },
-    { name: 'Warehouse Beats',         venue: 'Chang Klan Warehouse',date: dInThisMonth(15, 21, 0), type: 'INDOOR',  ticketing: 'ONSITE_SALES',  genre: 'EDM',      door: '20:00', end: '00:30' },
-    { name: 'Santitham Loft Session',  venue: 'Santitham Loft',      date: dInThisMonth(18, 20, 0), type: 'INDOOR',  ticketing: 'FREE',          genre: 'Lo-fi',    door: '19:00', end: '22:00' },
-    { name: 'Sunset Pop at One Nimman',venue: 'One Nimman Terrace',  date: dInThisMonth(20, 18, 0), type: 'OUTDOOR', ticketing: 'FREE',          genre: 'Pop',      door: '17:30', end: '20:30' },
-    { name: 'Crossover Night',         venue: 'Wat Gate Pavilion',   date: dInThisMonth(22, 19, 30),type: 'INDOOR',  ticketing: 'DIRECT_CONTACT',genre: 'Crossover',door: '19:00', end: '22:00' },
-    { name: 'Riverside Blues Jam',     venue: 'Ping Riverside Stage',date: dInThisMonth(25, 19, 0), type: 'OUTDOOR', ticketing: 'DONATION',      genre: 'Blues',    door: '18:00', end: '21:00' },
-    { name: 'Nimman Live Showcase',    venue: 'Nimman Studio',       date: dInThisMonth(28, 20, 0), type: 'INDOOR',  ticketing: 'TICKET_MELON',  genre: 'Mixed',    door: '19:00', end: '23:00', ticketLink: 'https://ticketmelon.com/demo/nimman-live' },
+    { name: 'Nimman Indie Night',       venue: 'Nimman Studio',        date: dInThisMonth(5, 20, 0),  type: 'INDOOR',  ticketing: 'FREE',           genre: 'Indie',     door: '19:00', end: '22:30' },
+    { name: 'Ping Riverside Jazz',      venue: 'Ping Riverside Stage', date: dInThisMonth(8, 19, 30), type: 'OUTDOOR', ticketing: 'ONSITE_SALES',   genre: 'Jazz',      door: '18:30', end: '21:30' },
+    { name: 'Old City Acoustic Eve',    venue: 'Old City Arena',       date: dInThisMonth(12, 18, 30),type: 'INDOOR',  ticketing: 'DIRECT_CONTACT', genre: 'Acoustic',  door: '18:00', end: '21:00' },
+    { name: 'Tha Phae Folk Friday',     venue: 'Tha Phae Courtyard',   date: dInThisMonth(13, 19, 0), type: 'OUTDOOR', ticketing: 'DONATION',       genre: 'Folk',      door: '18:00', end: '22:00' },
+    { name: 'Warehouse Beats',          venue: 'Chang Klan Warehouse', date: dInThisMonth(15, 21, 0), type: 'INDOOR',  ticketing: 'ONSITE_SALES',   genre: 'EDM',       door: '20:00', end: '00:30' },
+    { name: 'Santitham Loft Session',   venue: 'Santitham Loft',       date: dInThisMonth(18, 20, 0), type: 'INDOOR',  ticketing: 'FREE',           genre: 'Lo-fi',     door: '19:00', end: '22:00' },
+    { name: 'Sunset Pop at One Nimman', venue: 'One Nimman Terrace',   date: dInThisMonth(20, 18, 0), type: 'OUTDOOR', ticketing: 'FREE',           genre: 'Pop',       door: '17:30', end: '20:30' },
+    { name: 'Crossover Night',          venue: 'Wat Gate Pavilion',    date: dInThisMonth(22, 19, 30),type: 'INDOOR',  ticketing: 'DIRECT_CONTACT', genre: 'Crossover', door: '19:00', end: '22:00' },
+    { name: 'Riverside Blues Jam',      venue: 'Ping Riverside Stage', date: dInThisMonth(25, 19, 0), type: 'OUTDOOR', ticketing: 'DONATION',       genre: 'Blues',     door: '18:00', end: '21:00' },
+    { name: 'Nimman Live Showcase',     venue: 'Nimman Studio',        date: dInThisMonth(28, 20, 0), type: 'INDOOR',  ticketing: 'TICKET_MELON',   genre: 'Mixed',     door: '19:00', end: '23:00', ticketLink: 'https://ticketmelon.com/demo/nimman-live' },
   ];
 
   const createdEvents = [];
@@ -164,8 +198,8 @@ async function main() {
       data: {
         name: plan.name,
         description: `${plan.genre} night in Chiang Mai`,
-        eventType: plan.type,
-        ticketing: plan.ticketing,
+        eventType: plan.type,         // enum EventType
+        ticketing: plan.ticketing,    // enum TicketingType
         ticketLink: plan.ticketLink || null,
         alcoholPolicy: 'SERVE',
         date: plan.date,
@@ -179,18 +213,17 @@ async function main() {
   }
 
   // ---------- Link Artists ↔ Events ----------
-  // กำหนดศิลปินขึ้นงานแบบง่าย ๆ (หัวตาราง = headliner, ต่อมาคือ support)
   const linkPlan = [
-    { evIdx: 0, artists: [0, 1] },     // Nimman Indie Night: NewJeans, IU
-    { evIdx: 1, artists: [1, 2] },     // Ping Riverside Jazz: IU, BLACKPINK
-    { evIdx: 2, artists: [3] },        // Old City Acoustic Eve: BTS (อะไรก็ได้ เดโม)
-    { evIdx: 3, artists: [4, 5] },     // Tha Phae Folk Friday: Ado, YOASOBI
-    { evIdx: 4, artists: [2, 4] },     // Warehouse Beats: BLACKPINK, Ado
-    { evIdx: 5, artists: [5] },        // Santitham Loft Session: YOASOBI
-    { evIdx: 6, artists: [0, 3] },     // Sunset Pop: NewJeans, BTS
-    { evIdx: 7, artists: [1, 4] },     // Crossover Night: IU, Ado
-    { evIdx: 8, artists: [2, 5] },     // Blues Jam: BLACKPINK, YOASOBI
-    { evIdx: 9, artists: [0] },        // Nimman Live Showcase: NewJeans
+    { evIdx: 0, artists: [0, 1] },  // Nimman Indie Night: NewJeans, IU
+    { evIdx: 1, artists: [1, 2] },  // Ping Riverside Jazz: IU, BLACKPINK
+    { evIdx: 2, artists: [3] },     // Old City Acoustic Eve: BTS
+    { evIdx: 3, artists: [4, 5] },  // Tha Phae Folk Friday: Ado, YOASOBI
+    { evIdx: 4, artists: [2, 4] },  // Warehouse Beats: BLACKPINK, Ado
+    { evIdx: 5, artists: [5] },     // Santitham Loft Session: YOASOBI
+    { evIdx: 6, artists: [0, 3] },  // Sunset Pop: NewJeans, BTS
+    { evIdx: 7, artists: [1, 4] },  // Crossover Night: IU, Ado
+    { evIdx: 8, artists: [2, 5] },  // Riverside Blues Jam: BLACKPINK, YOASOBI
+    { evIdx: 9, artists: [0] },     // Nimman Live Showcase: NewJeans
   ];
 
   for (const lp of linkPlan) {
@@ -203,6 +236,7 @@ async function main() {
           eventId: ev.id,
           role: i === 0 ? 'headliner' : 'support',
           order: i + 1,
+          status: 'PENDING', // เริ่มสถานะ PENDING (ให้ flow invite/accept ใช้ได้)
         }
       });
     }
