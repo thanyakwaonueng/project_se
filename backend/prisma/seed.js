@@ -125,7 +125,7 @@ async function main() {
       data: {
         email: v.email,
         passwordHash: await bcrypt.hash('password123', 10),
-        role: 'VENUE',
+        role: 'ORGANIZE',
       }
     });
     const vp = await prisma.venueProfile.create({

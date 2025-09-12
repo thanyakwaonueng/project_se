@@ -118,7 +118,7 @@ export default function Navbar() {
             <li><Link className="dropdown-item" to="/me/artist" onClick={closeMobileMenu}>My Artist</Link></li>
           )}
 
-          {(user.role === 'VENUE' || user.role === 'ORGANIZER' || user.role === 'ADMIN') && (
+          {(user.role === 'ORGANIZE' || user.role === 'ADMIN') && (
             <>
               <li><Link className="dropdown-item" to="/me/venue" onClick={closeMobileMenu}>My Venue</Link></li>
               <li><Link className="dropdown-item" to="/page_events/new" onClick={closeMobileMenu}>Create Event</Link></li>

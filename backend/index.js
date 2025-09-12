@@ -17,7 +17,7 @@ const port = process.env.PORT || 4000;
 
 /* ───────────────────────────── HELPERS / AUTHZ ───────────────────────────── */
 // roles ที่อนุญาตให้ "ยื่นคำขออัปเกรด"
-const ALLOW_REQUEST_ROLES = ['ARTIST', 'VENUE', 'ORGANIZER'];
+const ALLOW_REQUEST_ROLES = ['ARTIST', 'ORGANIZE'];
 
 // middleware ตรวจสิทธิ์ ADMIN
 function requireAdmin(req, res, next) {
@@ -116,28 +116,35 @@ function validateEmail(email) {
 /* ───────────────────────────── USERS ───────────────────────────── */
 app.post('/users', async (req, res) => {
   try {
-    
-    const { email, password, role } = req.body;
+    let { email, password } = req.body;
 
-    const user_db = await prisma.user.findUnique({where: {email: email},})
+    // sanitize
+    email = (email || '').trim().toLowerCase();
+
+    // Validate
+    if (!validateEmail(email)) {
+      return res.status(400).json({ error: 'Invalid email!' });
+    }
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: 'Password ต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป!' });
+    }
+
+    // Check existing user
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return res.status(400).json({ error: 'This User is already exist!' });
+    }
+
+    // Create new user (force role = AUDIENCE)
     const passwordHash = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: { email, passwordHash, role: 'AUDIENCE' },
+    });
 
-    //Password check
-    if(!password || password.length < 6){ //Password สั้นเกินไป
-      return res.status(400).json({error: "Password ต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป!"})
-    }
-    
-    //Email and User check
-    if(user_db){ //User already exist! can't sign up
-      return res.status(400).json({error: "This User is already exist!"})
-    } else if(!validateEmail(email)){  
-      return res.status(400).json({error: "Invalid email!"})
-    }else{ //New User
-      const user = await prisma.user.create({ data: { email, passwordHash, role } });
-      return res.status(201).json(user);
-    }
+    return res.status(201).json(user);
   } catch (err) {
-    return res.status(400).json({ error: err.message });
+    console.error('POST /users error:', err);
+    return res.status(400).json({ error: err.message || 'Signup failed' });
   }
 });
 
@@ -293,6 +300,10 @@ app.get("/groups", async (req, res) => {
 /* ───────────────────────────── VENUES (POST = upsert by userId) ─────────── */
 app.post('/venues', authMiddleware, async (req, res) => {
   try {
+
+     if (!['ORGANIZE', 'ADMIN'].includes(req.user.role)) {
+       return res.status(403).json({ error: 'Only ORGANIZE or ADMIN can manage venues' });
+        }
     const userId = req.user.id;
     const data = req.body;
 
@@ -696,7 +707,7 @@ app.post('/me/setup', authMiddleware, async (req, res) => {
     let createdRoleRequest = null;
     if (desiredRole) {
       const me = await prisma.user.findUnique({ where: { id: req.user.id } });
-      const REQUESTABLE = ['ARTIST', 'VENUE', 'ORGANIZER'];
+      const REQUESTABLE = ['ARTIST', 'ORGANIZE'];
 
       const wantsUpgrade = REQUESTABLE.includes(desiredRole);
       const roleChanged  = desiredRole !== me.role;

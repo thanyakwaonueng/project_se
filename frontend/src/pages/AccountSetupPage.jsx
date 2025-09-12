@@ -5,35 +5,42 @@ const PRESET_GENRES = [
   'Pop','Rock','Indie','Hip-hop','R&B','EDM','Jazz','Blues','Metal','Folk','Country'
 ];
 
+const ROLE_OPTIONS = [
+  { value: 'AUDIENCE', label: 'Audience' },              // ไม่ต้องอนุมัติ
+  { value: 'ARTIST',   label: 'Artist (ขออนุมัติ)' },
+  { value: 'ORGANIZE', label: 'Organizer (ขออนุมัติ)' },// ใช้ ORGANIZE
+];
+
 export default function AccountSetupPage() {
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState('');
-  const [ok, setOk] = useState('');
+  const [saving, setSaving]   = useState(false);
+  const [err, setErr]         = useState('');
+  const [ok, setOk]           = useState('');
 
   // form state
   const [displayName, setDisplayName] = useState('');
-  const [firstName, setFirst] = useState('');
-  const [lastName, setLast] = useState('');
-  const [bio, setBio] = useState('');
-  const [favoriteGenres, setFav] = useState([]); // array of string
-  const [desiredRole, setDesiredRole] = useState('FAN'); // FAN (default)
+  const [firstName, setFirst]         = useState('');
+  const [lastName, setLast]           = useState('');
+  const [bio, setBio]                 = useState('');
+  const [favoriteGenres, setFav]      = useState([]);
+  const [desiredRole, setDesiredRole] = useState('AUDIENCE'); // ค่าเริ่มต้น
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
-        const { data } = await axios.get('/api/me/profile', { withCredentials: true });
-        if (data?.profile) {
-          const p = data.profile;
-          setDisplayName(p.displayName || '');
-          setFirst(p.firstName || '');
-          setLast(p.lastName || '');
-          setBio(p.bio || '');
-          setFav(Array.isArray(p.favoriteGenres) ? p.favoriteGenres : []);
-        }
-      } catch (e) {
-        // ignore
+        // ถ้า backend ยังไม่มี GET /me/profile จะเงียบ ๆ แล้วโหลดฟอร์มเปล่า
+        try {
+          const { data } = await axios.get('/api/me/profile', { withCredentials: true });
+          if (data?.profile) {
+            const p = data.profile;
+            setDisplayName(p.displayName || '');
+            setFirst(p.firstName || '');
+            setLast(p.lastName || '');
+            setBio(p.bio || '');
+            setFav(Array.isArray(p.favoriteGenres) ? p.favoriteGenres : []);
+          }
+        } catch {}
       } finally {
         setLoading(false);
       }
@@ -50,7 +57,9 @@ export default function AccountSetupPage() {
     setOk('');
     setSaving(true);
     try {
-      const payload = { displayName, firstName, lastName, bio, favoriteGenres, desiredRole };
+      const payload = { displayName, firstName, lastName, bio, favoriteGenres };
+      if (desiredRole !== 'AUDIENCE') payload.desiredRole = desiredRole; // ส่งเฉพาะถ้าขออัปเกรด
+
       const { data } = await axios.post('/api/me/setup', payload, { withCredentials: true });
 
       if (data?.createdRoleRequest) {
@@ -71,11 +80,12 @@ export default function AccountSetupPage() {
     <div style={{ maxWidth: 800, margin: '24px auto', padding: 16 }}>
       <h2>Account Setup</h2>
       <p style={{ color: '#666' }}>
-        กรอกข้อมูลโปรไฟล์เบื้องต้น เลือกบทบาทที่ต้องการใช้งาน (FAN/ARTIST/VENUE/ORGANIZER) — ถ้าไม่เลือกจะเป็น FAN
+        กรอกข้อมูลโปรไฟล์เบื้องต้น และเลือกบทบาทที่ต้องการใช้งาน (Audience/Artist/Organizer)
+        — ถ้าไม่เลือกจะเป็น Audience
       </p>
 
       {err && <div className="alert alert-danger">{err}</div>}
-      {ok && <div className="alert alert-success">{ok}</div>}
+      {ok  && <div className="alert alert-success">{ok}</div>}
 
       <form onSubmit={submit} style={{ display: 'grid', gap: 16 }}>
         <div className="row">
@@ -118,12 +128,13 @@ export default function AccountSetupPage() {
         <div>
           <label className="form-label fw-bold">Role</label>
           <select className="form-select" value={desiredRole} onChange={(e) => setDesiredRole(e.target.value)}>
-            <option value="FAN">FAN</option>
-            <option value="ARTIST">ARTIST (ขออนุมัติ)</option>
-            <option value="VENUE">VENUE (ขออนุมัติ)</option>
-            <option value="ORGANIZER">ORGANIZER (ขออนุมัติ)</option>
+            {ROLE_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
-          <small className="text-muted">ถ้าเลือก ARTIST/VENUE/ORGANIZER ระบบจะส่งคำขอไปให้แอดมินอนุมัติ</small>
+          <small className="text-muted">
+            ถ้าเลือก Artist/Organizer ระบบจะส่งคำขอไปให้แอดมินอนุมัติ
+          </small>
         </div>
 
         <div>

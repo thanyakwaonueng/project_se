@@ -36,8 +36,10 @@ export default function AppRoutes() {
 
           <Route path="/page_artists" element={<Artist />} />
           <Route path="/page_artists/:slug" element={<Artist />} />
+
           <Route path="/page_venues" element={<Venue />} />
           <Route path="/page_venues/map" element={<VenueMap />} />
+
           <Route path="/page_events" element={<Event />} />
           <Route path="/page_events/:id" element={<EventDetail />} />
           <Route path="/my_events" element={<MyEvents />} />
@@ -46,7 +48,7 @@ export default function AppRoutes() {
           <Route
             path="/page_events/new"
             element={
-              <ProtectedRoute allow={['VENUE', 'ORGANIZER', 'ADMIN']}>
+              <ProtectedRoute allow={['ORGANIZE', 'ADMIN']}>
                 <EventCreate />
               </ProtectedRoute>
             }
@@ -65,7 +67,7 @@ export default function AppRoutes() {
           <Route
             path="/me/venue"
             element={
-              //<ProtectedRoute allow={['VENUE', 'ORGANIZER', 'ADMIN']}>
+              //<ProtectedRoute allow={['ORGANIZER', 'ADMIN']}>
               //</ProtectedRoute>
                 //<VenueProfileForm />
                 <CreateVenue/>
@@ -83,7 +85,7 @@ export default function AppRoutes() {
           <Route
             path="/account_setup"
             element={
-              <ProtectedRoute allow={['FAN','ARTIST','VENUE','ORGANIZER','ADMIN']}>
+              <ProtectedRoute allow={['AUDIENCE', 'ARTIST', 'ORGANIZE', 'ADMIN']}>
                 <AccountSetupPage />
               </ProtectedRoute>
             }
@@ -96,7 +98,7 @@ export default function AppRoutes() {
           <Route
             path="/me/role_upgrade"
             element={
-              <ProtectedRoute allow={['FAN', 'ARTIST', 'VENUE', 'ORGANIZER', 'ADMIN']}>
+              <ProtectedRoute allow={['AUDIENCE', 'ARTIST', 'ORGANIZE', 'ADMIN']}>
                 <RoleUpgradePage />
               </ProtectedRoute>
             }
