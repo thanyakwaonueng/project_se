@@ -166,7 +166,7 @@ async function main() {
       data: {
         userId: u.id,
         name: v.name,
-        locationUrl: v.name, // ในอนาคตจะเปลี่ยนเป็น Google Maps URL จริงได้
+        locationUrl: v.name, // ในอนาคน์จะเปลี่ยนเป็น Google Maps URL จริงได้
         genre: v.genre,
         alcoholPolicy: 'SERVE',
         latitude: v.lat,
@@ -212,7 +212,7 @@ async function main() {
     createdEvents.push(ev);
   }
 
-  // ---------- Link Artists ↔ Events ----------
+  // ---------- Link Artists ↔ Events (existing plan) ----------
   const linkPlan = [
     { evIdx: 0, artists: [0, 1] },  // Nimman Indie Night: NewJeans, IU
     { evIdx: 1, artists: [1, 2] },  // Ping Riverside Jazz: IU, BLACKPINK
@@ -230,16 +230,38 @@ async function main() {
     const ev = createdEvents[lp.evIdx];
     for (let i = 0; i < lp.artists.length; i++) {
       const a = artistUsers[lp.artists[i]].artist;
+      // NOTE: your schema doesn't have role/order fields on ArtistEvent, so we only set status
       await prisma.artistEvent.create({
         data: {
           artistId: a.id,
           eventId: ev.id,
-          role: i === 0 ? 'headliner' : 'support',
-          order: i + 1,
           status: 'PENDING', // เริ่มสถานะ PENDING (ให้ flow invite/accept ใช้ได้)
         }
       });
     }
+  }
+
+  // ---------- Invite artist with id = 1 to ALL events (if artist exists) ----------
+  const artistOne = await prisma.artistProfile.findUnique({ where: { id: 1 } });
+  if (artistOne) {
+    for (const ev of createdEvents) {
+      // avoid duplicate composite PK errors
+      const exists = await prisma.artistEvent.findUnique({
+        where: { artistId_eventId: { artistId: artistOne.id, eventId: ev.id } },
+      });
+      if (!exists) {
+        await prisma.artistEvent.create({
+          data: {
+            artistId: artistOne.id,
+            eventId: ev.id,
+            status: 'PENDING',
+          }
+        });
+      }
+    }
+    console.log(`✅ Invited artist id=1 (${artistOne.name}) to all events.`);
+  } else {
+    console.warn('⚠️ Artist with id=1 not found — skipping invites for artistId=1');
   }
 
   console.log('✅ Done! Chiang Mai venues + this-month events seeded.');
@@ -248,3 +270,4 @@ async function main() {
 main()
   .catch((e) => { console.error(e); process.exit(1); })
   .finally(async () => { await prisma.$disconnect(); });
+

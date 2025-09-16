@@ -19,6 +19,7 @@ import EventDetail from '../pages/EventDetail';
 import VenueMap from '../pages/VenueMap';
 import MyEvents from '../pages/MyEvents';
 import InviteArtist from '../pages/InviteArtist';
+import ArtistInviteRequestsPage from '../pages/ArtistInviteRequestsPage';
 
 
 import AccountSetupPage from '../pages/AccountSetupPage';
@@ -109,6 +110,15 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute allow={['ADMIN']}>
                 <AdminRoleRequestsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/artist/invite_requests"
+            element={
+              <ProtectedRoute allow={['ADMIN', 'ARTIST']}>
+                <ArtistInviteRequestsPage />
               </ProtectedRoute>
             }
           />

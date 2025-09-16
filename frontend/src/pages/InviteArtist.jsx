@@ -8,10 +8,7 @@ export default function InviteArtist() {
 
   const [form, setForm] = useState({
     artistId: "",
-    eventId: Number(eventId), // make sure it's a number
-    role: "",
-    fee: "",   // will parse to int before sending
-    order: "", // will parse to int before sending
+    eventId: Number(eventId),
     notes: "",
   });
 
@@ -29,16 +26,20 @@ export default function InviteArtist() {
     setMessage("");
 
     try {
-      // parse numbers correctly before sending
+      const artistIdStr = form.artistId.trim();
+
+      // ✅ Validate: must be digits only (no spaces, no letters, no decimals)
+      if (!/^\d+$/.test(artistIdStr)) {
+        throw new Error("Artist ID must be a valid integer with no spaces or letters");
+      }
+
       const payload = {
         ...form,
-        artistId: Number(form.artistId),
+        artistId: parseInt(artistIdStr, 10),
         eventId: Number(form.eventId),
-        fee: form.fee ? Number(form.fee) : undefined,
-        order: form.order ? Number(form.order) : undefined,
       };
 
-      const res = await axios.post("/api/artist-events/invite", payload, {
+      await axios.post("/api/artist-events/invite", payload, {
         withCredentials: true,
       });
 
@@ -59,45 +60,12 @@ export default function InviteArtist() {
         <div className="mb-3">
           <label className="form-label">Artist ID</label>
           <input
-            type="number"
+            type="text"
             name="artistId"
             value={form.artistId}
             onChange={handleChange}
             className="form-control"
             required
-          />
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Role</label>
-          <input
-            type="text"
-            name="role"
-            value={form.role}
-            onChange={handleChange}
-            className="form-control"
-          />
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Fee (in cents)</label>
-          <input
-            type="number"
-            name="fee"
-            value={form.fee}
-            onChange={handleChange}
-            className="form-control"
-          />
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Order</label>
-          <input
-            type="number"
-            name="order"
-            value={form.order}
-            onChange={handleChange}
-            className="form-control"
           />
         </div>
 
@@ -112,11 +80,15 @@ export default function InviteArtist() {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: "flex", gap: 8 }}>
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? "Sending..." : "Send Invite"}
           </button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => navigate(-1)}
+          >
             Cancel
           </button>
         </div>

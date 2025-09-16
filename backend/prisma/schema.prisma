@@ -193,9 +193,6 @@ model ArtistEvent {
   eventId  Int
 
   // metadata fields you wanted
-  role      String?    // "headliner" | "support" etc
-  fee       Int?       // use integer cents if you're storing money, or Decimal
-  order     Int?       // lineup order
   status   ArtistEventStatus @default(PENDING)
   notes     String?
   createdAt DateTime @default(now())

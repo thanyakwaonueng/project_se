@@ -457,6 +457,7 @@ app.get('/events/:id', async (req, res) => {
   }
 });
 
+/* ───────────────────────────── LIST OF ALL INVITATION TO ARTIST ─────────── */
 
 /* ───────────────────────────── VENUE SENDS INVITE TO ARTIST ─────────── */
 
