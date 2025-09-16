@@ -644,6 +644,134 @@ app.post('/role-requests/:id/reject', authMiddleware, requireAdmin, async (req, 
   }
 });
 
+
+
+
+
+// ADMIN ดูรายละเอียดคำขอรายรายการ (แนบข้อมูลใบสมัครถ้ามี)
+app.get('/role-requests/:id', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const rr = await prisma.roleRequest.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, email: true, role: true } } },
+    });
+    if (!rr) return res.status(404).json({ error: 'Request not found' });
+
+    // payload รายละเอียดใบสมัคร
+    const application = {};
+
+    // ถ้าขอเป็น ARTIST -> แนบโปรไฟล์ศิลปิน (ฉบับที่ผู้ใช้ส่งจาก AccountSetup)
+    if (rr.requestedRole === 'ARTIST') {
+      const artist = await prisma.artistProfile.findUnique({
+        where: { userId: rr.userId },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          genre: true,
+          bookingType: true,
+          foundingYear: true,
+          label: true,
+          isIndependent: true,
+          memberCount: true,
+          contactEmail: true,
+          contactPhone: true,
+          priceMin: true,
+          priceMax: true,
+          profilePhotoUrl: true,
+          youtubeUrl: true,
+          spotifyUrl: true,
+          soundcloudUrl: true,
+          appleMusicUrl: true,
+          facebookUrl: true,
+          instagramUrl: true,
+          tiktokUrl: true,
+          riderUrl: true,
+          rateCardUrl: true,
+          epkUrl: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      application.artist = artist || null;
+    }
+
+    // (ถ้ามีโรลอื่นในอนาคต ค่อยแนบข้อมูลที่เกี่ยวข้องเพิ่มได้ที่นี่)
+
+    res.json({ request: rr, application });
+  } catch (e) {
+    console.error('GET /role-requests/:id error', e);
+    res.status(400).json({ error: 'Fetch details failed' });
+  }
+});
+
+
+
+
+// ───────────────────────────── ROLE REQUESTS: DETAIL ─────────────────────────────
+// ให้แอดมินดูรายละเอียดคำขอ + แนบใบสมัครศิลปิน (ถ้ามี)
+app.get('/role-requests/:id/detail', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    const request = await prisma.roleRequest.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, email: true, role: true } } },
+    });
+    if (!request) return res.sendStatus(404);
+
+    // แนบ "ใบสมัครศิลปินแบบสั้น" ที่ผู้ใช้ส่งจากหน้า Account Setup (เก็บใน ArtistProfile ของ user นั้น)
+    let application = null;
+    if (request.requestedRole === 'ARTIST') {
+      const artist = await prisma.artistProfile.findUnique({
+        where: { userId: request.userId },
+      });
+      application = { artist };
+    }
+
+    res.json({ request, application });
+  } catch (e) {
+    console.error('GET /role-requests/:id/detail error', e);
+    res.status(500).json({ error: 'Failed to load request detail' });
+  }
+});
+
+// (ทางเลือก) เผื่อ FE บางที่เรียก /role-requests/:id เดิมๆ
+app.get('/role-requests/:id', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const request = await prisma.roleRequest.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, email: true, role: true } } },
+    });
+    if (!request) return res.sendStatus(404);
+    res.json({ request });
+  } catch (e) {
+    console.error('GET /role-requests/:id error', e);
+    res.status(500).json({ error: 'Failed to load request' });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* ───────────────────────────── NOTIFICATIONS ───────────────────────────── */
 
 // ดึงแจ้งเตือน (รองรับ ?unread=1)
@@ -685,43 +813,51 @@ app.post('/me/setup', authMiddleware, async (req, res) => {
   try {
     const {
       displayName, firstName, lastName, bio,
-      favoriteGenres,      // array หรือ string คั่น comma ก็ได้
-      desiredRole,         // ไม่บังคับส่งมา ถ้าไม่เปลี่ยน role
+      favoriteGenres,   // array หรือ string คั่น comma ก็ได้
+      desiredRole,      // ผู้ใช้เลือกบทบาทที่ “อยากเป็น”
     } = req.body;
 
-    // normalize genres
+    // normalize genres -> array<string>
     const genres = Array.isArray(favoriteGenres)
       ? favoriteGenres.map((s) => String(s).trim()).filter(Boolean)
       : typeof favoriteGenres === 'string'
       ? favoriteGenres.split(',').map((s) => s.trim()).filter(Boolean)
       : [];
 
-    // upsert โปรไฟล์ (ใช้ได้ทั้งสร้างครั้งแรกและแก้ไข)
+    // upsert โปรไฟล์
     await prisma.userProfile.upsert({
       where: { userId: req.user.id },
       update: { displayName, firstName, lastName, bio, favoriteGenres: genres },
       create: { userId: req.user.id, displayName, firstName, lastName, bio, favoriteGenres: genres },
     });
 
-    // สร้าง role request ก็ต่อเมื่อ "ผู้ใช้ร้องขอเปลี่ยน role" และ "ต่างจาก role ปัจจุบัน" และ "ไม่มี pending อยู่"
+    // อัปเกรดบทบาท: ให้ "ยื่นขอ" ได้เฉพาะ ARTIST เท่านั้น
+    // ORGANIZE ต้องให้แอดมินกำหนดเอง
     let createdRoleRequest = null;
+    let organizeRequestIgnored = false;
+
     if (desiredRole) {
       const me = await prisma.user.findUnique({ where: { id: req.user.id } });
-      const REQUESTABLE = ['ARTIST', 'ORGANIZE'];
 
-      const wantsUpgrade = REQUESTABLE.includes(desiredRole);
-      const roleChanged  = desiredRole !== me.role;
-
-      if (wantsUpgrade && roleChanged && me.role !== 'ADMIN') {
+      if (desiredRole === 'ORGANIZE') {
+        // ไม่อนุญาตให้ยื่นเอง
+        organizeRequestIgnored = true;
+      } else if (desiredRole === 'ARTIST' && me.role !== 'ARTIST' && me.role !== 'ADMIN') {
+        // กันซ้ำถ้ามีคำขอค้างอยู่
         const pending = await prisma.roleRequest.findFirst({
           where: { userId: req.user.id, status: 'PENDING' },
         });
+
         if (!pending) {
           createdRoleRequest = await prisma.roleRequest.create({
-            data: { userId: req.user.id, requestedRole: desiredRole, reason: 'Requested via profile edit' },
+            data: {
+              userId: req.user.id,
+              requestedRole: 'ARTIST',
+              reason: 'Requested via account setup',
+            },
           });
 
-          // แจ้งเตือนแอดมิน
+          // แจ้งเตือนแอดมินทุกคน
           const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
           await Promise.all(
             admins.map((a) =>
@@ -729,7 +865,7 @@ app.post('/me/setup', authMiddleware, async (req, res) => {
                 data: {
                   userId: a.id,
                   type: 'role_request.new',
-                  message: `New role request: ${me.email} -> ${desiredRole}`,
+                  message: `New role request: ${me.email} -> ARTIST`,
                   data: { roleRequestId: createdRoleRequest.id },
                 },
               })
@@ -737,9 +873,14 @@ app.post('/me/setup', authMiddleware, async (req, res) => {
           );
         }
       }
+      // หมายเหตุ: ไม่ auto เปลี่ยน role ที่นี่ — รอ ADMIN อนุมัติเท่านั้น
     }
 
-    res.json({ ok: true, createdRoleRequest: Boolean(createdRoleRequest) });
+    res.json({
+      ok: true,
+      createdRoleRequest: Boolean(createdRoleRequest),
+      organizeRequestIgnored,
+    });
   } catch (e) {
     console.error('POST /me/setup error', e);
     res.status(400).json({ error: 'Save profile failed' });

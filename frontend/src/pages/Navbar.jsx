@@ -105,15 +105,6 @@ export default function Navbar() {
             </Link>
           </li>
 
-          {/* เมนูยื่นขออัปเกรดสิทธิ์ */}
-          {user.role !== 'ADMIN' && (
-            <li>
-              <Link className="dropdown-item" to="/me/role_upgrade" onClick={closeMobileMenu}>
-                Request role upgrade
-              </Link>
-            </li>
-          )}
-
           {(user.role === 'ARTIST' || user.role === 'ADMIN') && (
             <li><Link className="dropdown-item" to="/me/artist" onClick={closeMobileMenu}>My Artist</Link></li>
           )}

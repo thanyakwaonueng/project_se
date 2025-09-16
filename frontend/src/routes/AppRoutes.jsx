@@ -22,7 +22,7 @@ import InviteArtist from '../pages/InviteArtist';
 
 
 import AccountSetupPage from '../pages/AccountSetupPage';
-import RoleUpgradePage from '../pages/RoleUpgradePage';
+//import RoleUpgradePage from '../pages/RoleUpgradePage';
 import AdminRoleRequestsPage from '../pages/AdminRoleRequestsPage';
 
 
@@ -91,17 +91,6 @@ export default function AppRoutes() {
           />
 
 
-
-
-          {/*ผู้ใช้ที่ล็อกอินแล้วสามารถยื่นขออัปเกรดสิทธิ์ได้ทุก role */}
-          <Route
-            path="/me/role_upgrade"
-            element={
-              <ProtectedRoute allow={['AUDIENCE', 'ARTIST', 'ORGANIZE', 'ADMIN']}>
-                <RoleUpgradePage />
-              </ProtectedRoute>
-            }
-          />
 
           {/*หน้าแอดมินตรวจคำขอ/อนุมัติ/ปฏิเสธ */}
           <Route
