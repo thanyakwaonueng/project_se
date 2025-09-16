@@ -176,6 +176,37 @@ h1 {
   width: 100%;
 }
 
+.error-popup {
+  position: fixed;           /* ลอยอยู่บนหน้าจอ */
+  top: 20px;          
+  left: 50%;           
+  transform: translateX(-50%);
+  background: #ffeef0;
+  color: #86181d;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 1000;        
+  animation: slideDown 0.3s ease;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #86181d;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+
 /* Mobile & Tablet Responsive */
 @media (max-width: 1024px) {
   .signup-content {

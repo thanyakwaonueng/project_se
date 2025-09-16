@@ -59,13 +59,17 @@ export default function Signup() {
         </div>
 
         <div className="container">
-          {err && (
-            <div style={{ background: '#ffeef0', color: '#86181d', padding: 12, borderRadius: 8, marginBottom: 12 }}>
-              {err}
-            </div>
-          )}
 
           <div className="signup-section">
+
+            {err && (
+              <div className="error-popup">
+                {err}
+                <button className="close-btn" onClick={() => setErr('')}>×</button>
+              </div>
+            )}
+
+
             <form onSubmit={handleSignup} className="signup-form">
               <div>
                 {/* <label>Email</label> */}
