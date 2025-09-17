@@ -33,6 +33,17 @@ async function notify(client, userId, type, message, data = null) {
 }
 
 
+//ฟังค์ชั่นช่วยในการซ่อนข้อมูล artist ในแต่ละ user role
+//const { filterArtistForRole } = require('./utils/artistVisibility');
+
+//function getRole(req) {
+  //return req.user?.role ?? 'AUDIENCE';
+//}
+//function isOwner(req, artist) {
+  //return req.user?.id === artist.userId;
+//}
+
+
 /* ───────────────────────────── AUTH MIDDLEWARE ───────────────────────────── */
 async function authMiddleware(req, res, next) {
   const token = req.cookies.token;
@@ -227,16 +238,16 @@ app.post('/users', async (req, res) => {
     const otp = `${Math.floor(100000 + Math.random() * 900000)}` //สุ่มเลข OTP 6 หลัก
     const otp_expired = new Date(Date.now()+15 * 60 * 1000) //อายุ otp 15 นาที
 
-    const mailOption = {
-      from: `"Chiang Mai Original website" <no-reply@myapp.com`, //Header
-      to: email, //User email
-      subject: "Verify your email",
-      html: `<p>Enter <b>${otp}</b> in the app to verify your email and complete sign up</p>
-          <p>This code <b>expired in 15 minutes</b></p>`,
-    }
+    //const mailOption = {
+      //from: `"Chiang Mai Original website" <no-reply@myapp.com`, //Header
+      //to: email, //User email
+      //subject: "Verify your email",
+      //html: `<p>Enter <b>${otp}</b> in the app to verify your email and complete sign up</p>
+         // <p>This code <b>expired in 15 minutes</b></p>`,
+  //  }
     
     //Send email to user
-    await transporter.sendMail(mailOption)
+    //await transporter.sendMail(mailOption)
     
     // Create new user (force role = AUDIENCE)
     const hashotp = await bcrypt.hash(otp, 10)

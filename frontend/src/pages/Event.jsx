@@ -49,6 +49,7 @@ function normalizeEvent(ev) {
   const year = dt ? dt.getFullYear() : null;  // <- เพิ่มปี
 
   return {
+    id: ev?.id ?? null,
     day,
     month,
     year,   // <- เพิ่มปี

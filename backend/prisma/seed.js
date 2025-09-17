@@ -10,6 +10,30 @@ function dInThisMonth(day, hour = 19, minute = 30) {
   return new Date(now.getFullYear(), now.getMonth(), day, hour, minute, 0);
 }
 
+/* ---------- รูปสุ่มสำหรับ Venue ---------- */
+const VENUE_PICS = [
+  "https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg",
+  "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg",
+  "https://images.pexels.com/photos/3359713/pexels-photo-3359713.jpeg",
+  "https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg",
+  "https://images.pexels.com/photos/21067/pexels-photo.jpg",
+  "https://images.pexels.com/photos/164938/pexels-photo-164938.jpeg",
+  "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg",
+  "https://images.pexels.com/photos/167092/pexels-photo-167092.jpeg"
+];
+function pickVenuePhotos(n = 4) {
+  const out = [];
+  const used = new Set();
+  while (out.length < n) {
+    const idx = Math.floor(Math.random() * VENUE_PICS.length);
+    if (!used.has(idx)) {
+      used.add(idx);
+      out.push(VENUE_PICS[idx]);
+    }
+  }
+  return out;
+}
+
 async function main() {
   console.log('🌱 Seeding… (users, artists, Chiang Mai venues, this-month events)');
 
@@ -127,7 +151,7 @@ async function main() {
         name: raw.name,
         description: raw.description || null,
         genre: raw.genre,
-        bookingType: raw.bookingType,          // enum BookingType
+        bookingType: raw.bookingType,
         foundingYear: raw.foundingYear || null,
         memberCount: raw.memberCount || null,
         label: raw.label || null,
@@ -141,11 +165,11 @@ async function main() {
     artistUsers.push({ user, artist });
   }
 
-  // ---------- Venues (เชียงใหม่) — เจ้าของเป็น ORGANIZE ----------
+  // ---------- Venues (เชียงใหม่) ----------
   const venueDefs = [
     { email: 'nimman.studio@venue.example',   name: 'Nimman Studio',        lat: 18.79650, lng: 98.97890, genre: 'Indie/Alt' },
     { email: 'oldcity.arena@venue.example',   name: 'Old City Arena',       lat: 18.79410, lng: 98.98870, genre: 'Pop/Rock' },
-    { email: 'riverside.stage@venue.example', name: 'Ping Riverside Stage',  lat: 18.78760, lng: 99.00190, genre: 'Jazz/Blues' },
+    { email: 'riverside.stage@venue.example', name: 'Ping Riverside Stage', lat: 18.78760, lng: 99.00190, genre: 'Jazz/Blues' },
     { email: 'thaphae.court@venue.example',   name: 'Tha Phae Courtyard',   lat: 18.78790, lng: 98.99340, genre: 'Acoustic/Folk' },
     { email: 'changklan.wh@venue.example',    name: 'Chang Klan Warehouse', lat: 18.78060, lng: 98.99980, genre: 'EDM/Hip-Hop' },
     { email: 'santitham.loft@venue.example',  name: 'Santitham Loft',       lat: 18.80550, lng: 98.98170, genre: 'Indie/Lo-fi' },
@@ -159,18 +183,21 @@ async function main() {
       data: {
         email: v.email,
         passwordHash: await bcrypt.hash('password123', 10),
-        role: 'ORGANIZE', // ⬅️ รวมหน้าที่ดูแล venue ไว้กับ ORGANIZE
+        role: 'ORGANIZE',
       }
     });
+    const photos = pickVenuePhotos(4);
     const vp = await prisma.venueProfile.create({
       data: {
         userId: u.id,
         name: v.name,
-        locationUrl: v.name, // ในอนาคน์จะเปลี่ยนเป็น Google Maps URL จริงได้
+        locationUrl: v.name,
         genre: v.genre,
         alcoholPolicy: 'SERVE',
         latitude: v.lat,
         longitude: v.lng,
+        profilePhotoUrl: photos[0],
+        photoUrls: photos,
       }
     });
     venueProfiles.push(vp);
@@ -178,7 +205,7 @@ async function main() {
 
   const venueByName = Object.fromEntries(venueProfiles.map(v => [v.name, v.id]));
 
-  // ---------- Events (ทั้งหมดภายใน "เดือนนี้") ----------
+  // ---------- Events ----------
   const eventsPlan = [
     { name: 'Nimman Indie Night',       venue: 'Nimman Studio',        date: dInThisMonth(5, 20, 0),  type: 'INDOOR',  ticketing: 'FREE',           genre: 'Indie',     door: '19:00', end: '22:30' },
     { name: 'Ping Riverside Jazz',      venue: 'Ping Riverside Stage', date: dInThisMonth(8, 19, 30), type: 'OUTDOOR', ticketing: 'ONSITE_SALES',   genre: 'Jazz',      door: '18:30', end: '21:30' },
@@ -198,8 +225,8 @@ async function main() {
       data: {
         name: plan.name,
         description: `${plan.genre} night in Chiang Mai`,
-        eventType: plan.type,         // enum EventType
-        ticketing: plan.ticketing,    // enum TicketingType
+        eventType: plan.type,
+        ticketing: plan.ticketing,
         ticketLink: plan.ticketLink || null,
         alcoholPolicy: 'SERVE',
         date: plan.date,
@@ -212,50 +239,44 @@ async function main() {
     createdEvents.push(ev);
   }
 
-  // ---------- Link Artists ↔ Events (existing plan) ----------
+  // ---------- Link Artists ↔ Events ----------
   const linkPlan = [
-    { evIdx: 0, artists: [0, 1] },  // Nimman Indie Night: NewJeans, IU
-    { evIdx: 1, artists: [1, 2] },  // Ping Riverside Jazz: IU, BLACKPINK
-    { evIdx: 2, artists: [3] },     // Old City Acoustic Eve: BTS
-    { evIdx: 3, artists: [4, 5] },  // Tha Phae Folk Friday: Ado, YOASOBI
-    { evIdx: 4, artists: [2, 4] },  // Warehouse Beats: BLACKPINK, Ado
-    { evIdx: 5, artists: [5] },     // Santitham Loft Session: YOASOBI
-    { evIdx: 6, artists: [0, 3] },  // Sunset Pop: NewJeans, BTS
-    { evIdx: 7, artists: [1, 4] },  // Crossover Night: IU, Ado
-    { evIdx: 8, artists: [2, 5] },  // Riverside Blues Jam: BLACKPINK, YOASOBI
-    { evIdx: 9, artists: [0] },     // Nimman Live Showcase: NewJeans
+    { evIdx: 0, artists: [0, 1] },
+    { evIdx: 1, artists: [1, 2] },
+    { evIdx: 2, artists: [3] },
+    { evIdx: 3, artists: [4, 5] },
+    { evIdx: 4, artists: [2, 4] },
+    { evIdx: 5, artists: [5] },
+    { evIdx: 6, artists: [0, 3] },
+    { evIdx: 7, artists: [1, 4] },
+    { evIdx: 8, artists: [2, 5] },
+    { evIdx: 9, artists: [0] },
   ];
 
   for (const lp of linkPlan) {
     const ev = createdEvents[lp.evIdx];
     for (let i = 0; i < lp.artists.length; i++) {
       const a = artistUsers[lp.artists[i]].artist;
-      // NOTE: your schema doesn't have role/order fields on ArtistEvent, so we only set status
       await prisma.artistEvent.create({
         data: {
           artistId: a.id,
           eventId: ev.id,
-          status: 'PENDING', // เริ่มสถานะ PENDING (ให้ flow invite/accept ใช้ได้)
+          status: 'PENDING',
         }
       });
     }
   }
 
-  // ---------- Invite artist with id = 1 to ALL events (if artist exists) ----------
+  // ---------- Invite artist with id = 1 ----------
   const artistOne = await prisma.artistProfile.findUnique({ where: { id: 1 } });
   if (artistOne) {
     for (const ev of createdEvents) {
-      // avoid duplicate composite PK errors
       const exists = await prisma.artistEvent.findUnique({
         where: { artistId_eventId: { artistId: artistOne.id, eventId: ev.id } },
       });
       if (!exists) {
         await prisma.artistEvent.create({
-          data: {
-            artistId: artistOne.id,
-            eventId: ev.id,
-            status: 'PENDING',
-          }
+          data: { artistId: artistOne.id, eventId: ev.id, status: 'PENDING' }
         });
       }
     }
@@ -270,4 +291,3 @@ async function main() {
 main()
   .catch((e) => { console.error(e); process.exit(1); })
   .finally(async () => { await prisma.$disconnect(); });
-
