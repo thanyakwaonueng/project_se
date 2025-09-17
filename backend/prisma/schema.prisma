@@ -30,6 +30,7 @@ model User {
   roleRequests     RoleRequest[]  @relation("RoleRequestUser") // ผู้ใช้คนนี้เป็นเจ้าของคำขอ
   reviewedRequests RoleRequest[]  @relation("RoleRequestReviewedBy") // ผู้ใช้คนนี้ (แอดมิน) เป็นผู้รีวิว
   notifications    Notification[] @relation("UserNotifications") // การแจ้งเตือนของผู้ใช้
+  artistLikes      ArtistLike[]   @relation("ArtistLikeUser")
 }
 
 
@@ -102,6 +103,8 @@ model ArtistProfile {
 
   // new explicit relation
   artistEvents ArtistEvent[]
+
+  likes       ArtistLike[]   @relation("ArtistLikeArtist")
 }
 
 model VenueProfile {
@@ -297,4 +300,18 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([createdAt])
+}
+
+
+model ArtistLike {
+  userId    Int
+  artistId  Int
+  createdAt DateTime @default(now())
+
+  // relations
+  user   User          @relation("ArtistLikeUser",   fields: [userId],   references: [id], onDelete: Cascade)
+  artist ArtistProfile @relation("ArtistLikeArtist", fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@id([userId, artistId])   // ป้องกัน like ซ้ำ
+  @@index([artistId])
 }

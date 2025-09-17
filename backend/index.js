@@ -64,6 +64,9 @@ async function authMiddleware(req, res, next) {
   }
 }
 
+
+
+
 /* ───────────────────────────── AUTH ROUTES ───────────────────────────── */
 app.post('/auth/login', async (req, res) => {
   try {
@@ -334,6 +337,13 @@ app.get('/artists/:id', async (req, res) => {
 
 app.get("/groups", async (req, res) => {
   try {
+    // พยายามอ่านผู้ใช้ปัจจุบันจาก cookie แบบไม่บังคับ (ถ้าผ่านก็มี req.user.id ใช้, ถ้าไม่ก็ปล่อยผ่าน)
+    let meId = null;
+    try {
+      await authMiddleware(req, res, () => {});
+      meId = req.user?.id ?? null;
+    } catch {}
+
     // fetch artists and their artistEvents -> event -> venue
     const artists = await prisma.artistProfile.findMany({
       include: {
@@ -343,7 +353,18 @@ app.get("/groups", async (req, res) => {
               include: { venue: true }
             }
           }
-        }
+        },
+        _count: { select: { likes: true } }, // ✅ นับยอดไลก์
+        ...(meId
+          ? {
+              // ✅ เช็คว่า user นี้ไลก์อยู่ไหม (มีแถวใน ArtistLike หรือไม่)
+              likes: {
+                where: { userId: meId },
+                select: { userId: true },
+                take: 1,
+              },
+            }
+          : {}),
       }
     });
 
@@ -382,7 +403,12 @@ app.get("/groups", async (req, res) => {
           debut: a.foundingYear ? String(a.foundingYear) : "N/A",
           followers: "N/A"
         },
-        followersCount: 0,
+                //  ยอดไลก์จริงจาก DB (เดิมใส่ 0 ไว้)
+        followersCount: a._count?.likes ?? 0,
+
+        //  เราไลก์ศิลปินนี้อยู่ไหม (true/false)
+        likedByMe: !!(a.likes && a.likes.length),
+
         artists: [],
 
         socials: {
@@ -1034,15 +1060,45 @@ app.patch('/me/profile', authMiddleware, async (req, res) => {
 
 
 
+// ---------- LIKE / UNLIKE ARTIST ----------
+app.post('/artists/:id/like', authMiddleware, async (req, res) => {
+  try {
+    const artistId = Number(req.params.id);
+    const userId = req.user.id;
 
+    // กันกรณีศิลปินไม่อยู่
+    const exists = await prisma.artistProfile.findUnique({ where: { id: artistId } });
+    if (!exists) return res.status(404).json({ error: 'Artist not found' });
 
+    // สร้าง like (ถ้ามีอยู่แล้วจะชน PK -> จับ error เฉย ๆ)
+    await prisma.artistLike.create({
+      data: { userId, artistId },
+    }).catch(() => {});
 
+    const count = await prisma.artistLike.count({ where: { artistId } });
+    res.json({ liked: true, count });
+  } catch (e) {
+    console.error('POST /artists/:id/like error', e);
+    res.status(500).json({ error: 'Like failed' });
+  }
+});
 
+app.delete('/artists/:id/like', authMiddleware, async (req, res) => {
+  try {
+    const artistId = Number(req.params.id);
+    const userId = req.user.id;
 
+    await prisma.artistLike.delete({
+      where: { userId_artistId: { userId, artistId } },
+    }).catch(() => {});
 
-
-
-
+    const count = await prisma.artistLike.count({ where: { artistId } });
+    res.json({ liked: false, count });
+  } catch (e) {
+    console.error('DELETE /artists/:id/like error', e);
+    res.status(500).json({ error: 'Unlike failed' });
+  }
+});
 
 
 

@@ -131,7 +131,11 @@ export default function Artist() {
   }, [slug, groups]); //KUYY GU GAE TONG NII, Tanya add groups to that left fucking array
 
   // จำสถานะ follow
-  useEffect(() => { saveFollowed(followed); }, [followed]);
+  useEffect(() => {
+  if (!selectedGroup) return;
+  const updated = groups.find(g => g.id === selectedGroup.id);
+  if (updated) setSelectedGroup(updated);
+}, [groups]); // เมื่อ groups เปลี่ยน (เพราะกด like/unlike) ให้ดึงเวอร์ชันล่าสุดมาแสดง
 
   // ปิดโมดัลด้วย ESC
   useEffect(() => {
@@ -181,7 +185,43 @@ export default function Artist() {
   }, [selectedGroup]);
 
   const toggleFollow = (groupId) => setFollowed(prev => ({ ...prev, [groupId]: !prev[groupId] }));
-
+    /** ========================== LIKE / UNLIKE (เชื่อม DB) ========================== */
+  const toggleLike = async (group) => {
+    try {
+      if (group.likedByMe) {
+        // UNLIKE
+        const { data } = await axios.delete(`/api/artists/${group.id}/like`, { withCredentials: true });
+        setGroups(prev =>
+          prev.map(g =>
+            g.id === group.id
+              ? {
+                  ...g,
+                  likedByMe: false,
+                  followersCount: data?.count ?? Math.max(0, (g.followersCount || 0) - 1),
+                }
+              : g
+          )
+        );
+      } else {
+        // LIKE
+        const { data } = await axios.post(`/api/artists/${group.id}/like`, {}, { withCredentials: true });
+        setGroups(prev =>
+          prev.map(g =>
+            g.id === group.id
+              ? {
+                  ...g,
+                  likedByMe: true,
+                  followersCount: data?.count ?? ((g.followersCount || 0) + 1),
+                }
+              : g
+          )
+        );
+      }
+    } catch (err) {
+      console.error("toggleLike error:", err);
+      // ถ้าส่ง 401/403 มา อาจแจ้งให้ล็อกอินก่อนตาม UX ที่ต้องการ
+    }
+  };
   return (
     <div className="artist-container a-bleed">
       {/* ====== รายการวงทั้งหมด ====== */}
@@ -223,30 +263,40 @@ export default function Artist() {
 
           {/* Grid รายการวง */}
           <div className="group-grid">
-            {filteredGroups.map(group => (  
-              <div key={group.id} className="group-card-wrap" ref={lastFocusRef}>
-                <Link
-                  to={`/page_artists/${group.slug}`}
-                  className="group-card a-card-min"
-                  onClick={() => { setSelectedGroup(group); }}
-                >
-                  <div className="group-card-image">
-                    <img
-                      src={group.image}
-                      alt={group.name}
-                      loading="lazy"
-                      onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
-                    />
-                  </div>
-                </Link>
+  {filteredGroups.map(group => (  
+    <div key={group.id} className="group-card-wrap" ref={lastFocusRef}>
+      {/* ✅ ปุ่มหัวใจ */}
+      <button
+  className={`like-button ${group.likedByMe ? "liked" : ""}`}
+  onClick={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleLike(group);               // << ใช้ API
+  }}
+  aria-label={group.likedByMe ? "Unlike" : "Like"}
+/>
 
-                {/* ชื่อวงอยู่นอกการ์ด */}
-                <div className="group-card-caption">
-                  <h3>{group.name}</h3>
-                </div>
-              </div>
-            ))}
-          </div>
+      <Link
+        to={`/page_artists/${group.slug}`}
+        className="group-card a-card-min"
+        onClick={() => { setSelectedGroup(group); }}
+      >
+        <div className="group-card-image">
+          <img
+            src={group.image}
+            alt={group.name}
+            loading="lazy"
+            onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
+          />
+        </div>
+      </Link>
+
+      <div className="group-card-caption">
+        <h3>{group.name}</h3>
+      </div>
+    </div>
+  ))}
+</div>
         </>
       ) : (
         /* ====== รายละเอียดวง (เลย์เอาต์ 3 คอลัมน์) ====== */

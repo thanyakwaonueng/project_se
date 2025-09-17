@@ -188,3 +188,37 @@
   /* font-weight: 700; */
   color: #231f20;
 }
+
+
+/* ให้กล่องรูปวางตำแหน่งอ้างอิงได้ */
+.group-card-image { 
+  position: relative; 
+}
+
+/* ปุ่มหัวใจวางทับมุมขวาบน */
+.like-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 35px;
+  height: 35px;
+  border: none;
+  outline: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s;
+  background: #2a2a2a url('/img/heart_light.png') no-repeat center;
+  background-size: 15px 15px;
+  z-index: 5;            /* ✅ บังคับให้ลอยเหนือรูป/ลิงก์ */
+}
+
+.like-button:hover {
+  background: #a9deff url('/img/heart_dark.png') no-repeat center;
+  background-size: 18px 18px;
+  transform: scale(1.1);
+}
+
+.like-button.liked {
+  background: #a9deff url('/img/heart_dark.png') no-repeat center;
+  background-size: 18px 18px;
+}
