@@ -34,6 +34,20 @@ function pickVenuePhotos(n = 4) {
   return out;
 }
 
+/* ---------- โปสเตอร์ Event (แนวคอนเสิร์ต/เวที/ไฟสวยๆ) ---------- */
+const EVENT_POSTERS = [
+  "https://images.pexels.com/photos/1190298/pexels-photo-1190298.jpeg",
+  "https://images.pexels.com/photos/3359713/pexels-photo-3359713.jpeg",
+  "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg",
+  "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg",
+  "https://images.pexels.com/photos/167092/pexels-photo-167092.jpeg",
+  "https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg",
+  "https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg",
+  "https://images.pexels.com/photos/21067/pexels-photo.jpg",
+  "https://images.pexels.com/photos/164938/pexels-photo-164938.jpeg",
+  "https://images.pexels.com/photos/164931/pexels-photo-164931.jpeg"
+];
+
 async function main() {
   console.log('🌱 Seeding… (users, artists, Chiang Mai venues, this-month events)');
 
@@ -220,7 +234,8 @@ async function main() {
   ];
 
   const createdEvents = [];
-  for (const plan of eventsPlan) {
+  for (let i = 0; i < eventsPlan.length; i++) {
+    const plan = eventsPlan[i];
     const ev = await prisma.event.create({
       data: {
         name: plan.name,
@@ -234,6 +249,7 @@ async function main() {
         endTime: plan.end,
         genre: plan.genre,
         venueId: venueByName[plan.venue],
+        posterUrl: EVENT_POSTERS[i % EVENT_POSTERS.length], // ✅ ใส่โปสเตอร์สวยๆ
       }
     });
     createdEvents.push(ev);
