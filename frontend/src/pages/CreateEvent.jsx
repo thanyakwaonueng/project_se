@@ -1,10 +1,10 @@
+// frontend/src/pages/CreateEvent.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
 export default function CreateEvent() {
-  const { eventId } = useParams(); // grabs the ":id" part from the URL (e.g., /me/event/4 → id = "4")
-
+  const { eventId } = useParams(); // /me/event/:eventId
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [posterUrl, setPosterUrl] = useState('');
@@ -12,8 +12,8 @@ export default function CreateEvent() {
   const [eventType, setEventType] = useState('INDOOR');
   const [ticketing, setTicketing] = useState('FREE');
   const [ticketLink, setTicketLink] = useState('');
-  const [alcoholPolicy, setAlcoholPolicy] = useState('NONE');
-  const [ageRestriction, setAgeRestriction] = useState('ALL');
+  const [alcoholPolicy, setAlcoholPolicy] = useState('SERVE');
+  const [ageRestriction, setAgeRestriction] = useState('ALL'); // ALL | E18 | E20
   const [date, setDate] = useState('');
   const [doorOpenTime, setDoorOpenTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -26,20 +26,16 @@ export default function CreateEvent() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (eventId) {
-      setHasEvent(true);
-    }
+    if (eventId) setHasEvent(true);
   }, [eventId]);
 
-  // โหลดข้อมูลเดิม (ถ้ามี)
+  // โหลดข้อมูลเดิม (โหมดแก้ไข)
   useEffect(() => {
     const fetchEvent = async () => {
       if (!eventId) return;
-
       try {
         const res = await axios.get(`/api/events/${eventId}`, { withCredentials: true });
         const ev = res.data;
-
         setName(ev.name || '');
         setDescription(ev.description || '');
         setPosterUrl(ev.posterUrl || '');
@@ -47,18 +43,17 @@ export default function CreateEvent() {
         setEventType(ev.eventType || 'INDOOR');
         setTicketing(ev.ticketing || 'FREE');
         setTicketLink(ev.ticketLink || '');
-        setAlcoholPolicy(ev.alcoholPolicy || 'NONE');
-        setAgeRestriction(profile.ageRestriction || 'ALL');
-        setDate(ev.date ? ev.date.split('T')[0] : ''); // keep only YYYY-MM-DD
+        setAlcoholPolicy(ev.alcoholPolicy || 'SERVE');
+        setAgeRestriction(ev.ageRestriction || 'ALL'); // ✅ ใช้ ev.*
+        setDate(ev.date ? ev.date.split('T')[0] : '');
         setDoorOpenTime(ev.doorOpenTime || '');
         setEndTime(ev.endTime || '');
         setGenre(ev.genre || '');
       } catch (err) {
-        console.error("Failed to fetch event:", err);
+        console.error('Failed to fetch event:', err);
         setError(err.response?.data?.error || 'Could not load event details');
       }
     };
-
     fetchEvent();
   }, [eventId]);
 
@@ -77,12 +72,12 @@ export default function CreateEvent() {
         ticketing,
         ticketLink: ticketLink.trim() || undefined,
         alcoholPolicy,
-        ageRestriction: ageRestriction || undefined,
+        ageRestriction, // 'ALL' | 'E18' | 'E20'
         date: date ? new Date(date).toISOString() : undefined,
         doorOpenTime: doorOpenTime.trim() || undefined,
         endTime: endTime.trim() || undefined,
         genre: genre.trim() || undefined,
-        id: eventId ? parseInt(eventId, 10) : undefined,
+        id: eventId ? parseInt(eventId, 10) : undefined, // ส่ง id ถ้าแก้ไข
       };
 
       const payload = Object.fromEntries(
@@ -95,7 +90,8 @@ export default function CreateEvent() {
       });
 
       setLoading(false);
-      navigate(`/api/events/${res.data.id}`);
+      // ✅ กลับไปหน้า UI ของงานนั้น
+      navigate(`/page_events/${res.data.id}`);
     } catch (err) {
       setLoading(false);
       setError(err.response?.data?.error || err.message || 'Failed to save event');
@@ -104,9 +100,7 @@ export default function CreateEvent() {
 
   return (
     <div style={{ maxWidth: 720, margin: '24px auto', padding: 16 }}>
-      <h2 style={{ marginBottom: 12 }}>
-        {hasEvent ? 'Edit Event' : 'Create Event'}
-      </h2>
+      <h2 style={{ marginBottom: 12 }}>{hasEvent ? 'Edit Event' : 'Create Event'}</h2>
 
       {error && (
         <div style={{ background: '#ffeef0', color: '#86181d', padding: 12, borderRadius: 8, marginBottom: 16 }}>
@@ -169,7 +163,7 @@ export default function CreateEvent() {
           </select>
         </div>
 
-        {/* เปลี่ยนเป็น select ของ enum: ALL / E18 / E20 */}
+        {/* Age Restriction enum */}
         <div>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Age Restriction</label>
           <select
@@ -215,4 +209,3 @@ export default function CreateEvent() {
     </div>
   );
 }
-

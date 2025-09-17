@@ -236,7 +236,7 @@ app.post('/users', async (req, res) => {
     }
     
     //Send email to user
-    //await transporter.sendMail(mailOption)
+    await transporter.sendMail(mailOption)
     
     // Create new user (force role = AUDIENCE)
     const hashotp = await bcrypt.hash(otp, 10)

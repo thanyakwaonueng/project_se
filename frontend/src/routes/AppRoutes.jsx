@@ -8,7 +8,7 @@ import Event from '../pages/Event';
 import Login from '../pages/Login';
 import Signup from '../pages/Signup';
 import Logout from '../pages/Logout';
-import EventCreate from '../pages/EventCreate';
+//import EventCreate from '../pages/EventCreate';
 import ArtistProfileForm from '../pages/ArtistProfileForm';
 import VenueProfileForm from '../pages/VenueProfileForm';
 import CreateArtist from '../pages/CreateArtist';
@@ -51,7 +51,7 @@ export default function AppRoutes() {
             path="/page_events/new"
             element={
               <ProtectedRoute allow={['ORGANIZE', 'ADMIN']}>
-                <EventCreate />
+                <CreateEvent />
               </ProtectedRoute>
             }
           />
