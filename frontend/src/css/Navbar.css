@@ -7,6 +7,8 @@
 .navbar-container {
   padding-left: 15px;
   padding-right: 15px;
+  padding-top: 15px;
+  /* background-color: #1c1c1c; */
 }
 
 
@@ -20,29 +22,44 @@
   height: auto;
 }
 
-#nav-style {
+/* #nav-style {
   font-size: 15px;
-}
+} */
 
 .navbar {
   width: 100%;
   top: 25px;
   padding: 10px 10px 20px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  /* background-color: #1c1c1c; */
 }
 
-.navbar-small {
-  padding: 4px 2px;
-}
-
-.navbar-small .logo {
-  width: 70px !important;
-  transition: width 0.3s ease;
-}
 
 .form-inline-nav {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+}
+
+.navbar-menu-text {
+  font-size: 18px;
+}
+
+.profile-icon {
+  width: 100%; 
+  height: 100%;
+  margin-top: 8px;
+  /* object-fit: cover; */
+  vertical-align: middle;
+  display: inline-block; 
+}
+
+#accountDropdown {
+  border: none;
+  background: transparent;
+  padding: 0,
 }
 
 .languageDropdown {
@@ -57,17 +74,23 @@
   background: none;
   border: none;
   padding: 0;
-  font-size: 15px;
+  font-size: 18px;
   cursor: pointer;
   position: relative;
 }
 
 .language-dropdown-btn::after {
-  font-size: 0.6rem;
+  font-size: 14px;
   margin-left: 6px;
   position: relative;
   top: 1px;
   color: currentColor;
+}
+
+.dropdown-item-text {
+  margin-top: 0.5rem;
+  text-align: center;
+  color: #8d8d8d;
 }
 
 .hover-dropdown {
@@ -96,7 +119,7 @@
 
 #nav-signup-btn {
   border-radius: 20px;
-  font-size: 15px;
+  font-size: 18px;
   background-color: #1c1c1c;
   border: 1px solid #aaa;
   margin-left: 10px;
@@ -161,6 +184,7 @@
     flex-direction: column;
     gap: 20px;
     padding: 20px 0;
+    
   }
   
   .navbar-menu-link {
@@ -170,7 +194,7 @@
   }
   
   .navbar-collapse {
-    background-color: #1c1c1c;
+    background-color: #ffffff;
     padding: 15px;
     border-radius: 8px;
     margin-top: 10px;
@@ -202,8 +226,8 @@
   .navbar-auth-section {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    margin-top: 15px;
+    /* gap: 15px; */
+    /* margin-top: 15px; */
   }
   
   #nav-signup-btn {
@@ -217,6 +241,7 @@
   .navbar-menu-wrapper {
     display: flex;
     align-items: center;
+    margin-left: auto;
     gap: 30px;
   }
   
@@ -224,13 +249,13 @@
     display: flex;
     align-items: center;
     gap: 15px;
-    margin-left: auto;
+    /* margin-left: auto; */
   }
   
   /* จัดการ padding สำหรับเมนูเต็มจอ */
   .navbar-container {
-    padding-left: 30px;
-    padding-right: 30px;
+    padding-left: 2%;
+    padding-right: 5%;
   }
 }
 
@@ -250,6 +275,7 @@
 .navbar-menu-link:active {
   outline: none;
   box-shadow: none;
+
 }
 
 /* ตัวหนังสือเดิม */
@@ -275,4 +301,17 @@
 
 .navbar-menu-link:hover .navbar-menu-text:last-child {
   transform: translateY(-100%);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%; 
+  left: 50%; 
+  transform: translateX(-50%); /* เลื่อนให้กึ่งกลาง */
+  margin-top: 8px;
+  min-width: 100px;
+  background-color: #fff;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
 }

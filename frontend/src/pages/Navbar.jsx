@@ -90,10 +90,12 @@ export default function Navbar() {
           data-bs-toggle="dropdown"
           aria-expanded="false"
         >
-          {user.email || 'My Account'}
+
+        <img src="/img/users-circles-freepik.png" className="navbar-menu-link profile-icon"/>
         </button>
+        
         <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
-          <li className="dropdown-item-text" style={{ fontSize: 18, color: '#666' }}>
+          <li className="dropdown-item-text">
             Role: {user.role}
           </li>
           <li><hr className="dropdown-divider" /></li>
@@ -170,10 +172,20 @@ export default function Navbar() {
 
             {/* Dropdowns */}
             <div className="navbar-auth-section">
-              {user ? <NotificationBell /> : null}
-              <AuthButtons user={user} loading={loading} />
-              <LanguageDropdown />
+              {user ? (
+                <>
+                  <LanguageDropdown />        {/* ย้ายมาเป็นอันแรก */}
+                  <NotificationBell />
+                  <AuthButtons user={user} loading={loading} />
+                </>
+              ) : (
+                <>
+                  <AuthButtons user={user} loading={loading} />
+                  <LanguageDropdown />        {/* สำหรับผู้ใช้ไม่ล็อกอิน */}
+                </>
+              )}
             </div>
+
           </div>
         </div>
       </div>

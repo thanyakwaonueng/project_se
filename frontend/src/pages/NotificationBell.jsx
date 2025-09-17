@@ -47,10 +47,16 @@ export default function NotificationBell() {
   };
 
   useEffect(() => {
-    load();
-    const t = setInterval(load, 15000);
-    return () => clearInterval(t);
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.nbell')) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
 
   const markRead = async (id) => {
     try {
@@ -75,6 +81,7 @@ export default function NotificationBell() {
       <button
         className="nbell-btn"
         type="button"
+        style={{ border: 'none', background: 'transparent', outline: 'none' }}
         aria-label={count ? `Notifications ${badgeText} unread` : 'Notifications'}
         onClick={() => setOpen(!open)}
         aria-expanded={open}
@@ -92,7 +99,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="dropdown-menu dropdown-menu-end" style={{ minWidth: 320, padding: 8, display: 'block' }}>
+        <div className="dropdown-menu dropdown-menu-end" style={{ minWidth: 250, padding: 8, display: 'block' }}>
           {!items.length ? (
             <div className="dropdown-item-text">No notifications</div>
           ) : (
