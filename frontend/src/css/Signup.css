@@ -36,7 +36,7 @@
   /* background-color: #9e7676; */
   background-color: #f7f7f7;
   border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  /* box-shadow: 0 5px 15px rgba(0,0,0,0.1); */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -209,10 +209,15 @@ h1 {
 
 /* Mobile & Tablet Responsive */
 @media (max-width: 1024px) {
-  .signup-content {
-    width: 80%;
-    padding: 40px 20px;
+
+  .signup-page {
+    background-color: #f7f7f7;
   }
+
+  .signup-content {
+    width: 100%;
+  }
+  
   .signup-section {
       width: 80%;  
   }
@@ -220,8 +225,7 @@ h1 {
 
 @media (max-width: 768px) {
   .signup-page {
-    flex-direction: column;  /* เรียงแนวตั้ง */
-    height: auto;
+    background-color: #f7f7f7;
     padding: 40px 20px;
   }
 
@@ -233,7 +237,7 @@ h1 {
   }
 
   .signup-subtitle {
-    width: 60%;
+    width: 70%;
     font-size: 13px;
   }
 
