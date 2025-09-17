@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../lib/api';
 import '../css/Event.css';
+import { Link } from "react-router-dom";
 
 /* ---------- เดดโค้ดเดิม (คงไว้) ---------- */
 const allEvents = [
@@ -252,40 +253,30 @@ export default function Event() {
 
         {/* Popup event detail (เหมือนเดิม) */}
         {selectedEvent && (
-          <div className="popup-overlay" onClick={() => setSelectedEvent(null)}>
-            <div className="popup-content" onClick={e => e.stopPropagation()}>
+          <div className="popup-event-overlay" onClick={() => setSelectedEvent(null)}>
+            <div className="popup-event-content" onClick={e => e.stopPropagation()}>
               <button className="close-btn" onClick={() => setSelectedEvent(null)}>×</button>
-              <h2>{selectedEvent[0].day} {selectedEvent[0].month}</h2>
 
-              {selectedEvent.map((ev) => (
-                <div key={`${ev.title}-${ev.day}-detail`} className="popup-event">
-                  <h3>{ev.title}</h3>
+              <h2>{selectedEvent[0].day} {selectedEvent[0].month}</h2>
+              <hr className="popup-divider" />
+
+              {selectedEvent.map((ev, index) => (
+                <div key={`${ev.id || ev.title}-${ev.day}-detail`} className="popup-event">
                   <img
                     src={ev.image}
-                    alt={ev.title}
                     className="popup-image"
                     onError={(e) => { e.currentTarget.src = '/img/graphic-3.png'; }}
                   />
-                  {ev.venueName && <p><strong>สถานที่:</strong> {ev.venueName}</p>}
-                  <p><strong>Description:</strong> {ev.desc || 'No description provided.'}</p>
-                  {ev.condition && (
-                    <p>
-                      <strong>Condition:</strong><br />
-                      {ev.condition.split('\n').map((line, idx) => <span key={idx}>{line}<br /></span>)}
-                    </p>
-                  )}
-                  <p><strong>Genre:</strong> {ev.genre}</p>
-                  <p><strong>Event Type:</strong> {ev.eventType}</p>
-                  <p><strong>Ticketing:</strong> {ev.ticketing}</p>
-                  {ev.ticketLink && (
-                    <p><strong>Ticket Link:</strong> <a href={ev.ticketLink} target="_blank" rel="noopener noreferrer">{ev.ticketLink}</a></p>
-                  )}
-                  <p><strong>Alcohol:</strong> {ev.alcohol}</p>
-                  <p><strong>Age Restriction:</strong> {ev.ageRestriction}</p>
-                  <p><strong>Date:</strong> {ev.date || 'N/A'}</p>
-                  <p><strong>Door Open:</strong> {ev.doorOpenTime || 'N/A'}</p>
-                  <p><strong>End Time:</strong> {ev.endEventTime || 'N/A'}</p>
-                  <hr />
+                  
+                  <div className="popup-event-section">
+                    <h3>{ev.title}</h3>
+                    <Link to={`/my_events/${ev.id}`} className="btn-event-detail">
+                      View Event
+                    </Link>
+                  </div>
+
+                  {/* แสดง divider ถ้าไม่ใช่ item สุดท้าย */}
+                  {index < selectedEvent.length - 1 && <hr className="popup-divider" />}
                 </div>
               ))}
 
@@ -299,7 +290,7 @@ export default function Event() {
             <div className="popup-content" onClick={e => e.stopPropagation()}>
               {/* แก้ตรงนี้ */}
               <button className="close-btn" onClick={(e) => {
-                  e.stopPropagation();   // ✅ กันไม่ให้ overlay จับก่อน
+                  e.stopPropagation();   // กันไม่ให้ overlay จับก่อน
                   setShowGenrePopup(false);
                 }} aria-label="Close"> × </button>
 

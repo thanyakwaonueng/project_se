@@ -241,7 +241,7 @@
 
 .date {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 16px;
   margin-bottom: 6px;
   color: #111;
   display: flex;
@@ -296,54 +296,122 @@
   color: #666;
 }
 
-.popup-overlay {
+/* ---------------- Popup Event Overlay ---------------- */
+.popup-event-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0,0,0,0.5);
+  top: 0; 
+  left: 0; 
+  right: 0; 
+  bottom: 0;
+  background-color: rgba(0,0,0,0.6);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 1100;
+  padding: 20px; /* กัน popup ติดขอบเกินไปตอนเลื่อน */
 }
 
-.popup-content {
-  background: white;
-  padding: 50px;
-  border-radius: 8px;
-  width: 90%;
+/* ---------------- Popup Event Content ---------------- */
+.popup-event-content {
+  background: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  width: 80%;
   max-width: 500px;
+  max-height: 80vh;    /* สูงสุดไม่เกิน 80% ของหน้าจอ */
+  overflow-y: auto;    /* ถ้าเนื้อหายาวเกิน → เลื่อนลงได้ */
   position: relative;
-  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  animation: popupFadeIn 0.25s ease-out;
 }
 
-.close-btn {
-  position: absolute;
-  top: 10px; right: 10px;
-  background: transparent;
+
+/* ---------------- Popup Event Detail ---------------- */
+.popup-divider {
   border: none;
-  font-size: 24px;
-  cursor: pointer;
+  height: 1px;
+  background-color: #ccc;  /* สีของเส้น */
+  margin: 12px 0;          /* ระยะห่างบน-ล่าง */
+}
+
+
+.popup-event {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.popup-event h3 {
+  font-size: 1.5rem;
+  margin: 15px 0;
+  color: #333;
 }
 
 .popup-image {
-  width: 50%;
+  max-width: 100%;
   height: auto;
-  object-fit: cover;
-  margin-bottom: 15px;
+  margin: 15px 0;
+  border-radius: 8px;
 }
 
-.event-title-short {
+
+/* ---------------- Close Button ---------------- */
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 1.8rem;
+  font-weight: bold;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #333;
+}
+
+.close-btn:hover {
+  color: #ff3333;
+}
+
+/* ---------------- Animation ---------------- */
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.popup-event-section {
+  display: flex;                 
+  align-items: center;         
+  justify-content: space-between; 
+  gap: 10px;            
+  margin-bottom: 15px;      
+}
+
+
+.btn-event-detail {
+  display: inline-block;
+  padding: 4px 12px;
   font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 500;
+  background-color: #292929;
+  color: #d2d2d2;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  text-transform: uppercase;
 }
 
-.popup-event + .popup-event {
-  margin-top: 20px;
+.btn-event-detail:hover {
+  background-color: #a9deff;
+  color: #292929;
+  text-decoration: none;
 }
+
 
 
 .btn.select-genre {
