@@ -440,10 +440,10 @@ export default function VenueMap() {
               scrollWheelZoom={true}
               style={{ height: '100%', width: '100%' }}
             >
-              <TileLayer
-                attribution='&copy; OpenStreetMap'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
+<TileLayer
+  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+  url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
+/>
 
               {/* อัปเดตขอบเขตแผนที่เข้ากับ state */}
               <BoundsTracker onChange={setBounds} />
