@@ -13,6 +13,9 @@ model User {
   email        String   @unique
   passwordHash String
   role         UserRole @default(AUDIENCE)
+  isVerified   Boolean  @default(false)
+  otpHash      String? 
+  otpExpiredAt DateTime? 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import '../css/Signup.css';
 //import { useAuth } from '../lib/auth';
 //import { extractErrorMessage } from '../lib/api';
 
@@ -44,52 +45,90 @@ export default function Signup() {
 
 
   return (
-    <div style={{ maxWidth: 480, margin: '40px auto', padding: 16 }}>
-      <h2 style={{ marginBottom: 12 }}>Sign Up</h2>
-      {err && (
-        <div style={{ background: '#ffeef0', color: '#86181d', padding: 12, borderRadius: 8, marginBottom: 12 }}>
-          {err}
-        </div>
-      )}
 
-      <form onSubmit={handleSignup} style={{ display: 'grid', gap: 12 }}>
-        <div>
-          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Email</label>
-          <input
-            type="email"
-            className="form-control"
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            required
-            disabled={busy}
-          />
+    <div className="signup-page">
+
+      {/* <div class="container-h2">
+        <h2>CHIANG MAI ORIGINAL</h2>
+      </div> */}
+
+      <div className="signup-content">
+        <h1>Sign Up</h1>
+        <div className="signup-subtitle">
+          <p>Join our community today to stay updated on concerts, discover new sounds and never miss a beat in Chiang Mai.</p>
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Password</label>
-          <input
-            type="password"
-            className="form-control"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="อย่างน้อย 6 ตัวอักษร"
-            minLength={6}
-            required
-            disabled={busy}
-          />
+        <div className="container">
+
+          <div className="signup-section">
+
+            {err && (
+              <div className="error-popup">
+                {err}
+                <button className="close-btn" onClick={() => setErr('')}>×</button>
+              </div>
+            )}
+
+
+            <form onSubmit={handleSignup} className="signup-form">
+              <div>
+                {/* <label>Email</label> */}
+                <input
+                  type="email"
+                  className="form-control"
+                  autoComplete="username"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  required
+                  disabled={busy}
+                />
+              </div>
+
+              <div>
+                {/* <label>Password</label> */}
+                <input
+                  type="password"
+                  className="form-control"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  minLength={6}
+                  required
+                  disabled={busy}
+                />
+              </div>
+
+              {/* หมายเหตุ: ระบบจะตั้งค่า role เป็น FAN อัตโนมัติหลังสมัคร
+                  ถ้าต้องการสิทธิ์ ARTIST/VENUE/ORGANIZER ให้ไปขออัปเกรดสิทธิ์ภายหลังที่เมนู "Request role upgrade"
+                  ใน Account dropdown (ที่ Navbar) */}
+
+              <button type="submit" className="btn btn-signup" disabled={busy}>
+                {busy ? 'Creating account…' : 'Sign Up'}
+              </button>
+            </form>
+
+     
+          <p className="or-divider">─────── or ───────</p>
+
+          <button type="button" className="btn-google">
+            <img
+              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+              alt="Google logo"
+              className="google-icon"
+            />
+            Sign up with Google
+          </button>
+
+
+          </div>
         </div>
 
-        {/* หมายเหตุ: ระบบจะตั้งค่า role เป็น FAN อัตโนมัติหลังสมัคร
-            ถ้าต้องการสิทธิ์ ARTIST/VENUE/ORGANIZER ให้ไปขออัปเกรดสิทธิ์ภายหลังที่เมนู "Request role upgrade"
-            ใน Account dropdown (ที่ Navbar) */}
 
-        <button type="submit" className="btn btn-primary" disabled={busy}>
-          {busy ? 'Creating account…' : 'Sign Up'}
-        </button>
-      </form>
+
+      </div>
+
     </div>
   );
 }

@@ -1,0 +1,276 @@
+/* 
+.container-h2 {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;        
+  position: relative;
+}
+
+.container-h2 h2 {
+  transform: rotate(270deg);
+  font-size: 40px;
+  transform-origin: center;
+  font-weight: bold;
+  font-family: 'Nothing You Could Do', sans-serif;
+  color: #a9deff;
+} */
+
+
+.signup-page {
+  display: flex;               
+  justify-content: center;   
+  align-items: center; 
+  width: 100vw;
+  height: 100vh;
+  padding: 0 20px;        
+  gap: 20px;
+  background-color: #0e0e0e;
+  /* background-color: #322626; */
+}
+
+.signup-content {
+  /* flex: 1;                   */
+  width: 60%;    
+  height: 80%;         
+  padding: 100px;
+  /* background-color: #9e7676; */
+  background-color: #f7f7f7;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.signup-subtitle {
+  display: flex;
+  flex-direction: column;
+  justify-content: center; 
+  align-items: center;       
+  color: #757575;
+  font-size: 14px;
+  width: 70%;
+  margin: 0 auto;     
+  margin-bottom: 20px;   
+  text-align: center;      
+}
+
+
+
+h1 {
+  display: flex;
+  justify-content: center;  
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.container {
+  /* background-color: #f7f7f7; */
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+    /* background-color: aquamarine; */
+}
+
+.signup-section {
+    width: 55%;
+}
+
+.signup-form div {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.signup-form label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #333;
+}
+
+.signup-form input {
+  padding: 10px 20px;
+  font-size: 14px;
+  border: 1px solid #3e3e3e;
+  border-radius: 20px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.signup-form input:focus {
+  border-color: #000000;
+  box-shadow: 0 0 0 2px rgba(158, 118, 118, 0.2);
+}
+
+.signup-form input::placeholder {
+  color: #aaa;
+}
+
+.btn-signup {
+  padding: 10px 20px;
+  font-size: 14px;
+  border-radius: 20px;
+  color: #f7f7f7;
+  background-color: #1f1f1f;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-signup:hover {
+  background-color: #434343;
+  color: #ffffff;
+  /* transform: scale(1.05); */
+}
+
+/* .signup-option {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;  
+  align-items: center;      
+  width: 50%;
+  margin: 0 auto;     
+  margin-bottom: 20px; 
+  text-align: center; 
+} */
+
+.or-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #757575;
+  font-size: 14px;
+  margin: 20px;
+}
+
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 20px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #444;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-google:hover {
+  background-color: #f7f7f7;
+  border-color: #bbb;
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.btn-google {
+  width: 100%;
+}
+
+.error-popup {
+  position: fixed;           /* ลอยอยู่บนหน้าจอ */
+  top: 20px;          
+  left: 50%;           
+  transform: translateX(-50%);
+  background: #ffeef0;
+  color: #86181d;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 1000;        
+  animation: slideDown 0.3s ease;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #86181d;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+
+/* Mobile & Tablet Responsive */
+@media (max-width: 1024px) {
+  .signup-content {
+    width: 80%;
+    padding: 40px 20px;
+  }
+  .signup-section {
+      width: 80%;  
+  }
+}
+
+@media (max-width: 768px) {
+  .signup-page {
+    flex-direction: column;  /* เรียงแนวตั้ง */
+    height: auto;
+    padding: 40px 20px;
+  }
+
+  .signup-content {
+    width: 100%;  
+    max-width: 100%;
+    height: auto;
+    padding: 30px 20px;
+  }
+
+  .signup-subtitle {
+    width: 60%;
+    font-size: 13px;
+  }
+
+  .or-divider {
+    font-size: 11px;
+  }
+
+  .btn-google {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .signup-form input {
+    font-size: 13px;
+    padding: 8px 15px;
+  }
+
+  .btn-signup {
+    font-size: 13px;
+    padding: 8px 15px;
+  }
+
+  .btn-google {
+    font-size: 13px;
+    gap: 8px;
+  }
+
+  .google-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  
+}

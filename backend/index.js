@@ -7,7 +7,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const { PrismaClient } = require('./generated/prisma');
 const prisma = new PrismaClient();
-
+const nodemailer = require('nodemailer')
 //const { requireRole } = require('./authz');
 
 const app = express();
@@ -113,6 +113,94 @@ function validateEmail(email) {
   return regex.test(email);
 }
 
+//ใช้สำหรับส่งเมลไปหา user
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth:{
+    user: "your_gmail@gmail.com", //เมลคนผู้ส่ง (เปลี่ยนด้วยตอนจะลองส่งด้วยเมลตัวเอง)
+    pass: "xxxx xxxx xxxx xxxx" //รหัสผ่านของเมล
+    //user: process.env.EMAIL_USER, // กำหนดใน .env Email ที่ใช้ส่ง
+   //pass: process.env.EMAIL_PASS, // Password email ที่ใช้ส่งใน .env
+  }
+})
+
+
+
+/* ───────────────────────────── OTP ───────────────────────────── */
+app.post('/verifyOTP', async(req, res) =>{
+  console.log("Verifying OTP...")
+  try{
+    const {email, otp} = req.body
+    if (!validateEmail(email)) {
+      return res.status(400).json({ error: 'Invalid email!' });
+    }
+
+    const user = await prisma.user.findUnique({where:{email}})
+    const valid = await bcrypt.compare(otp, user.otpHash) //เปรียบเทียบ otp กับที่มีใน db
+
+    if(!user){ 
+      return res.status(404).json({error: "User not found!"})
+    }else if(user.isVerified){ //User verify ไปแล้ว
+      return res.status(400).json({error: "User already verified!"})
+    }else if(!valid || user.otpExpiredAt < Date.now()){ //ใส่รหัส OTP ผิดหรือหมดอายุ
+      return res.status(400).json({error: "Invalid or Expired OTP!"})
+    }
+    
+    //Update ข้อมูลว่ายืนยันแล้ว พร้อเปลี่ยนค่า OTP เป็น Null
+    await prisma.user.update({
+      where: { email },
+      data: {isVerified: true, otpHash: null, otpExpiredAt: null}
+    })
+    
+    return res.status(201).json({message: "Email verified successfully!"})
+  }catch(err){
+    console.error('POST /verifyOTP error:', err);
+    return res.status(400).json({ error: err.message || 'OTP failed' });
+  }
+})
+
+app.post("/resendOTP", async(req, res)=>{ //ส่ง OTP ไปหาเมล user ใหม่
+  console.log("Resending OTP...")
+  try {
+    const {email} = req.body
+    if (!validateEmail(email)) {
+      return res.status(400).json({ error: 'Invalid email!' });
+    }
+    const user = await prisma.user.findUnique({where: {email}})
+
+
+    if(!user){
+      return res.status(404).json({error: "User not found!"})
+    }
+
+    const otp = `${Math.floor(100000 + Math.random() * 900000)}` //สุ่มเลข OTP 6 หลัก
+    const otp_expired = new Date(Date.now()+15 * 60 * 1000) //อายุ otp 15 นาที
+
+    //โครงร่างส่งเมล
+    const mailOption = {
+      from: `"Chiang Mai Original website" <no-reply@myapp.com`, //Header
+      to: email, //User email
+      subject: "Verify your email", //หัวเรื่องในเมล
+      html: `<p>Enter <b>${otp}</b> in the app to verify your email and complete sign up</p> 
+          <p>This code <b>expired in 15 minutes</b></p>`, //ข้อความในเมล
+    }
+    //Send email to user
+    await transporter.sendMail(mailOption)
+    
+    const hashotp = await bcrypt.hash(otp, 10)
+    //Update ใส่ OTP กับเวลาใหม่
+    await prisma.user.update({
+      where: { email },
+      data: {otpHash: hashotp, otpExpiredAt: otp_expired}
+    })
+
+    return res.status(201).json({status:"PENDING", message: "OTP has been resent"})
+  } catch (err) {
+    console.error('POST /resendOTP error:', err)
+    return res.status(400).json({error: err.message || 'Resend OTP failed'})
+  }
+})
+
 /* ───────────────────────────── USERS ───────────────────────────── */
 app.post('/users', async (req, res) => {
   try {
@@ -135,10 +223,27 @@ app.post('/users', async (req, res) => {
       return res.status(400).json({ error: 'This User is already exist!' });
     }
 
+    //Create OTP
+    const otp = `${Math.floor(100000 + Math.random() * 900000)}` //สุ่มเลข OTP 6 หลัก
+    const otp_expired = new Date(Date.now()+15 * 60 * 1000) //อายุ otp 15 นาที
+
+    const mailOption = {
+      from: `"Chiang Mai Original website" <no-reply@myapp.com`, //Header
+      to: email, //User email
+      subject: "Verify your email",
+      html: `<p>Enter <b>${otp}</b> in the app to verify your email and complete sign up</p>
+          <p>This code <b>expired in 15 minutes</b></p>`,
+    }
+    
+    //Send email to user
+    await transporter.sendMail(mailOption)
+    
     // Create new user (force role = AUDIENCE)
+    const hashotp = await bcrypt.hash(otp, 10)
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, passwordHash, role: 'AUDIENCE' },
+      data: { email, passwordHash, role: 'AUDIENCE',   
+        otpHash:hashotp, otpExpiredAt:otp_expired},
     });
 
     return res.status(201).json(user);
