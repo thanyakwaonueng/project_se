@@ -93,7 +93,7 @@ export default function Signup() {
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
+                  placeholder="••••••"
                   minLength={6}
                   required
                   disabled={busy}

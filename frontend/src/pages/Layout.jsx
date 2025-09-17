@@ -6,7 +6,7 @@ import { AuthProvider } from '../lib/auth';
 
 export default function Layout() {
   const location = useLocation();  // ดึง path ปัจจุบัน
-  const hideNavandFooter = location.pathname === '/signup'; // หน้า signup จะไม่แสดง
+  const hideNavandFooter = location.pathname === '/signup' || location.pathname === '/login'; // หน้า signup จะไม่แสดง
 
   return (
     <AuthProvider>

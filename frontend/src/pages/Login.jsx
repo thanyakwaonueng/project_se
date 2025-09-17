@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import '../css/Login.css';
 //import { useAuth } from '../lib/auth';
 //import { extractErrorMessage } from '../lib/api';
 
@@ -28,27 +29,54 @@ export default function Login() {
   };
 
   return (
-    <div style={{ maxWidth: 420, margin: '40px auto', padding: 16 }}>
-      <h2 style={{ marginBottom: 12 }}>Login</h2>
-      {err && <div style={{ background: '#ffeef0', color: '#86181d', padding: 12, borderRadius: 8, marginBottom: 12 }}>{err}</div>}
 
-      <form onSubmit={handleLogin} style={{ display: 'grid', gap: 12 }}>
-        <div>
-          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Email</label>
-          <input type="email" className="form-control" autoComplete="username"
-            value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
+    <div className="login-page">
+      <div className="login-content">
+        <h1>Login</h1>
+
+        <div className="container">
+          <div className="login-section">
+
+            {err && (
+              <div className="error-popup">
+                {err}
+                <button className="close-btn" onClick={() => setErr('')}>×</button>
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="login-form">
+              <div>
+                <input 
+                    type="email" 
+                    className="form-control" 
+                    autoComplete="username"
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    placeholder="Email" 
+                    required 
+                />
+              </div>
+
+              <div>
+                <input 
+                    type="password" 
+                    className="form-control" 
+                    autoComplete="current-password"
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    placeholder="••••••" 
+                    required
+                />
+              </div>
+
+              <button type="submit" className="btn btn-login" disabled={busy}>
+                {busy ? 'Signing in…' : 'Login'}
+              </button>
+            </form>
+
+          </div>
         </div>
-
-        <div>
-          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Password</label>
-          <input type="password" className="form-control" autoComplete="current-password"
-            value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••" required />
-        </div>
-
-        <button type="submit" className="btn btn-primary" disabled={busy}>
-          {busy ? 'Signing in…' : 'Login'}
-        </button>
-      </form>
+      </div>
     </div>
   );
 }
