@@ -117,7 +117,7 @@ model VenueProfile {
   timeOpen        String?
   timeClose       String?
   alcoholPolicy   AlcoholPolicy
-  ageRestriction  String?
+  ageRestriction  AgeRestriction @default(ALL)
   profilePhotoUrl String?
   photoUrls       String[]
   contactEmail    String?
@@ -142,6 +142,18 @@ model VenueProfile {
 
   @@index([latitude, longitude])
 }
+
+
+
+
+enum AgeRestriction {
+  ALL  // ทุกวัย
+  E18  // 18+
+  E20  // 20+
+}
+
+
+
 
 enum BookingType {
   FULL_BAND
@@ -174,7 +186,7 @@ model Event {
   ticketing      TicketingType
   ticketLink     String?
   alcoholPolicy  AlcoholPolicy
-  ageRestriction String?
+  ageRestriction AgeRestriction @default(ALL)
   date           DateTime
   doorOpenTime   String?
   endTime        String?

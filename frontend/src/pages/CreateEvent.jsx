@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
 export default function CreateEvent() {
-  const { eventId } = useParams(); // 👈 grabs the ":id" part from the URL (e.g., /me/event/4 → id = "4")
+  const { eventId } = useParams(); // grabs the ":id" part from the URL (e.g., /me/event/4 → id = "4")
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -13,7 +13,7 @@ export default function CreateEvent() {
   const [ticketing, setTicketing] = useState('FREE');
   const [ticketLink, setTicketLink] = useState('');
   const [alcoholPolicy, setAlcoholPolicy] = useState('NONE');
-  const [ageRestriction, setAgeRestriction] = useState('');
+  const [ageRestriction, setAgeRestriction] = useState('ALL');
   const [date, setDate] = useState('');
   const [doorOpenTime, setDoorOpenTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -48,7 +48,7 @@ export default function CreateEvent() {
         setTicketing(ev.ticketing || 'FREE');
         setTicketLink(ev.ticketLink || '');
         setAlcoholPolicy(ev.alcoholPolicy || 'NONE');
-        setAgeRestriction(ev.ageRestriction || '');
+        setAgeRestriction(profile.ageRestriction || 'ALL');
         setDate(ev.date ? ev.date.split('T')[0] : ''); // keep only YYYY-MM-DD
         setDoorOpenTime(ev.doorOpenTime || '');
         setEndTime(ev.endTime || '');
@@ -77,7 +77,7 @@ export default function CreateEvent() {
         ticketing,
         ticketLink: ticketLink.trim() || undefined,
         alcoholPolicy,
-        ageRestriction: ageRestriction.trim() || undefined,
+        ageRestriction: ageRestriction || undefined,
         date: date ? new Date(date).toISOString() : undefined,
         doorOpenTime: doorOpenTime.trim() || undefined,
         endTime: endTime.trim() || undefined,
@@ -169,9 +169,18 @@ export default function CreateEvent() {
           </select>
         </div>
 
+        {/* เปลี่ยนเป็น select ของ enum: ALL / E18 / E20 */}
         <div>
-          <label>Age Restriction</label>
-          <input value={ageRestriction} onChange={e => setAgeRestriction(e.target.value)} className="form-control" />
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Age Restriction</label>
+          <select
+            className="form-select"
+            value={ageRestriction}
+            onChange={(e) => setAgeRestriction(e.target.value)}
+          >
+            <option value="ALL">ทุกวัย</option>
+            <option value="E18">18+</option>
+            <option value="E20">20+</option>
+          </select>
         </div>
 
         <div>

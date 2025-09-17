@@ -16,7 +16,7 @@ export default function CreateVenue() {
   const [timeOpen, setTimeOpen] = useState('');
   const [timeClose, setTimeClose] = useState('');
   const [alcoholPolicy, setAlcoholPolicy] = useState('SERVE');
-  const [ageRestriction, setAgeRestriction] = useState('');
+  const [ageRestriction, setAgeRestriction] = useState('ALL');
   const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
   const [photoUrls, setPhotoUrls] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -27,7 +27,7 @@ export default function CreateVenue() {
   const [tiktokUrl, setTiktokUrl] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
 
-  // ✅ พิกัด (มาจาก MapPicker) + mirror ลงช่อง lat/lng เพื่อแสดงอย่างเดียว
+  // พิกัด (มาจาก MapPicker) + mirror ลงช่อง lat/lng เพื่อแสดงอย่างเดียว
   const [location, setLocation] = useState(null); // {lat, lng, address}
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
@@ -57,7 +57,7 @@ export default function CreateVenue() {
           setTimeOpen(profile.timeOpen || '');
           setTimeClose(profile.timeClose || '');
           setAlcoholPolicy(profile.alcoholPolicy || 'SERVE');
-          setAgeRestriction(profile.ageRestriction || '');
+          setAgeRestriction(profile.ageRestriction || 'ALL');
           setProfilePhotoUrl(profile.profilePhotoUrl || '');
           setPhotoUrls((profile.photoUrls || []).join(', '));
           setContactEmail(profile.contactEmail || '');
@@ -244,9 +244,18 @@ export default function CreateVenue() {
           </select>
         </div>
 
+        {/* เปลี่ยนเป็น select ของ enum: ALL / E18 / E20 */}
         <div>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Age Restriction</label>
-          <input className="form-control" value={ageRestriction} onChange={(e) => setAgeRestriction(e.target.value)} />
+          <select
+            className="form-select"
+            value={ageRestriction}
+            onChange={(e) => setAgeRestriction(e.target.value)}
+          >
+            <option value="ALL">ทุกวัย</option>
+            <option value="E18">18+</option>
+            <option value="E20">20+</option>
+          </select>
         </div>
 
         <div>
