@@ -1,353 +1,681 @@
 // frontend/src/pages/VenueMap.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import api from '../lib/api';
+import api, { extractErrorMessage } from '../lib/api';
+import { Link } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvent, Circle } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import "../css/Venuemap.css";
 
-// ใช้ Leaflet แบบไม่ต้อง import css ไฟล์—เติมลิงก์ให้เอง
-function ensureLeafletCSS() {
-  if (!document.getElementById('leaflet-css')) {
-    const link = document.createElement('link');
-    link.id = 'leaflet-css';
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
+// ----- Fix default marker paths (สำหรับ Vite) -----
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
+
+const CNX = { lat: 18.7883, lng: 98.9853 }; // Chiang Mai
+
+// ===== สร้าง SVG pin เป็น data URL =====
+const pinSvg = (stroke = '#111') => `
+<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'
+     fill='none' stroke='${stroke}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
+  <path d='M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0'/>
+  <circle cx='12' cy='10' r='3'/>
+</svg>`;
+const toDataUrl = s => `data:image/svg+xml;utf8,${encodeURIComponent(s)}`;
+
+// ===== divIcon พร้อมพื้นหลัง + hover =====
+function makePinDivIcon({ stroke = '#111', size = 28, extraClass = '' }) {
+  const box = size + 8;     // กล่องพื้นหลัง (ใหญ่กว่า SVG นิดหน่อย)
+  const height = box + 12;  // เผื่อส่วนปลายหมุด
+  const html = `
+    <div class="vmap-pin-wrap ${extraClass}" style="width:${box}px;height:${box}px;">
+      <img class="vmap-pin-svg" alt="pin" src="${toDataUrl(pinSvg(stroke))}"
+           style="width:${size}px;height:${size}px"/>
+    </div>
+  `;
+  return L.divIcon({
+    className: 'vmap-pin',
+    html,
+    iconSize: [box, height],
+    iconAnchor: [box / 2, height],
+    popupAnchor: [0, -height],
+  });
+}
+
+// Venue = ดำ, Event = ดำ (ให้โทนเดียวกัน)
+const ICON_VENUE = makePinDivIcon({ stroke: '#111', size: 28, extraClass: 'venue-pin' });
+const ICON_EVENT = makePinDivIcon({ stroke: '#000', size: 28, extraClass: 'event-pin' });
+
+// -------- Geo helpers --------
+function haversineKm(a, b) {
+  if (!a || !b) return Infinity;
+  const toRad = (x) => (x * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+function useBounds(onChange) {
+  const [bounds, setBounds] = useState(null);
+  useMapEvent('moveend', (e) => {
+    const b = e.target.getBounds();
+    const payload = {
+      north: b.getNorth(),
+      south: b.getSouth(),
+      east: b.getEast(),
+      west: b.getWest(),
+    };
+    setBounds(payload);
+    onChange?.(payload);
+  });
+  return bounds;
+}
+
+// ===== formatter =====
+function formatDT(iso) {
+  if (!iso) return '—';
+  try {
+    const dt = new Date(iso);
+    return new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeStyle: 'short' }).format(dt);
+  } catch {
+    return iso;
   }
 }
 
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
+// ===== path helpers =====
+const toEventDetailPath = (ev) => {
+  const key = ev?.id ?? ev?._id ?? ev?.slug;
+  return key ? `/page_events/${encodeURIComponent(key)}` : (ev?.url || "#");
+};
+const toVenueDetailPath = (v) => {
+  const key = v?.id ?? v?._id ?? v?.slug ?? v?.slugOrId;
+  return key ? `/page_venues/${encodeURIComponent(key)}` : "#";
+};
 
-// ไอคอนปักหมุดปกติ + ตอนเลือก
-const iconDefault = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-const iconSelected = L.icon({
-  iconUrl:
-    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+// ===== เวลาเปิด–ปิด (รองรับหลายคีย์) =====
+const getOpenCloseText = (v) => {
+  const open =
+    v?.timeOpen ??
+    v?.openTime ??
+    v?.openingTime ??
+    v?.open ??
+    v?.hours?.open ??
+    v?.opening_hours?.open;
 
-function FlyTo({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) map.flyTo(center, Math.max(map.getZoom(), 14), { duration: 0.6 });
-  }, [center]);
-  return null;
-}
+  const close =
+    v?.timeClose ??
+    v?.closeTime ??
+    v?.closingTime ??
+    v?.close ??
+    v?.hours?.close ??
+    v?.opening_hours?.close;
+
+  if (!open && !close) return null;
+  return `${open || '—'}–${close || '—'}`;
+};
 
 export default function VenueMap() {
   const [venues, setVenues] = useState([]);
-  const [query, setQuery] = useState('');
+  const [events, setEvents] = useState([]);
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const [mode, setMode] = useState('VENUES');
+
+  // ฟิลเตอร์
+  const [q, setQ] = useState('');
   const [genre, setGenre] = useState('ALL');
-  const [alcohol, setAlcohol] = useState('ALL');
-  const [selectedId, setSelectedId] = useState(null);
-  const [mapCenter, setMapCenter] = useState([13.7563, 100.5018]); // BKK default
+  const [eventType, setEventType] = useState('ALL');
+  const [daysForward, setDaysForward] = useState('60');
 
-  const listRef = useRef(null);
+  const [bounds, setBounds] = useState(null);
+  const [myLoc, setMyLoc] = useState(null);
+  const [geoErr, setGeoErr] = useState('');
+  const [radiusKm, setRadiusKm] = useState('ALL');
 
+  // แผนที่
+  const mapRef = useRef(null);
+  const [center, setCenter] = useState(CNX);
+  const [zoom, setZoom] = useState(13);
+
+  // โหลดข้อมูล
   useEffect(() => {
-    ensureLeafletCSS();
+    let alive = true;
     (async () => {
       try {
-        const { data } = await api.get('/venues');
-        setVenues(
-          (data || []).filter(v => v.latitude && v.longitude) // ต้องมีพิกัด
-        );
-        // ตั้งศูนย์กลางเริ่มต้นเป็นจุดแรก ๆ ถ้ามี
-        if (data?.length) {
-          const first = data.find(v => v.latitude && v.longitude);
-          if (first) setMapCenter([first.latitude, first.longitude]);
-        }
+        setErr('');
+        setLoading(true);
+        const [vRes, eRes] = await Promise.all([
+          api.get('/venues'),
+          api.get('/events'),
+        ]);
+        if (!alive) return;
+        setVenues(Array.isArray(vRes.data) ? vRes.data : []);
+        setEvents(Array.isArray(eRes.data) ? eRes.data : []);
       } catch (e) {
-        console.error('load venues failed', e);
+        if (!alive) return;
+        setErr(extractErrorMessage(e, 'โหลดข้อมูลไม่สำเร็จ'));
+      } finally {
+        if (alive) setLoading(false);
       }
     })();
+    return () => { alive = false; };
   }, []);
 
-  // สร้างชุดตัวเลือกจากข้อมูลจริง
   const genres = useMemo(() => {
-    const set = new Set(venues.map(v => v.genre).filter(Boolean));
-    return ['ALL', ...Array.from(set)];
+    const s = new Set();
+    venues.forEach(v => v.genre && s.add(v.genre));
+    return Array.from(s).sort();
   }, [venues]);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+  // ===== กรอง VENUES =====
+  const visibleVenuesBase = useMemo(() => {
     return venues.filter(v => {
-      const passQ =
-        !q ||
-        v.name?.toLowerCase().includes(q) ||
-        v.description?.toLowerCase().includes(q);
-      const passG = genre === 'ALL' || v.genre === genre;
-      const passA = alcohol === 'ALL' || v.alcoholPolicy === alcohol;
-      return passQ && passG && passA;
+      if (v.latitude == null || v.longitude == null) return false;
+      if (bounds) {
+        const inLat = v.latitude <= bounds.north && v.latitude >= bounds.south;
+        const inLng = bounds.west <= bounds.east
+          ? (v.longitude >= bounds.west && v.longitude <= bounds.east)
+          : (v.longitude >= bounds.west || v.longitude <= bounds.east);
+        if (!(inLat && inLng)) return false;
+      }
+      if (q.trim()) {
+        const hit = (v.name || '').toLowerCase().includes(q.trim().toLowerCase());
+        if (!hit) return false;
+      }
+      if (genre !== 'ALL' && v.genre !== genre) return false;
+      return true;
     });
-  }, [venues, query, genre, alcohol]);
+  }, [venues, bounds, q, genre]);
 
-  const selected = useMemo(
-    () => filtered.find(v => v.id === selectedId) || null,
-    [filtered, selectedId]
+  const visibleVenues = useMemo(() => {
+    if (!myLoc || radiusKm === 'ALL') return visibleVenuesBase;
+    const r = Number(radiusKm);
+    return visibleVenuesBase.filter(v => {
+      const d = haversineKm(myLoc, { lat: v.latitude, lng: v.longitude });
+      return d <= r;
+    });
+  }, [visibleVenuesBase, myLoc, radiusKm]);
+
+  // ===== กรอง EVENTS =====
+  const visibleEvents = useMemo(() => {
+    const now = new Date();
+    const maxDays = Number(daysForward) || 60;
+    const until = new Date(now.getFullYear(), now.getMonth(), now.getDate() + maxDays);
+
+    let filtered = events.filter(ev => {
+      const v = ev.venue;
+      if (!v || v.latitude == null || v.longitude == null) return false;
+
+      const dt = ev?.date ? new Date(ev.date) : null;
+      if (!dt) return false;
+      if (dt < now || dt > until) return false;
+
+      if (bounds) {
+        const inLat = v.latitude <= bounds.north && v.latitude >= bounds.south;
+        const inLng = bounds.west <= bounds.east
+          ? (v.longitude >= bounds.west && v.longitude <= bounds.east)
+          : (v.longitude >= bounds.west || v.longitude <= bounds.east);
+        if (!(inLat && inLng)) return false;
+      }
+
+      if (q.trim()) {
+        const hit = (ev.name || ev.title || '').toLowerCase().includes(q.trim().toLowerCase());
+        if (!hit) return false;
+      }
+
+      if (eventType !== 'ALL' && ev.eventType !== eventType) return false;
+
+      return true;
+    });
+
+    if (myLoc && radiusKm !== 'ALL') {
+      const r = Number(radiusKm);
+      filtered = filtered.filter(ev => {
+        const v = ev.venue;
+        const d = haversineKm(myLoc, { lat: v.latitude, lng: v.longitude });
+        return d <= r;
+      });
+    }
+
+    return filtered.sort((a,b) => new Date(a.date) - new Date(b.date));
+  }, [events, bounds, q, eventType, daysForward, myLoc, radiusKm]);
+
+  const totalVenuesWithCoords = useMemo(
+    () => venues.filter(v => v.latitude != null && v.longitude != null).length,
+    [venues]
   );
 
-  const listCard = v => {
-    const img =
-      v.profilePhotoUrl || (v.photoUrls && v.photoUrls[0]) ||
-      'https://picsum.photos/seed/venue/400/240';
-    return (
-      <div
-        key={v.id}
-        onClick={() => {
-          setSelectedId(v.id);
-          setMapCenter([v.latitude, v.longitude]);
-          // เลื่อนไปบนสุดของลิสต์เมื่อเลือก (ถ้าต้องการ)
-          // listRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-        style={{
-          background: '#fff',
-          border: v.id === selectedId ? '2px solid #c56' : '1px solid #e8e8e8',
-          borderRadius: 12,
-          overflow: 'hidden',
-          cursor: 'pointer',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-        }}
-      >
-        <div style={{ position: 'relative', height: 160, overflow: 'hidden' }}>
-          <img
-            src={img}
-            alt={v.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-          {v.genre && (
-            <span
-              style={{
-                position: 'absolute',
-                top: 8,
-                left: 8,
-                background: 'rgba(0,0,0,0.65)',
-                color: '#fff',
-                fontSize: 12,
-                padding: '2px 8px',
-                borderRadius: 8,
-              }}
-            >
-              {v.genre}
-            </span>
-          )}
-        </div>
-        <div style={{ padding: 12 }}>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>{v.name}</div>
-          {v.description && (
-            <div style={{ color: '#666', fontSize: 13, marginTop: 4 }}>
-              {v.description.slice(0, 80)}
-              {v.description.length > 80 ? '…' : ''}
-            </div>
-          )}
-          <div
-            style={{
-              display: 'flex',
-              gap: 8,
-              alignItems: 'center',
-              marginTop: 10,
-              flexWrap: 'wrap',
-            }}
-          >
-            {v.priceRate && (
-              <span style={chipStyle}>{v.priceRate}</span>
-            )}
-            {v.alcoholPolicy && (
-              <span style={chipStyle}>{v.alcoholPolicy}</span>
-            )}
-            {v.capacity ? <span style={chipStyle}>Cap {v.capacity}</span> : null}
-          </div>
+  const nearestVenue = useMemo(() => {
+    if (!myLoc) return null;
+    const source = visibleVenues.length ? visibleVenues : visibleVenuesBase;
+    if (!source.length) return null;
+    let best = null;
+    for (const v of source) {
+      const d = haversineKm(myLoc, { lat: v.latitude, lng: v.longitude });
+      if (!best || d < best.distanceKm) best = { venue: v, distanceKm: d };
+    }
+    return best;
+  }, [myLoc, visibleVenues, visibleVenuesBase]);
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {v.websiteUrl ? (
-              <a
-                href={v.websiteUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn btn-sm btn-outline-dark"
-              >
-                Visit Website
-              </a>
-            ) : null}
-            <a
-              href={`https://www.google.com/maps?q=${v.latitude},${v.longitude}`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn btn-sm btn-primary"
-            >
-              Open in Maps
-            </a>
-          </div>
-        </div>
-      </div>
+  const requestMyLocation = () => {
+    if (!('geolocation' in navigator)) {
+      setGeoErr('เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง');
+      return;
+    }
+    setGeoErr('');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setMyLoc(loc);
+        if (mapRef.current) mapRef.current.setView(loc, 15);
+      },
+      (e) => setGeoErr(e.message || 'ไม่สามารถอ่านตำแหน่งได้'),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
     );
   };
 
+  const flyToNearestVenue = () => {
+    if (!nearestVenue || !mapRef.current) return;
+    const v = nearestVenue.venue;
+    mapRef.current.flyTo([v.latitude, v.longitude], 17, { duration: 0.8 });
+  };
+
+  if (loading) return <div style={{ padding: 16 }}>กำลังโหลด…</div>;
+
   return (
-    <div style={pageStyle}>
-      {/* แถบควบคุมด้านบนของฝั่งซ้าย */}
-      <div style={leftColumnStyle}>
-        <div style={toolbarStyle}>
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search venues…"
-            style={searchStyle}
-          />
-          <select
-            value={genre}
-            onChange={e => setGenre(e.target.value)}
-            style={selectStyle}
+    <div className="vmap-page">
+      {/* Header / Controls */}
+      <div className="vmap-controls">
+        <div className="vmap-filterBtns" role="group" aria-label="mode">
+          <button
+            type="button"
+            className={`vmap-filterBtn ${mode === 'VENUES' ? 'is-active' : ''}`}
+            onClick={() => setMode('VENUES')}
           >
-            {genres.map(g => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
-          <select
-            value={alcohol}
-            onChange={e => setAlcohol(e.target.value)}
-            style={selectStyle}
+            Venues
+          </button>
+          <button
+            type="button"
+            className={`vmap-filterBtn ${mode === 'EVENTS' ? 'is-active' : ''}`}
+            onClick={() => setMode('EVENTS')}
           >
-            <option value="ALL">All Alcohol</option>
-            <option value="SERVE">Serve</option>
-            <option value="BYOB">BYOB</option>
-            <option value="NONE">None</option>
-          </select>
+            Events
+          </button>
         </div>
 
-        <div ref={listRef} style={listStyle}>
-          {filtered.length === 0 ? (
-            <div style={{ color: '#777' }}>No venues</div>
-          ) : (
-            <div style={gridStyle}>
-              {filtered.map(v => listCard(v))}
-            </div>
-          )}
+        {/* Search */}
+        <div className="vmap-searchBox">
+          <input
+            className="vmap-searchInput"
+            placeholder={mode === 'VENUES' ? 'ค้นหาชื่อสถานที่…' : 'ค้นหาชื่ออีเวนต์…'}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <span className="vmap-searchIcon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+              <circle cx="11" cy="11" r="7"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </span>
         </div>
+
+        {mode === 'VENUES' ? (
+          <div className="vmap-selectWrap vmap-genreBox" title="แนวเพลง">
+            <select
+              className="vmap-select"
+              value={genre}
+              onChange={(e) => setGenre(e.target.value)}
+            >
+              <option value="ALL">ทุกแนว</option>
+              {genres.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+            <span className="vmap-selectCaret" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </div>
+        ) : (
+          <>
+            <div className="vmap-selectWrap" title="ประเภทอีเวนต์">
+              <select className="vmap-select" value={eventType} onChange={(e) => setEventType(e.target.value)}>
+                <option value="ALL">ทุกประเภท</option>
+                <option value="OUTDOOR">OUTDOOR</option>
+                <option value="INDOOR">INDOOR</option>
+                <option value="HYBRID">HYBRID</option>
+              </select>
+              <span className="vmap-selectCaret" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </span>
+            </div>
+
+            <div className="vmap-selectWrap" title="ช่วงเวลา">
+              <select className="vmap-select" value={daysForward} onChange={(e) => setDaysForward(e.target.value)}>
+                <option value="7">7 วันข้างหน้า</option>
+                <option value="30">30 วันข้างหน้า</option>
+                <option value="60">60 วันข้างหน้า</option>
+                <option value="90">90 วันข้างหน้า</option>
+              </select>
+              <span className="vmap-selectCaret" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </span>
+            </div>
+          </>
+        )}
+
+        {/* GPS + Radius */}
+        <button className="vmap-ghostBtn" onClick={requestMyLocation}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 22s7-4.5 7-11a7 7 0 0 0-14 0c0 6.5 7 11 7 11z"></path>
+            <circle cx="12" cy="11" r="3"></circle>
+          </svg>
+          ตำแหน่งของฉัน
+        </button>
+        <div className="vmap-selectWrap vmap-radiusSelectWrap" title="รัศมี">
+          <select
+            className="vmap-select"
+            value={radiusKm}
+            onChange={(e) => setRadiusKm(e.target.value)}
+          >
+            <option value="ALL">ทุกรัศมี</option>
+            <option value="1">≤ 1 km</option>
+            <option value="3">≤ 3 km</option>
+            <option value="5">≤ 5 km</option>
+            <option value="10">≤ 10 km</option>
+          </select>
+          <span className="vmap-selectCaret" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </span>
+        </div>
+
+        <button
+          className="vmap-ghostBtn"
+          onClick={flyToNearestVenue}
+          disabled={!nearestVenue}
+          title={nearestVenue ? `ใกล้สุด ≈ ${nearestVenue.distanceKm.toFixed(2)} km` : 'ยังไม่มีตำแหน่งฉัน'}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          ใกล้ฉัน
+        </button>
+
+        {(err || geoErr) && (
+          <div className="vmap-alert">
+            {err || geoErr}
+          </div>
+        )}
       </div>
 
-      {/* ฝั่งขวา: แผนที่ */}
-      <div style={rightColumnStyle}>
-        <MapContainer
-          center={mapCenter}
-          zoom={12}
-          style={{ width: '100%', height: '100%' }}
-          scrollWheelZoom
-        >
-          <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <FlyTo center={selected ? [selected.latitude, selected.longitude] : null} />
-
-          {filtered.map(v => (
-            <Marker
-              key={v.id}
-              position={[v.latitude, v.longitude]}
-              icon={v.id === selectedId ? iconSelected : iconDefault}
-              eventHandlers={{
-                click: () => {
-                  setSelectedId(v.id);
-                },
+      {/* ====== Layout 2 คอลัมน์: ซ้าย (Map) / ขวา (List) ====== */}
+      <div className="vmap-twoCol">
+        {/* ซ้าย: แผนที่ */}
+        <div className="vmap-mapCol">
+          <div className="vmap-mapBox">
+            <MapContainer
+              whenCreated={(map) => {
+                mapRef.current = map;
+                map.on('moveend', () => {
+                  const c = map.getCenter();
+                  setCenter({ lat: c.lat, lng: c.lng });
+                  setZoom(map.getZoom());
+                });
               }}
+              center={[center.lat, center.lng]}
+              zoom={zoom}
+              scrollWheelZoom={true}
+              style={{ height: '100%', width: '100%' }}
             >
-              <Popup>
-                <div style={{ fontWeight: 700 }}>{v.name}</div>
-                {v.genre ? <div style={{ fontSize: 12 }}>{v.genre}</div> : null}
-                <div style={{ marginTop: 6 }}>
-                  <a
-                    href={`https://www.google.com/maps?q=${v.latitude},${v.longitude}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open in Google Maps
-                  </a>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
+              <TileLayer
+                attribution='&copy; OpenStreetMap'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+
+              {/* อัปเดตขอบเขตแผนที่เข้ากับ state */}
+              <BoundsTracker onChange={setBounds} />
+
+              {/* วาดรัศมีจากตำแหน่งฉัน (ถ้ามี) */}
+              {myLoc && radiusKm !== 'ALL' && (
+                <Circle
+                  center={[myLoc.lat, myLoc.lng]}
+                  radius={Number(radiusKm) * 1000}
+                  pathOptions={{ color: '#111', fillOpacity: 0.08 }}
+                />
+              )}
+
+              {/* หมุดตามโหมด */}
+              {mode === 'VENUES'
+                ? visibleVenues.map(v => (
+                    <Marker
+                      key={`v-${v.id || v.slug}`}
+                      position={[v.latitude, v.longitude]}
+                      icon={ICON_VENUE}
+                    >
+                      {/* Popup โหมด VENUES: ชื่อ + เวลาเปิด–ปิด */}
+                      <Popup>
+                        <div className="vmap-popupTitle">
+                          <Link to={toVenueDetailPath(v)} className="vmap-popupTitleLink">
+                            {v.name || 'Unnamed Venue'}
+                          </Link>
+                        </div>
+                        {(() => {
+                          const oc = getOpenCloseText(v);
+                          return oc ? <div className="vmap-popupSub">{oc}</div> : null;
+                        })()}
+                      </Popup>
+                    </Marker>
+                  ))
+                : visibleEvents.map(ev => (
+                    <Marker
+                      key={`e-${ev.id || ev._id || ev.slug}`}
+                      position={[ev.venue.latitude, ev.venue.longitude]}
+                      icon={ICON_EVENT}
+                    >
+                      {/* Popup โหมด EVENTS: ชื่ออย่างเดียว */}
+                      <Popup>
+                        <div className="vmap-popupTitle">
+                          <Link to={toEventDetailPath(ev)} className="vmap-popupTitleLink">
+                            {ev.title || ev.name || 'Untitled Event'}
+                          </Link>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  ))
+              }
+            </MapContainer>
+          </div>
+        </div>
+
+        {/* ขวา: ลิสต์แบบการ์ด */}
+        <aside className="vmap-listPane">
+          <div className="vmap-listHeader">
+            {mode === 'VENUES'
+              ? <>แสดง {visibleVenues.length} / ทั้งหมด {totalVenuesWithCoords} สถานที่ที่มีพิกัด</>
+              : <>แสดง {visibleEvents.length} อีเวนต์ (ภายใน {daysForward} วันข้างหน้า)</>
+            }
+          </div>
+
+          {mode === 'VENUES' ? (
+            visibleVenues.length === 0 ? (
+              <div className="vmap-empty">เลื่อนแผนที่/ปรับรัศมีเพื่อหาสถานที่</div>
+            ) : (
+              <div className="vmap-grid">
+                {visibleVenues.map(v => {
+                  const img = v.bannerUrl
+                    || v.coverImage
+                    || v.profilePhotoUrl
+                    || (Array.isArray(v.photoUrls) && v.photoUrls[0])
+                    || '/img/fallback.jpg';
+                  const hasLoc = v.latitude != null && v.longitude != null;
+
+                  // สตริงบรรทัดย่อย (เวลาเปิด–ปิด ถ้าไม่มีใช้ address)
+                  const oc = getOpenCloseText(v);
+                  const subline = oc || v.address || '';
+
+                  // คำนวณระยะทาง (แสดงใน badge)
+                  const distKm = myLoc
+                    ? haversineKm(myLoc, { lat: v.latitude, lng: v.longitude })
+                    : null;
+
+                  return (
+                    <div key={v.id || v.slug} className="vmap-card">
+                      <div className="vmap-cardImg">
+                        <img
+                          src={img}
+                          alt={v.name}
+                          loading="lazy"
+                          onError={(e)=>{e.currentTarget.src='/img/fallback.jpg';}}
+                        />
+                      </div>
+
+                      <div className="vmap-cardBody">
+                        {/* ชื่อร้าน (ลิงก์หัวการ์ด) */}
+                        <div className="vmap-cardTitle">
+                          <Link
+                            to={toVenueDetailPath(v)}
+                            className="vmap-cardTitleLink"
+                          >
+                            {v.name || 'Unnamed Venue'}
+                          </Link>
+                        </div>
+
+                        {/* บรรทัดย่อยใต้ชื่อ */}
+                        {subline && (
+                          <div className="vmap-cardSub">
+                            <span className="vmap-sub">{subline}</span>
+                          </div>
+                        )}
+
+                        {/* meta ด้านขวา */}
+                        <div className="vmap-cardMeta">
+                          {typeof v.rating === 'number' && (
+                            <span className="vmap-badge">★ {v.rating.toFixed(1)}</span>
+                          )}
+                          {Number.isFinite(distKm) && (
+                            <span className="vmap-badge">{distKm.toFixed(1)} km</span>
+                          )}
+                        </div>
+
+                        {/* ปุ่มแอ็กชัน */}
+                        <div className="vmap-cardActions">
+                          {v.website && (
+                            <a className="vmap-btn" href={v.website} target="_blank" rel="noreferrer">
+                              Visit Website ↗
+                            </a>
+                          )}
+                          {hasLoc && (
+                            <a
+                              className="vmap-btn vmap-btnGhost"
+                              href={`https://www.google.com/maps?q=${v.latitude},${v.longitude}`}
+                              target="_blank" rel="noreferrer"
+                            >
+                              เปิดแผนที่
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          ) : (
+            /* EVENTS */
+            visibleEvents.length === 0 ? (
+              <div className="vmap-empty">ยังไม่พบอีเวนต์ในกรอบแผนที่/ช่วงวันที่เลือก</div>
+            ) : (
+              <div className="vmap-grid">
+                {visibleEvents.map(ev => {
+                  const img = ev.bannerUrl
+                    || ev.coverImage
+                    || ev.image
+                    || (Array.isArray(ev.images) && ev.images[0])
+                    || ev.venue?.bannerUrl
+                    || ev.venue?.coverImage
+                    || ev.venue?.profilePhotoUrl
+                    || (Array.isArray(ev.venue?.photoUrls) && ev.venue.photoUrls[0])
+                    || '/img/fallback.jpg';
+                  const hasLoc = ev.venue?.latitude != null && ev.venue?.longitude != null;
+                  return (
+                    <div key={ev.id || ev._id || ev.slug} className="vmap-card">
+                      <div className="vmap-cardImg">
+                        <img
+                          src={img}
+                          alt={ev.title || ev.name}
+                          loading="lazy"
+                          onError={(e)=>{e.currentTarget.src='/img/fallback.jpg';}}
+                        />
+                      </div>
+
+                      <div className="vmap-cardBody">
+                        <div className="vmap-cardTitle">
+                          <Link to={toEventDetailPath(ev)} className="vmap-cardTitleLink">
+                            {ev.title || ev.name || 'Untitled Event'}
+                          </Link>
+                        </div>
+
+                        <div className="vmap-cardSub">
+                          {ev.date && <span className="vmap-sub">{formatDT(ev.date)}</span>}
+                          {ev.venue?.name && <span className="vmap-sub"> • {ev.venue.name}</span>}
+                        </div>
+
+                        {(ev.venue?.address || ev.address) && (
+                          <a className="vmap-cardLink"
+                             href={`https://maps.google.com/?q=${encodeURIComponent(ev.venue?.address || ev.address)}`}
+                             target="_blank" rel="noreferrer">
+                            {ev.venue?.address || ev.address}
+                          </a>
+                        )}
+
+                        <div className="vmap-cardMeta">
+                          {typeof ev.distanceKm === 'number' && (
+                            <span className="vmap-badge">{ev.distanceKm.toFixed(1)} km</span>
+                          )}
+                          {ev.price && <span className="vmap-badge">{ev.price}</span>}
+                        </div>
+
+                        <div className="vmap-cardActions">
+                          {ev.url && (
+                            <a className="vmap-btn" href={ev.url} target="_blank" rel="noreferrer">Visit Website ↗</a>
+                          )}
+                          {hasLoc && (
+                            <a
+                              className="vmap-btn vmap-btnGhost"
+                              href={`https://www.google.com/maps?q=${ev.venue.latitude},${ev.venue.longitude}`}
+                              target="_blank" rel="noreferrer"
+                            >
+                              เปิดแผนที่
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
+        </aside>
       </div>
     </div>
   );
 }
 
-/* ---------- inline styles (ไม่ต้อง import css) ---------- */
-const pageStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'minmax(360px, 520px) 1fr',
-  gap: '0',
-  height: 'calc(100vh - 72px)', // ลบความสูง navbar โดยประมาณ
-  width: '100%',
-};
-
-const leftColumnStyle = {
-  borderRight: '1px solid #eaeaea',
-  background: '#f8f7f6',
-  display: 'flex',
-  flexDirection: 'column',
-  minWidth: 0,
-};
-
-const rightColumnStyle = {
-  minWidth: 0,
-};
-
-const toolbarStyle = {
-  display: 'flex',
-  gap: 8,
-  padding: 12,
-  alignItems: 'center',
-  borderBottom: '1px solid #eee',
-  background: '#fff',
-  position: 'sticky',
-  top: 0,
-  zIndex: 2,
-};
-
-const searchStyle = {
-  flex: 1,
-  height: 38,
-  padding: '0 12px',
-  borderRadius: 10,
-  border: '1px solid #ddd',
-  outline: 'none',
-};
-
-const selectStyle = {
-  height: 38,
-  borderRadius: 10,
-  border: '1px solid #ddd',
-  padding: '0 10px',
-  background: '#fff',
-};
-
-const listStyle = {
-  padding: 12,
-  overflow: 'auto',
-};
-
-const gridStyle = {
-  display: 'grid',
-  gridTemplateColumns: '1fr',
-  gap: 12,
-};
-
-const chipStyle = {
-  background: '#f1f1f1',
-  border: '1px solid #e4e4e4',
-  borderRadius: 999,
-  padding: '2px 10px',
-  fontSize: 12,
-  color: '#333',
-};
+function BoundsTracker({ onChange }) {
+  useBounds(onChange);
+  return null;
+}

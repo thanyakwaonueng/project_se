@@ -333,34 +333,32 @@ export default function Artist() {
 
             {/* กลุ่ม META ใต้รูป (ซ้ายคอลัมน์เดียวกับรูป) */}
             <div className="a-hero-photo-meta">
-              {/* แถว LISTEN ON + emoji ลิงก์ */}
+              {/* แถว LISTEN ON + ปุ่มรูปภาพ */}
               <div className="a-hero-photo-caption">
                 <span className="caption-text">LISTEN ON</span>
-                <div className="caption-icons">
+                <div className="a-listen-icons">
                   <a
-                    className="caption-link caption-btn-emoji"
-                    href="https://open.spotify.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Spotify"
-                    title="Spotify"
-                  >🎧</a>
+                    className="a-social-btn"
+                    href={selectedGroup?.socials?.spotify || "https://open.spotify.com/"}
+                    target="_blank" rel="noopener noreferrer"
+                    aria-label="Spotify" title="Spotify"
+                  >
+                    <img src="/img/spotify.png" alt="Spotify" />
+                  </a>
 
                   <a
-                    className="caption-link caption-btn-emoji"
-                    href="https://www.youtube.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="YouTube"
-                    title="YouTube"
-                  >▶️</a>
+                    className="a-social-btn"
+                    href={selectedGroup?.socials?.youtube || "https://www.youtube.com/"}
+                    target="_blank" rel="noopener noreferrer"
+                    aria-label="YouTube" title="YouTube"
+                  >
+                    <img src="/img/youtube.png" alt="YouTube" />
+                  </a>
 
-                  {/* ไอคอนเฉย ๆ */}
-                  <span
-                    className="caption-emoji-only caption-btn-emoji"
-                    aria-hidden="true"
-                    title="Sound"
-                  >🔊</span>
+                  {/* ปุ่ม “เสียง” (ไม่มีลิงก์) */}
+                  <span className="a-social-btn" aria-hidden="true" title="Sound">
+                    <img src="/img/wave-sound.png" alt="Sound" />
+                  </span>
                 </div>
               </div>
 
@@ -373,19 +371,18 @@ export default function Artist() {
                 <span className="date-value">September 11, 2025</span>
               </div>
 
-
               {/* แถว ETA */}
               <div className="a-hero-photo-eta">
                 <span className="eta-label">ETA</span>
                 <a
-                  className="eta-link"
+                  className="a-social-btn eta-btn"
                   href={selectedGroup?.etaPdfUrl || `/pdf/${selectedGroup?.slug || 'artist'}.pdf`}
                   download
                   title="Download ETA PDF"
                   aria-label="Download ETA PDF"
                   onClick={(e)=>e.stopPropagation()}
                 >
-                  <span className="eta-icon" aria-hidden="true">📄</span>
+                  <img src="/img/download.png" alt="PDF" />
                 </a>
               </div>
 
@@ -393,9 +390,23 @@ export default function Artist() {
               <div className="a-hero-photo-share">
                 <span className="share-label">Share</span>
                 <div className="share-icons">
-                  <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer" className="share-link" title="Instagram">📸</a>
-                  <a href="https://twitter.com"           target="_blank" rel="noopener noreferrer" className="share-link" title="Twitter">🐦</a>
-                  <a href="https://facebook.com"          target="_blank" rel="noopener noreferrer" className="share-link" title="Facebook">📘</a>
+                  <a href={selectedGroup?.socials?.instagram || "https://www.instagram.com"}
+                    target="_blank" rel="noopener noreferrer"
+                    className="a-social-btn" title="Instagram" aria-label="Instagram">
+                    <img src="/img/instagram.png" alt="Instagram" />
+                  </a>
+
+                  <a href={selectedGroup?.socials?.twitter || "https://twitter.com"}
+                    target="_blank" rel="noopener noreferrer"
+                    className="a-social-btn" title="Twitter / X" aria-label="Twitter / X">
+                    <img src="/img/twitter.png" alt="Twitter / X" />
+                  </a>
+
+                  <a href={selectedGroup?.socials?.facebook || "https://facebook.com"}
+                    target="_blank" rel="noopener noreferrer"
+                    className="a-social-btn" title="Facebook" aria-label="Facebook">
+                    <img src="/img/facebook.png" alt="Facebook" />
+                  </a>
                 </div>
               </div>
             </div>

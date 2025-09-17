@@ -43,6 +43,64 @@
 /* =========================================
    META ใต้รูป (LISTEN ON / DATE / SHARE)
    ========================================= */
+.a-hero-photo-caption { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px;
+}
+.a-hero-photo-caption .caption-text {
+  font-weight: 700; 
+  letter-spacing: .04em; 
+  color: #231f20;
+}
+
+.a-listen-icons,
+.a-hero-photo-share .share-icons {
+  display: flex; 
+  align-items: center; 
+  gap: 12px;
+}
+
+.a-social-btn {
+  display: inline-flex;
+  align-items: center; 
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  /* border: 1px solid #aab3bb;            กรอบบางคล้าย Footer */
+  /* background: #b8c9d4;                   สีพื้นโทนเดียวภาพตัวอย่าง */
+  transition: background-color .4s ease, transform .4s ease, opacity .4s ease;
+}
+.a-social-btn:hover {
+  background: #d6efff;
+  /* transform: translateY(-1px); */
+}
+.a-social-btn img {
+  width: 28px; height: 28px; display: block;
+}
+
+.a-social-btn.is-disabled { 
+  pointer-events: none; opacity: .55;
+}
+
+/* ===== ETA ปุ่มกลมให้เหมือนอันอื่น ===== */
+.a-hero-photo-eta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.eta-label {
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: #231f20;
+}
+
+/* ใช้สไตล์ฐานจาก .a-social-btn เหมือนปุ่มอื่น ๆ */
+.eta-btn { /* ไม่ต้องใส่อะไรเพิ่มก็ได้ เพราะสืบทอดจาก .a-social-btn */ }
+.eta-btn img { width: 22px; height: 22px; display: block; }
+   
 .a-hero-photo-meta {
   grid-area: meta;
   max-width: 320px;
@@ -67,20 +125,6 @@
   color: #231f20;
   letter-spacing: 1px;
 }
-.caption-icons { display: flex; gap: 10px; }
-.caption-btn-emoji {
-  font-size: 20px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  filter: grayscale(20%);
-  transition: transform .2s ease, filter .2s ease;
-}
-.caption-link { text-decoration: none; color: inherit; outline: none; border: none; }
-.caption-link:hover,
-.caption-btn-emoji:hover { transform: scale(1.15); filter: grayscale(0%); }
-.caption-emoji-only { cursor: default; }
 
 /* เส้นคั่น */
 .a-hero-photo-line { height: 2px; background: #231f20; }
