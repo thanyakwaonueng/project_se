@@ -124,7 +124,8 @@ export default function Event() {
 
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showGenrePopup, setShowGenrePopup] = useState(false);
-  const [selectedGenre, setSelectedGenre] = useState(null);
+  const [selectedGenre, setSelectedGenre] = useState([]); // <- multi genre
+  // const [selectedGenre, setSelectedGenre] = useState(null);
 
   /* ---------- ดึงข้อมูลจริงแล้ว "ผสาน" กับเดดโค้ด ---------- */
   useEffect(() => {
@@ -166,7 +167,7 @@ export default function Event() {
     return events.filter(e =>
       e.month === month && 
       String(e.year) === String(year) && // ตรวจสอบปีตรงนี้ใช้เป็น str ไปก่อนนะ ถ้าอยากเปลี่ยนก็เปลี่ยนได้เลย
-      (selectedGenre ? e.genre === selectedGenre : true)
+    (selectedGenre.length === 0 || selectedGenre.includes(e.genre)) // <- multi genre
     );
   }, [events, month, year, selectedGenre]); // <- เพิ่มปี
 
@@ -194,7 +195,11 @@ export default function Event() {
         <div className="text-section-right">
           <h1 className="subtitle-sound-agenda">Mark the dates</h1>
           <h1 className="subtitle-sound-agenda">feel the beats</h1>
-          <h1 className="subtitle-sound-agenda">⟡</h1>
+          {/* <div className="star-container">
+            <img src="img/set-hand-painted-stars-3.png" className="star"/>
+            <img src="img/set-hand-painted-stars-1.png" className="star"/>
+          </div> */}
+
         </div>
 
       <div className="calendar-content">
@@ -269,7 +274,7 @@ export default function Event() {
                   />
                   
                   <div className="popup-event-section">
-                    <h3>{ev.title}</h3>
+                    <h3 className="popup-event-title">{ev.title}</h3>
                     <Link to={`/my_events/${ev.id}`} className="btn-event-detail">
                       View Event
                     </Link>
@@ -297,31 +302,42 @@ export default function Event() {
 
               <h2>Select Genre</h2>
               <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
+                {/* All genres */}
                 <li
                   key="all"
-                  onClick={() => { setSelectedGenre(null); setShowGenrePopup(false); }}
+                  onClick={() => { setSelectedGenre([]); setShowGenrePopup(false); }}
                   style={{
                     cursor: 'pointer',
                     padding: '8px',
-                    fontWeight: selectedGenre === null ? 'bold' : 'normal'
+                    fontWeight: selectedGenre.length === 0 ? 'bold' : 'normal'
                   }}
                 >
                   All genres
                 </li>
+
                 {genres.map(g => (
                   <li
                     key={g}
-                    onClick={() => { setSelectedGenre(g); setShowGenrePopup(false); }}
+                    onClick={() => {
+                      if (selectedGenre.includes(g)) {
+                        // ถ้าเลือกแล้ว → ลบออก
+                        setSelectedGenre(selectedGenre.filter(x => x !== g));
+                      } else {
+                        // เพิ่มเข้า array
+                        setSelectedGenre([...selectedGenre, g]);
+                      }
+                    }}
                     style={{
                       cursor: 'pointer',
                       padding: '8px',
-                      fontWeight: selectedGenre === g ? 'bold' : 'normal'
+                      fontWeight: selectedGenre.includes(g) ? 'bold' : 'normal'
                     }}
                   >
                     {g}
                   </li>
                 ))}
               </ul>
+
             </div>
           </div>
         )}

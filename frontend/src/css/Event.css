@@ -19,14 +19,38 @@
 .text-section-right {
   display: flex;            
   flex-direction: column;  
-  align-items: flex-end;  
+  align-items: flex-end;  /* ให้ทุกอย่างชิดขวา */
   position: absolute;         
   right: 5%;                    
-  top: 55%;     
-  transform: translateY(-53%); /* ปรับให้อยู่กลางแนวตั้งจริง ๆ */
+  top: 43%;     
   padding-right: 20px;   
+}
+
+.star-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
 
 }
+
+.star {
+  width: 100px;   /* หรือ % ตามต้องการ */
+  height: auto;
+}
+
+/* ดาวดวงแรก */
+.star-container .star:first-child {
+  width: 100px;
+  transform: translateY(0px);  /* ปรับให้สูงต่ำต่างกัน */
+}
+
+/* ดาวดวงสอง */
+.star-container .star:last-child {
+  width: 80px;
+  transform: translateY(-20px); /* เลื่อนขึ้น 10px */
+}
+
 
 .subtitle-sound-agenda {
   font-family: 'Nothing You Could Do', sans-serif;
@@ -330,8 +354,8 @@
 .popup-divider {
   border: none;
   height: 1px;
-  background-color: #ccc;  /* สีของเส้น */
-  margin: 12px 0;          /* ระยะห่างบน-ล่าง */
+  background-color: #ccc;  
+  margin: 12px 0;   
 }
 
 
@@ -340,17 +364,18 @@
   text-align: center;
 }
 
-.popup-event h3 {
-  font-size: 1.5rem;
+.popup-event-title {
+  font-size: 18px;
   margin: 15px 0;
   color: #333;
 }
 
 .popup-image {
-  max-width: 100%;
-  height: auto;
-  margin: 15px 0;
-  border-radius: 8px;
+  width: 230px;       /* ปรับขนาดที่ต้องการ */
+  height: auto;       /* รักษาอัตราส่วนเดิม */
+  border-radius: 8px; /* ถ้าอยากให้มุมโค้ง */
+  object-fit: cover;  /* ปรับให้รูปเต็มขนาด box */
+  margin-bottom: 10px;
 }
 
 
