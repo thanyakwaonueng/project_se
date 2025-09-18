@@ -18,7 +18,7 @@ export default function NotificationBell() {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 36px; height: 36px;  /* hit-area ใหญ่ คลิกง่าย แต่มองเห็นแค่ไอคอน */
+      width: 36px; height: 36px;
       padding: 0;
       background: transparent;
       border: none;
@@ -43,26 +43,35 @@ export default function NotificationBell() {
     try {
       const { data } = await api.get('/notifications?unread=1');
       setItems(data || []);
-    } catch {}
+    } catch {
+      /* เงียบไว้ */
+    }
   };
 
+  // ปิด dropdown เมื่อคลิกนอกบริเวณ
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!e.target.closest('.nbell')) {
-        setOpen(false);
-      }
+      if (!e.target.closest('.nbell')) setOpen(false);
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ✅ โหลดครั้งแรก + โพลทุก 15s (เฉพาะเมื่อมี user)
+  useEffect(() => {
+    if (!user) return;
+    load(); // load ทันทีเมื่อรู้ว่ามี user
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, [user?.id]);
 
   const markRead = async (id) => {
     try {
       await api.post(`/notifications/${id}/read`);
       setItems((prev) => prev.filter((x) => x.id !== id));
-    } catch {}
+    } catch {
+      /* เงียบไว้ */
+    }
   };
 
   const goReview = async (id) => {
@@ -83,7 +92,11 @@ export default function NotificationBell() {
         type="button"
         style={{ border: 'none', background: 'transparent', outline: 'none' }}
         aria-label={count ? `Notifications ${badgeText} unread` : 'Notifications'}
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next) load(); // ✅ เปิดเมนูแล้วโหลดล่าสุดอีกรอบ
+        }}
         aria-expanded={open}
       >
         {/* ไอคอนกระดิ่งเส้นบาง — ขยายเป็น 26px */}
