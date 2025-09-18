@@ -158,14 +158,14 @@ export default function Navbar() {
             </a>
 
             <a href="/page_events" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
-              <div className="navbar-menu-text">EVENT</div>
-              <div className="navbar-menu-text">EVENT</div>
+              <div className="navbar-menu-text">EVENTS</div>
+              <div className="navbar-menu-text">EVENTS</div>
             </a>
 
             {/* 🔁 เหลือเมนู VENUE อย่างเดียว (รวม list + map) */}
             <a href="/page_venues/map" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
-              <div className="navbar-menu-text">VENUE</div>
-              <div className="navbar-menu-text">VENUE</div>
+              <div className="navbar-menu-text">VENUES</div>
+              <div className="navbar-menu-text">VENUES</div>
             </a>
 
             {/* (ลบ MAP ออก) */}
