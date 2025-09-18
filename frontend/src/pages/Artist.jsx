@@ -60,7 +60,12 @@ const groups = [
 
 /** ---------- Utilities ---------- */
 const formatCompact = (n) => Intl.NumberFormat(undefined, { notation: "compact" }).format(n);
-const dtf = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+// const dtf = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+const dtfEvent = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
 
 export default function Artist() {
 
@@ -512,21 +517,19 @@ export default function Artist() {
               <ul className="a-schedule-list">
                 {(scheduleTab === "upcoming" ? scheduleUpcoming : schedulePast).map(ev => (
                   <li key={ev.id} className="a-schedule-item">
-                    <div className="a-date">{dtf.format(new Date(ev.dateISO))}</div>
+                    <div className="a-date">{dtfEvent.format(new Date(ev.dateISO))}</div>
                     <div className="a-event">
                       <div className="a-event-title">{ev.title}</div>
                       <div className="a-event-sub">{ev.venue} • {ev.city}</div>
                     </div>
-                    {ev.ticketUrl && (
-                      <a
-                        href={ev.ticketUrl}
-                        className="a-link"
-                        onClick={(e)=>e.stopPropagation()}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Tickets
-                      </a>
+                    {(ev.id || ev.url || ev.ticketUrl) && (
+                      ev.id ? (
+                        <Link className="a-link" to={`/page_events/${ev.id}`}>Detail</Link>
+                      ) : ev.url ? (
+                        <a className="a-link" href={ev.url} target="_blank" rel="noreferrer">Detail</a>
+                      ) : (
+                        <a className="a-link" href={ev.ticketUrl} target="_blank" rel="noreferrer">Detail</a>
+                      )
                     )}
                   </li>
                 ))}

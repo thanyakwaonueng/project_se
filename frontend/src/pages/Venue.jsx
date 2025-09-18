@@ -22,6 +22,17 @@ const fmtDate = (v) => {
 };
 const fmtTime = (v) => (v ? v : "—");
 
+/** ===== วันที่แบบไทย: 29/9/2568 (วัน/เดือน/ปี พ.ศ.) ===== */
+const fmtThaiDMY_BE = (v) => {
+  if (!v) return "—";
+  const d = new Date(v);
+  if (isNaN(d)) return "—";
+  const day = d.getDate();               // ไม่ใส่ leading zero ตามตัวอย่าง
+  const month = d.getMonth() + 1;
+  const yearBE = d.getFullYear() + 543;
+  return `${day}/${month}/${yearBE}`;
+};
+
 export default function Venue() {
   const { slugOrId } = useParams();
   const [venue, setVenue] = useState(null);
@@ -68,6 +79,26 @@ export default function Venue() {
 
   const mapPoint = useMemo(() => {
     return parseLatLng(venue?.locationUrl || venue?.googleMapUrl, venue?.latitude, venue?.longitude);
+  }, [venue]);
+
+
+  const fmtEnLong = (v) => {
+    const d = v instanceof Date ? v : new Date(v);
+    if (isNaN(d)) return "—";
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long", day: "numeric", year: "numeric"
+    }).format(d);
+  };
+
+  /** ===== สร้างรายการ Upcoming (เรียงจากใกล้สุด → ไกลสุด) ===== */
+  const eventsUpcoming = useMemo(() => {
+    const list = Array.isArray(venue?.events) ? venue.events : [];
+    const today = new Date();
+    // ตัดเวลาออกจากวันนี้เพื่อกันกรณีเวลาเลื่อนเขต
+    const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return list
+      .filter(ev => ev?.date && !isNaN(new Date(ev.date)) && new Date(ev.date) >= todayMid)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [venue]);
 
   if (loading) return <div className="vn-page"><div className="vn-loading">กำลังโหลด…</div></div>;
@@ -197,34 +228,47 @@ export default function Venue() {
         </section>
       )}
 
-      {/* ===== EVENTS (ถ้ามี) ===== */}
-      {Array.isArray(venue.events) && venue.events.length > 0 && (
+      {/* ===== UPCOMING (ใหม่: ใช้หน้าตาเดียวกับ Schedule ของ Artist) ===== */}
+      {true && (
         <section className="vn-section">
-          <div className="vn-section-title">Upcoming Events</div>
-          <ul className="vn-event-list">
-            {venue.events.map(ev => (
-              <li key={ev.id || ev.slug || ev.title} className="vn-event-item">
-                <div className="vn-event-main">
-                  <div className="vn-event-title">{ev.title || ev.name}</div>
-                  <div className="vn-event-sub">
-                    {ev.date && <span>{new Date(ev.date).toLocaleString()}</span>}
-                    {ev.price && <span> • {ev.price}</span>}
+          <h2 className="a-section-title">Upcoming</h2>
+          <div className="a-panel">
+            <ul className="a-schedule-list">
+              {eventsUpcoming.map(ev => (
+                <li key={ev.id || ev.slug || ev.title} className="a-schedule-item">
+                  <div className="a-date">{fmtEnLong(ev.date || ev.dateISO)}</div>
+                  <div className="a-event">
+                    <div className="a-event-title">{ev.title || ev.name}</div>
+                    <div className="a-event-sub">
+                      {(ev.venue || venue.name) || ""}
+                      {ev.city ? ` • ${ev.city}` : ""}
+                      {ev.price ? ` • ${ev.price}` : ""}
+                    </div>
                   </div>
-                </div>
-                {(ev.id || ev.url) && (
-                  ev.id
-                    ? <Link className="vn-btn-ghost" to={`/page_events/${ev.id}`}>Details</Link>
-                    : <a className="vn-btn-ghost" href={ev.url} target="_blank" rel="noreferrer">Details</a>
-                )}
-              </li>
-            ))}
-          </ul>
+                  {(ev.id || ev.url || ev.ticketLink) && (
+                    ev.id ? (
+                      <Link className="a-link" to={`/page_events/${ev.id}`}>Detail</Link>
+                    ) : ev.url ? (
+                      <a className="a-link" href={ev.url} target="_blank" rel="noreferrer">Detail</a>
+                    ) : (
+                      <a className="a-link" href={ev.ticketLink} target="_blank" rel="noreferrer">Detail</a>
+                    )
+                  )}
+                </li>
+              ))}
+
+              {eventsUpcoming.length === 0 && (
+                <li className="a-empty">ยังไม่มีกิจกรรมที่จะเกิดขึ้น</li>
+              )}
+            </ul>
+          </div>
         </section>
       )}
 
-      <section className="vn-section" style={{ display: "flex", gap: 8 }}>
+      {/* ปุ่มกลับ */}
+      {/* <section className="vn-section" style={{ display: "flex", gap: 8 }}>
         <Link to="/page_venues" className="vn-btn-ghost">← กลับแผนที่</Link>
-      </section>
+      </section> */}
     </div>
   );
 }

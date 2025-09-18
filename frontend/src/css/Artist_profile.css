@@ -216,8 +216,8 @@
 /* หัวข้อเล็กๆ ก่อนแทบ */
 .a-section-title{
   font-family: 'Poppins', sans-serif;
-  font-weight: 800;
-  font-size: 18px;
+  font-weight: 600;
+  font-size: 22px;
   margin: 0 0 10px 4px;
   color: #231f20;
   letter-spacing: .3px;
@@ -377,3 +377,5 @@
 .eta-link:hover .eta-icon{ 
     transform:scale(1.12); 
 }
+
+

@@ -1,126 +1,321 @@
-/* =========================
-   Venue — Minimal B/W Theme
-   ========================= */
-:root {
-  --ink:#111;
-  --ink-2:#333;
-  --muted:#777;
-  --paper:#fff;
-  --line:#eaeaea;
-  --accent:#000; /* ปุ่มดำ */
-  --radius:16px;
-  --gap:16px;
-  --font: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+/* ==========================================================================
+   VENUE PAGE — Elegant Minimal Theme
+   สโคปทุกอย่างอยู่ภายใต้ .vn-page เพื่อไม่ให้ไปชนกับหน้าอื่น
+   ========================================================================== */
+
+/* ---------- ตัวแปรสี/ขนาด ที่ปรับโทนทั้งหน้าได้ง่าย ๆ ---------- */
+.vn-page {
+  --c-bg: #f7f7f8;            /* สีพื้นหลังหลัก */
+  --c-surface: #ffffff;       /* สีพื้นผิวการ์ด/กล่อง */
+  --c-text: #231f20;          /* ข้อความหลัก โทนเข้ม */
+  --c-soft: #5b5b63;          /* ข้อความรอง */
+  --c-line: #e8e8ea;          /* เส้นขอบ/คั่น */
+  --c-accent: #111111;        /* สีหลัก (ปุ่ม/ไฮไลต์) */
+  --c-accent-ghost: #f0f0f2;  /* สีปุ่ม ghost hover */
+  --radius-lg: 16px;          /* มุมโค้งใหญ่ */
+  --radius-md: 12px;          /* มุมโค้งกลาง */
+  --radius-sm: 10px;          /* มุมโค้งเล็ก */
+  --shadow-sm: 0 2px 10px rgba(0,0,0,.06);
+  --shadow-md: 0 12px 30px rgba(0,0,0,.07);
+  --shadow-inset: 0 2px 8px rgba(0,0,0,.05) inset;
 }
 
-.vn-page{
-  font-family:var(--font);
-  color:var(--ink);
-  background:var(--paper);
-  max-width:1200px;
-  margin:0 auto;
-  padding:24px 16px 80px;
+/* ---------- โครงสร้างหน้าหลัก ---------- */
+.vn-page {
+  font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; /* โทนโมเดิร์น เรียบหรู */
+  color: var(--c-text);
+  background: var(--c-bg);
+  padding: 16px;
+
+  --page-max: 1400px;             /* ปรับได้ตามชอบ: 1040/1160/1280 */
+  max-width: var(--page-max);     /* จำกัดไม่ให้กว้างเต็มจอ */
+  margin-inline: auto;            /* จัดกึ่งกลางแนวนอน */
+
+  /* ร่องข้างแบบยืดหยุ่น: มือถือมีระยะห่างมากขึ้น, จอใหญ่ไม่อึดอัด */
+  padding-inline: clamp(14px, 3.2vw, 28px);
 }
 
-.vn-loading{ padding:24px; color:var(--muted); }
-.vn-error{ background:#f8f8f8; border:1px solid var(--line); padding:12px 14px; border-radius:12px; }
-
-.vn-title{
-  font-size:64px; line-height:1; font-weight:800; letter-spacing:.5px;
-  margin:0 0 10px;
+/* ข้อความ/ลิงก์พื้นฐาน */
+.vn-page a { color: inherit; }
+.vn-page a:focus-visible,
+.vn-page button:focus-visible {
+  outline: 3px solid rgba(0,0,0,.14);   /* เส้นโฟกัสเพื่อการเข้าถึง */
+  outline-offset: 2px;
 }
 
-.vn-desc{ margin:8px 0 0; color:var(--ink-2); max-width:900px; line-height:1.7; }
+/* โหลด/เออเรอร์ */
+.vn-loading, .vn-error {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm);
+}
+.vn-error { color: #8b0000; }
 
-.vn-hero{
-  display:grid;
-  grid-template-columns: 320px 1fr 320px;
-  gap:var(--gap);
-  align-items:start;
-}
-@media (max-width: 1024px){
-  .vn-hero{ grid-template-columns: 240px 1fr; }
-  .vn-hero-side{ grid-column: 1 / -1; }
-}
-@media (max-width: 680px){
-  .vn-hero{ grid-template-columns: 1fr; }
-}
-
-.vn-hero-media img{
-  width:100%; height:auto; display:block; border-radius:0; /* เรียบ ไม่มีเงา */
-}
-
-.vn-chips{ display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 0; }
-.vn-chip{
-  font-size:12px; padding:6px 10px; border:1px solid var(--line);
-  border-radius:999px; color:var(--ink-2); background:#fff;
+/* ==========================================================================
+   HERO — ซ้าย (รูป) | กลาง (ข้อมูลหลัก) | ขวา (แผงข้อมูล)
+   ========================================================================== */
+.vn-hero {
+  display: grid;
+  grid-template-columns: minmax(260px, 32%) 1fr minmax(280px, 28%);
+  gap: 18px;
+  align-items: start;
+  margin-bottom: 18px;
 }
 
-.vn-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
-
-.vn-btn, .vn-btn-ghost{
-  display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:600;
-  transition:opacity .15s ease;
+/* สื่อหลัก (ภาพปกสถานที่) */
+.vn-hero-media {
+  background: #ececee;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--c-line);
 }
-.vn-btn{ background:var(--accent); color:#fff; }
-.vn-btn:hover{ opacity:.9; }
-.vn-btn-ghost{ background:#fff; color:var(--ink); border:1px solid var(--line); }
-.vn-btn-ghost:hover{ opacity:.85; }
-
-.vn-hero-side{ display:flex; flex-direction:column; gap:16px; }
-.vn-card{
-  border:1px solid var(--line); background:#fff; border-radius:16px; padding:14px;
+.vn-hero-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  transition: transform .6s ease, filter .6s ease;
 }
-.vn-card-title{ font-weight:700; margin-bottom:8px; }
-
-.vn-kv{ display:grid; grid-template-columns: 120px 1fr; gap:8px; padding:6px 0; border-top:1px solid var(--line); }
-.vn-kv:first-of-type{ border-top:none; }
-.vn-kv > div:nth-child(1){ color:var(--muted); }
-.vn-link{ color:inherit; text-underline-offset:2px; }
-
-.vn-section{ margin-top:28px; }
-.vn-section-title{ font-size:20px; font-weight:800; margin-bottom:12px; }
-
-.vn-info-grid{
-  display:grid; gap:16px;
-  grid-template-columns: 1.2fr 1fr 1fr;
+.vn-hero-media:hover img {
+  transform: scale(1.02);
+  filter: contrast(1.02) saturate(1.02);
 }
-@media (max-width: 1024px){
-  .vn-info-grid{ grid-template-columns: 1fr 1fr; }
+
+/* เนื้อหาหลัก (ชื่อ/รายละเอียด/ปุ่ม) */
+.vn-hero-body {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-inset), var(--shadow-sm);
+  padding: 16px 18px;
 }
-@media (max-width: 680px){
-  .vn-info-grid{ grid-template-columns: 1fr; }
+.vn-title {
+  font-weight: 800;
+  font-size: clamp(22px, 2.4vw, 28px);
+  letter-spacing: .2px;
+  margin: 2px 0 10px;
 }
-.vn-info-block{
-  border:1px solid var(--line); border-radius:16px; padding:14px; background:#fff;
+.vn-desc {
+  color: var(--c-soft);
+  line-height: 1.6;
+  margin: 8px 0 14px;
 }
-.vn-info-title{ font-weight:700; margin-bottom:8px; }
-.vn-text{ color:var(--ink-2); line-height:1.6; }
 
-.vn-links{ list-style:none; padding:0; margin:0; }
-.vn-links li{ padding:6px 0; border-top:1px solid var(--line); }
-.vn-links li:first-child{ border-top:none; }
-
-.vn-gallery{
-  display:grid; gap:8px;
-  grid-template-columns: repeat(4, 1fr);
+/* ชิปข้อมูลสั้น ๆ (genre / price / alcohol …) */
+.vn-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 12px;
 }
-@media (max-width: 1024px){ .vn-gallery{ grid-template-columns: repeat(3, 1fr);} }
-@media (max-width: 680px){ .vn-gallery{ grid-template-columns: repeat(2, 1fr);} }
-.vn-thumb{ aspect-ratio: 4/3; overflow:hidden; background:#f6f6f6; }
-.vn-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
-
-.vn-event-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; }
-.vn-event-item{
-  border:1px solid var(--line); border-radius:14px; padding:12px;
-  display:flex; justify-content:space-between; align-items:center; gap:12px;
+.vn-chip {
+  background: #f3f3f5;
+  border: 1px solid var(--c-line);
+  color: #2f2f34;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
-.vn-event-title{ font-weight:700; }
-.vn-event-sub{ color:var(--muted); }
+
+/* ปุ่มหลัก/รอง */
+.vn-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.vn-btn, .vn-btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 38px; padding: 0 14px;
+  border-radius: 999px; font-weight: 700; letter-spacing: .2px;
+  border: 1px solid var(--c-accent); text-decoration: none;
+  transition: transform .12s ease, background .16s ease, color .16s ease, border-color .16s ease;
+  user-select: none;
+}
+.vn-btn { background: var(--c-accent); color: #fff; }
+.vn-btn:hover { transform: translateY(-1px); }
+.vn-btn-ghost { background: #fff; color: var(--c-accent); border-color: var(--c-line); }
+.vn-btn-ghost:hover { background: var(--c-accent-ghost); border-color: var(--c-accent); }
+
+/* แผงข้อมูลด้านขวา */
+.vn-hero-side {
+  display: grid;
+  gap: 12px;
+}
+.vn-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 14px 12px;
+}
+.vn-card-title {
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: .3px;
+  margin-bottom: 10px;
+}
+
+/* แถว key-value สวย ๆ */
+.vn-kv {
+  display: grid;
+  grid-template-columns: 120px 1fr;    /* ซ้ายคีย์ 120px ขวาค่า ยืดได้ */
+  gap: 8px 14px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px dashed var(--c-line);
+}
+.vn-kv:first-of-type { border-top: 0; }
+.vn-kv > div:first-child { color: var(--c-soft); }
+.vn-link {
+  color: #0b57d0;
+  text-underline-offset: 2px;
+}
+.vn-link:hover { text-decoration: underline; }
+
+/* ==========================================================================
+   SECTION(s) — บล็อกเนื้อหาภาคต่อ (Basics / Address / Links / Gallery …)
+   ========================================================================== */
+.vn-section { margin-top: 16px; }
+.vn-section-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0 0 10px 2px;
+}
+.vn-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.vn-info-block {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 14px 12px;
+}
+.vn-info-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.vn-text { color: var(--c-soft); }
+.vn-links { list-style: none; padding: 0; margin: 0; }
+.vn-links li + li { margin-top: 6px; }
+
+/* แกลเลอรี */
+.vn-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+.vn-thumb {
+  background: #f1f1f3;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  aspect-ratio: 4/3;
+  box-shadow: var(--shadow-sm);
+}
+.vn-thumb img {
+  width: 100%; height: 100%; display: block; object-fit: cover;
+  transition: transform .5s ease, filter .5s ease;
+}
+.vn-thumb:hover img { transform: scale(1.03); filter: contrast(1.03); }
+
+/* ==========================================================================
+   UPCOMING (Schedule look & feel แบบเดียวกับหน้า Artist แต่สโคปเฉพาะหน้า Venue)
+   ========================================================================== */
+.vn-page .a-section-title{
+  font-weight: 800;
+  font-size: 16px;
+  margin: 0 0 10px 2px;
+}
+.vn-page .a-panel{
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.vn-page .a-schedule-list{
+  list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px;
+}
+.vn-page .a-schedule-item{
+  display: grid;
+  grid-template-columns: 170px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 10px 12px;
+}
+.vn-page .a-date{
+  font-weight: 700; color: var(--c-text);
+}
+.vn-page .a-event{ min-width: 0; }
+.vn-page .a-event-title{
+  font-weight: 700; color: var(--c-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.vn-page .a-event-sub{
+  color: var(--c-soft); font-size: 13px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.vn-page .a-link{
+  background: var(--c-accent); color: #fff; border: 1px solid var(--c-accent);
+  padding: 8px 12px; border-radius: var(--radius-sm); text-decoration: none; font-weight: 700;
+  transition: transform .12s ease, background .16s ease;
+}
+.vn-page .a-link:hover{ transform: translateY(-1px); }
+.vn-page .a-empty{
+  padding: 12px; text-align: center; color: var(--c-soft);
+  border: 1px dashed var(--c-line); border-radius: var(--radius-md);
+}
+
+/* ==========================================================================
+   RESPONSIVE — ทำให้สวยบนจอแคบ
+   ========================================================================== */
+@media (max-width: 1200px) {
+  .vn-hero {
+    grid-template-columns: minmax(240px, 36%) 1fr 28%;
+  }
+}
+@media (max-width: 1024px) {
+  .vn-hero {
+    grid-template-columns: 1fr;   /* เรียงลงเป็นคอลัมน์เดียว */
+  }
+  .vn-hero-side { grid-template-columns: 1fr; }
+  .vn-info-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .vn-info-grid { grid-template-columns: 1fr; }
+  .vn-page .a-schedule-item {
+    grid-template-columns: 1fr auto;     /* บีบ schedule ให้หยืดหยุ่นบนมือถือ */
+    grid-template-areas:
+      "date  btn"
+      "event btn";
+    align-items: start;
+  }
+  .vn-page .a-date { grid-area: date; }
+  .vn-page .a-event { grid-area: event; }
+  .vn-page .a-link  { grid-area: btn; }
+}
+
+/* ==========================================================================
+   REDUCED MOTION — สำหรับผู้ใช้ที่ปิดแอนิเมชัน
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .vn-hero-media img,
+  .vn-thumb img,
+  .vn-btn, .vn-btn-ghost,
+  .vn-page .a-link {
+    transition: none !important;
+  }
+}
 
 
 
-.vmap-cardTitleLink { color: inherit; text-decoration: none; }
-.vmap-cardTitleLink:hover { text-decoration: underline; }
+
 

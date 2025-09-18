@@ -235,21 +235,46 @@
 /* =========================================================
    LEAFLET PIN (DIVICON) — ใช้คงสไตล์เดิมที่ให้มา
    ========================================================= */
+
+/* ==== Hover grow for image pins ==== */
+.leaflet-marker-icon.vmap-imgPin {
+  transform-origin: center bottom;     /* ขยายจากฐานหมุด จะไม่ลอยพิกัด */
+  transition: transform .14s ease, filter .18s ease;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.35));
+}
+
+/* ขยาย “นิดหน่อย” + เงาเข้มขึ้น */
+.leaflet-marker-icon.vmap-imgPin:hover {
+  transform: translateY(-2px) scale(1.08);
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,.45));
+}
+
+/* ให้ตัวที่ถูกชี้ลอยขึ้นบน (กันทับกัน) */
+.leaflet-marker-pane .vmap-imgPin:hover {
+  z-index: 1000 !important;
+}
+
+/* (ออปชั่น) สำหรับจอสัมผัส – กดแล้วขยายเบา ๆ */
+.leaflet-marker-icon.vmap-imgPin:active {
+  transform: translateY(-1px) scale(1.03);
+}
+
+
 /* กล่องรอบ SVG */
 .vmap-pin-wrap {
   display: flex; align-items: center; justify-content: center;
-  border-radius: 25%;
+  border-radius: 50%;
   backdrop-filter: blur(0.5px);
   -webkit-backdrop-filter: blur(0.5px);
   background: rgba(255,255,255,1);
-  box-shadow: 0 2px 8px rgb(0, 0, 0);
+  box-shadow: 0 2px 2px rgb(0, 0, 0);
   transition: transform 0.4s ease, box-shadow 0.4s ease;
 }
 /* hover */
 .vmap-pin-wrap:hover { 
   transform: scale(1.15) translateY(-2px); 
   box-shadow: 0 6px 18px rgba(0,0,0,0.5); }
-
+ 
 /* แยกชนิด (ตอนนี้ให้เป็นพื้นขาวโปร่งใสเหมือนกัน) */
 .vmap-pin-wrap.venue-pin { background: rgba(255, 255, 255, 0.5); }
 .vmap-pin-wrap.event-pin { background: rgba(255, 255, 255, 0.5); }

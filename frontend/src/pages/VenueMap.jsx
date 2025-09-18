@@ -19,37 +19,61 @@ L.Icon.Default.mergeOptions({
 
 const CNX = { lat: 18.7883, lng: 98.9853 }; // Chiang Mai
 
-// ===== สร้าง SVG pin เป็น data URL =====
-const pinSvg = (stroke = '#111') => `
-<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'
-     fill='none' stroke='${stroke}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
-  <path d='M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0'/>
-  <circle cx='12' cy='10' r='3'/>
-</svg>`;
-const toDataUrl = s => `data:image/svg+xml;utf8,${encodeURIComponent(s)}`;
+// // ===== สร้าง SVG pin เป็น data URL =====
+// const pinSvg = (stroke = '#111') => `
+// <svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'
+//      fill='none' stroke='${stroke}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
+//   <path d='M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0'/>
+//   <circle cx='12' cy='10' r='3'/>
+// </svg>`;
+// const toDataUrl = s => `data:image/svg+xml;utf8,${encodeURIComponent(s)}`;
 
-// ===== divIcon พร้อมพื้นหลัง + hover =====
-function makePinDivIcon({ stroke = '#111', size = 28, extraClass = '' }) {
-  const box = size + 8;     // กล่องพื้นหลัง (ใหญ่กว่า SVG นิดหน่อย)
-  const height = box + 12;  // เผื่อส่วนปลายหมุด
-  const html = `
-    <div class="vmap-pin-wrap ${extraClass}" style="width:${box}px;height:${box}px;">
-      <img class="vmap-pin-svg" alt="pin" src="${toDataUrl(pinSvg(stroke))}"
-           style="width:${size}px;height:${size}px"/>
-    </div>
-  `;
-  return L.divIcon({
-    className: 'vmap-pin',
-    html,
-    iconSize: [box, height],
-    iconAnchor: [box / 2, height],
-    popupAnchor: [0, -height],
-  });
-}
+// // ===== divIcon พร้อมพื้นหลัง + hover =====
+// function makePinDivIcon({ stroke = '#111', size = 28, extraClass = '' }) {
+//   const box = size + 8;     // กล่องพื้นหลัง (ใหญ่กว่า SVG นิดหน่อย)
+//   const height = box + 12;  // เผื่อส่วนปลายหมุด
+//   const html = `
+//     <div class="vmap-pin-wrap ${extraClass}" style="width:${box}px;height:${box}px;">
+//       <img class="vmap-pin-svg" alt="pin" src="${toDataUrl(pinSvg(stroke))}"
+//            style="width:${size}px;height:${size}px"/>
+//     </div>
+//   `;
+//   return L.divIcon({
+//     className: 'vmap-pin',
+//     html,
+//     iconSize: [box, height],
+//     iconAnchor: [box / 2, height],
+//     popupAnchor: [0, -height],
+//   });
+// }
 
-// Venue = ดำ, Event = ดำ (ให้โทนเดียวกัน)
-const ICON_VENUE = makePinDivIcon({ stroke: '#111', size: 28, extraClass: 'venue-pin' });
-const ICON_EVENT = makePinDivIcon({ stroke: '#000', size: 28, extraClass: 'event-pin' });
+// // Venue = ดำ, Event = ดำ (ให้โทนเดียวกัน)
+// const ICON_VENUE = makePinDivIcon({ stroke: '#111', size: 28, extraClass: 'venue-pin' });
+// const ICON_EVENT = makePinDivIcon({ stroke: '#000', size: 28, extraClass: 'event-pin' });
+
+// ===== ใช้รูปภาพ pin.png เป็นไอคอนแทน =====
+// วาง pin.png ไว้ที่ public/img/pin.png
+const PIN_URL = '/img/pin.png';
+const PIN_SIZE = 34; // ปรับได้ 28–40 ตามขนาดรูปจริง
+
+// กำหนด anchor ให้ปลายไอคอนอยู่ชี้ที่พิกัดพอดี (กึ่งกลางล่าง)
+const ICON_VENUE = L.icon({
+  iconUrl: PIN_URL,
+  iconRetinaUrl: PIN_URL,     // ใช้ไฟล์เดียวกันไปก่อน
+  iconSize: [PIN_SIZE, PIN_SIZE],
+  iconAnchor: [PIN_SIZE / 2, PIN_SIZE],
+  popupAnchor: [0, -PIN_SIZE + 4],
+  className: 'vmap-imgPin venue-pin'
+});
+
+const ICON_EVENT = L.icon({
+  iconUrl: PIN_URL,
+  iconRetinaUrl: PIN_URL,
+  iconSize: [PIN_SIZE, PIN_SIZE],
+  iconAnchor: [PIN_SIZE / 2, PIN_SIZE],
+  popupAnchor: [0, -PIN_SIZE + 4],
+  className: 'vmap-imgPin event-pin'
+});
 
 // -------- Geo helpers --------
 function haversineKm(a, b) {
