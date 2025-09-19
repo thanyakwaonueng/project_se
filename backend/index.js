@@ -658,7 +658,37 @@ app.get('/artist-events/pending/:artistId', authMiddleware, async (req, res) => 
   }
 });
 
+/* ───────────────────────────── GET APPROVED INVITES FOR AN ARTIST ─────────── */
 
+app.get('/artist-events/accepted/:artistId', authMiddleware, async (req, res) => {
+  try {
+    const { artistId } = req.params;
+    const pending = await prisma.artistEvent.findMany({
+      where: { artistId: Number(artistId), status: "ACCEPTED" },
+      include: { event: true, artist: true },
+    });
+    res.json(pending);
+  } catch (err) {
+    console.error("Get accepted invites error:", err);
+    res.status(500).json({ error: "Could not fetch accepted invites" });
+  }
+});
+
+/* ───────────────────────────── GET REJECTED INVITES FOR AN ARTIST ─────────── */
+
+app.get('/artist-events/declined/:artistId', authMiddleware, async (req, res) => {
+  try {
+    const { artistId } = req.params;
+    const pending = await prisma.artistEvent.findMany({
+      where: { artistId: Number(artistId), status: "DECLINED" },
+      include: { event: true, artist: true },
+    });
+    res.json(pending);
+  } catch (err) {
+    console.error("Get declined invites error:", err);
+    res.status(500).json({ error: "Could not fetch declined invites" });
+  }
+});
 
 
 /* ───────────────────────────── ROLE REQUESTS ───────────────────────────── */
