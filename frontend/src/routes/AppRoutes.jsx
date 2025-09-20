@@ -20,6 +20,7 @@ import VenueMap from '../pages/VenueMap';
 import MyEvents from '../pages/MyEvents';
 import InviteArtist from '../pages/InviteArtist';
 import ArtistInviteRequestsPage from '../pages/ArtistInviteRequestsPage';
+import ProfilePage from "../pages/ProfilePage";
 
 
 import AccountSetupPage from '../pages/AccountSetupPage';
@@ -83,7 +84,7 @@ export default function AppRoutes() {
           <Route path="/me/invite_to_event/:eventId" element={<InviteArtist />} />
 
 
-
+          <Route path="/me/profile" element={<ProfilePage />} />
           {/* ✅ ใหม่: Account Setup หลังสมัคร/แก้โปรไฟล์ได้ */}
           <Route
             path="/account_setup"
