@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import '../css/Login.css';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 //import { useAuth } from '../lib/auth';
 //import { extractErrorMessage } from '../lib/api';
 
@@ -10,21 +12,35 @@ export default function Login() {
   //const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [err, setErr] = useState('');
+  // const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setErr('');
+    setBusy(true);
+
     try {
-      const res = await axios.post('/api/auth/login', {
-        email,
-        password,
+      const res = await axios.post('/api/auth/login', { email, password });
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Login Successful',
+        text: 'Welcome back!',
+        confirmButtonColor: '#3085d6',
+      }).then(() => {
+        // redirect หลังจากกด OK
+        window.location.assign('/');
       });
 
-      window.location.assign('/'); // redirect
     } catch (err) {
-      setErr(err.response?.data?.error || 'Login failed');
+      Swal.fire({
+        icon: 'error',
+        title: 'Login Failed',
+        text: err.response?.data?.error || 'Invalid email or password',
+        confirmButtonColor: '#d33',
+      });
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -33,17 +49,8 @@ export default function Login() {
     <div className="login-page">
       <div className="login-content">
         <h1>Login</h1>
-
         <div className="container">
           <div className="login-section">
-
-            {err && (
-              <div className="error-popup">
-                {err}
-                <button className="close-btn" onClick={() => setErr('')}>×</button>
-              </div>
-            )}
-
             <form onSubmit={handleLogin} className="login-form">
               <div>
                 <input 
@@ -52,11 +59,10 @@ export default function Login() {
                     autoComplete="username"
                     value={email} 
                     onChange={(e) => setEmail(e.target.value)} 
-                    placeholder="Email" 
+                    placeholder="Enter your email" 
                     required 
                 />
               </div>
-
               <div>
                 <input 
                     type="password" 
@@ -64,16 +70,14 @@ export default function Login() {
                     autoComplete="current-password"
                     value={password} 
                     onChange={(e) => setPassword(e.target.value)} 
-                    placeholder="••••••" 
+                    placeholder="Enter your password" 
                     required
                 />
               </div>
-
               <button type="submit" className="btn btn-login" disabled={busy}>
                 {busy ? 'Signing in…' : 'Login'}
               </button>
             </form>
-
           </div>
         </div>
       </div>

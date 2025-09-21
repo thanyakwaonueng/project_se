@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import '../css/Signup.css';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 //import { useAuth } from '../lib/auth';
 //import { extractErrorMessage } from '../lib/api';
 
@@ -10,17 +12,25 @@ export default function Signup() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [err, setErr] = useState('');
+  // const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    setErr('');
+    // setErr('');
 
-    if (password.length < 6) { //Check password length
-      setErr("Password ต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป!");
+    if (password.length < 6) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid Password',
+        text: 'Password ต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป!',
+        confirmButtonColor: '#3085d6'
+      });
       return;
     }
+
+    setBusy(true);
+
     try {
       // สมัคร: backend จะบังคับ role = FAN เสมอ
       await axios.post('/api/users', { email, password });
@@ -32,12 +42,30 @@ export default function Signup() {
           { email, password },
           { withCredentials: true }
         );
-        window.location.assign('/account_setup'); // สำเร็จ → กลับหน้าแรก
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Welcome!',
+          text: 'Your account has been created successfully.',
+          confirmButtonColor: '#3085d6'
+        }).then(() => {
+          window.location.assign('/account_setup');
+        });
       } catch (loginErr) {
-        setErr(loginErr?.response?.data?.error || 'Login failed');
+        Swal.fire({
+          icon: 'error',
+          title: 'Login Failed',
+          text: loginErr?.response?.data?.error || 'Login failed',
+          confirmButtonColor: '#d33'
+        });
       }
     } catch (signupErr) {
-      setErr(signupErr?.response?.data?.error || 'Signup failed');
+      Swal.fire({
+        icon: 'error',
+        title: 'Signup Failed',
+        text: signupErr?.response?.data?.error || 'Sign up failed',
+        confirmButtonColor: '#d33'
+      });
     } finally {
       setBusy(false);
     }
@@ -57,19 +85,8 @@ export default function Signup() {
         <div className="signup-subtitle">
           <p>Join our community today to stay updated on concerts, discover new sounds and never miss a beat in Chiang Mai.</p>
         </div>
-
         <div className="container">
-
           <div className="signup-section">
-
-            {err && (
-              <div className="error-popup">
-                {err}
-                <button className="close-btn" onClick={() => setErr('')}>×</button>
-              </div>
-            )}
-
-
             <form onSubmit={handleSignup} className="signup-form">
               <div>
                 {/* <label>Email</label> */}
@@ -79,7 +96,7 @@ export default function Signup() {
                   autoComplete="username"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email"
+                  placeholder="Enter your email"
                   required
                   disabled={busy}
                 />
@@ -93,7 +110,7 @@ export default function Signup() {
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••"
+                  placeholder="Enter your password"
                   minLength={6}
                   required
                   disabled={busy}
@@ -109,7 +126,6 @@ export default function Signup() {
               </button>
             </form>
 
-     
           <p className="or-divider">─────── or ───────</p>
 
           <button type="button" className="btn-google">
@@ -120,15 +136,9 @@ export default function Signup() {
             />
             Sign up with Google
           </button>
-
-
           </div>
         </div>
-
-
-
       </div>
-
     </div>
   );
 }
