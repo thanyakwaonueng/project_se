@@ -82,8 +82,10 @@ export default function Signup() {
 
       <div className="signup-content">
         <h1>Sign Up</h1>
+
+        {/* <img src="/img/graphic-assets-6.png" className="graphic-assets-6"/> */}
         <div className="signup-subtitle">
-          <p>Join our community today to stay updated on concerts, discover new sounds and never miss a beat in Chiang Mai.</p>
+        <p>Join our community today to stay updated on concerts, discover new sounds and never miss a beat in Chiang Mai.</p>
         </div>
         <div className="container">
           <div className="signup-section">
