@@ -40,12 +40,10 @@ model UserProfile {
   userId         Int       @unique
 
   displayName    String?
-  firstName      String?
-  lastName       String?
-  bio            String?
   favoriteGenres String[]  // text[] (Postgres)
 
-  avatarUrl      String?
+  profileImageUrl String?
+  birthday       DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -94,6 +92,7 @@ model ArtistProfile {
   shazamUrl     String?
   bandcampUrl   String?
   tiktokUrl     String?
+  twitterUrl    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -130,7 +129,7 @@ model VenueProfile {
   lineUrl         String?
   tiktokUrl       String?
   websiteUrl      String?
-
+  
   //  พิกัดสำหรับแผนที่
   latitude  Float?
   longitude Float?
@@ -274,6 +273,8 @@ model RoleRequest {
   reviewedAt    DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  application   Json?
 
   @@index([userId])
   @@index([status])

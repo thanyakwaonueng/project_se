@@ -48,138 +48,357 @@ const EVENT_POSTERS = [
   "https://images.pexels.com/photos/164931/pexels-photo-164931.jpeg"
 ];
 
-async function main() {
-  console.log('🌱 Seeding… (users, artists, Chiang Mai venues, this-month events)');
+/* ---------- ยูทิลลิงก์ค้นหา (ลิงก์กดได้จริงทุกโดเมน) ---------- */
+const searchLinks = (name) => {
+  const q = encodeURIComponent(name);
+  return {
+    instagramUrl: `https://www.instagram.com/explore/tags/${q}/`,
+    facebookUrl:  `https://www.facebook.com/search/top?q=${q}`,
+    youtubeUrl:   `https://www.youtube.com/results?search_query=${q}`,
+    spotifyUrl:   `https://open.spotify.com/search/${q}`,
+    appleMusicUrl:`https://music.apple.com/search?term=${q}`,
+    soundcloudUrl:`https://soundcloud.com/search?q=${q}`,
+    bandcampUrl:  `https://bandcamp.com/search?q=${q}`,
+    shazamUrl:    `https://www.shazam.com/search/${q}`,
+    tiktokUrl:    `https://www.tiktok.com/search?q=${q}`,
+    twitterUrl:   `https://twitter.com/search?q=${q}`
+  };
+};
 
-  // ---------- ล้างข้อมูลที่มีความสัมพันธ์ก่อน (dev เท่านั้น — อย่าใช้ใน prod) ----------
+/* ---------- ศิลปิน official (ลิงก์จริง) ---------- */
+const OFFICIAL_ARTISTS = [
+  {
+    email: 'newjeans@example.com',
+    name: 'NewJeans',
+    description: 'K-pop girl group under ADOR.',
+    genre: 'K-POP', bookingType: 'FULL_BAND',
+    foundingYear: 2022, memberCount: 5, label: 'ADOR',
+    instagramUrl: 'https://www.instagram.com/newjeans_official/',
+    facebookUrl:  'https://www.facebook.com/NewJeansOfficial/',
+    youtubeUrl:   'https://www.youtube.com/@NewJeans_official',
+    spotifyUrl:   'https://open.spotify.com/artist/6HvZYsbFfjnjFrWF950C9d',
+    appleMusicUrl:'https://music.apple.com/artist/newjeans/1636058531',
+    tiktokUrl:    'https://www.tiktok.com/@newjeans_official',
+    twitterUrl:   'https://twitter.com/NewJeans_ADOR',
+    profilePhotoUrl: 'https://images.pexels.com/photos/167092/pexels-photo-167092.jpeg',
+  },
+  {
+    email: 'iu@example.com',
+    name: 'IU',
+    description: 'South Korean solo artist, singer-songwriter and actress.',
+    genre: 'K-POP', bookingType: 'SOLO',
+    foundingYear: 2008, memberCount: 1, label: 'EDAM Entertainment',
+    instagramUrl:  'https://www.instagram.com/dlwlrma/',
+    youtubeUrl:    'https://www.youtube.com/@dlwlrma',
+    spotifyUrl:    'https://open.spotify.com/artist/3HqSLMAZ3g3d5poNaI7GOU',
+    appleMusicUrl: 'https://music.apple.com/artist/iu/1434084167',
+    twitterUrl:    'https://twitter.com/search?q=IU',
+    profilePhotoUrl: 'https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg',
+  },
+  {
+    email: 'blackpink@example.com',
+    name: 'BLACKPINK',
+    description: 'K-pop group from YG.',
+    genre: 'K-POP', bookingType: 'FULL_BAND',
+    foundingYear: 2016, memberCount: 4, label: 'YG Entertainment',
+    instagramUrl:  'https://www.instagram.com/blackpinkofficial/',
+    facebookUrl:   'https://www.facebook.com/BLACKPINKOFFICIAL/',
+    youtubeUrl:    'https://www.youtube.com/@BLACKPINK',
+    spotifyUrl:    'https://open.spotify.com/artist/41MozSoPIsD1dJM0CLPjZF',
+    appleMusicUrl: 'https://music.apple.com/artist/blackpink/1162650776',
+    tiktokUrl:     'https://www.tiktok.com/@blackpinkofficial',
+    shazamUrl:     'https://www.shazam.com/artist/204939476/blackpink',
+    twitterUrl:    'https://twitter.com/search?q=BLACKPINK',
+    profilePhotoUrl: 'https://images.pexels.com/photos/3359713/pexels-photo-3359713.jpeg',
+  },
+  {
+    email: 'bts@example.com',
+    name: 'BTS',
+    description: 'K-pop group from HYBE.',
+    genre: 'K-POP', bookingType: 'FULL_BAND',
+    foundingYear: 2013, memberCount: 7, label: 'BIGHIT MUSIC',
+    instagramUrl:  'https://www.instagram.com/bts.bighitofficial/',
+    facebookUrl:   'https://www.facebook.com/bangtan.official/',
+    youtubeUrl:    'https://www.youtube.com/@BANGTANTV',
+    spotifyUrl:    'https://open.spotify.com/artist/3Nrfpe0tUJi4K4DXYWgMUX',
+    appleMusicUrl: 'https://music.apple.com/artist/bts/883131348',
+    tiktokUrl:     'https://www.tiktok.com/@bts_official_bighit',
+    twitterUrl:    'https://twitter.com/BTS_twt',
+    profilePhotoUrl: 'https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg',
+  },
+  {
+    email: 'ado@example.com',
+    name: 'Ado',
+    description: 'Japanese solo singer.',
+    genre: 'J-POP', bookingType: 'SOLO',
+    foundingYear: 2020, memberCount: 1, label: 'Universal Music Japan',
+    instagramUrl:  'https://www.instagram.com/ado1024imokenp/',
+    youtubeUrl:    'https://www.youtube.com/@Ado1024',
+    spotifyUrl:    'https://open.spotify.com/artist/3bUqLQ8N9d2EapD5YdLK4Q',
+    appleMusicUrl: 'https://music.apple.com/artist/ado/1530426666',
+    twitterUrl:    'https://twitter.com/ado1024imokenp',
+    profilePhotoUrl: 'https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg',
+  },
+  {
+    email: 'yoasobi@example.com',
+    name: 'YOASOBI',
+    description: 'Japanese duo.',
+    genre: 'J-POP', bookingType: 'DUO',
+    foundingYear: 2019, memberCount: 2, label: 'Sony Music',
+    instagramUrl:  'https://www.instagram.com/yoasobi_staff/',
+    youtubeUrl:    'https://www.youtube.com/@Ayase_YOASOBI',
+    spotifyUrl:    'https://open.spotify.com/artist/64tJ2EAv1R6UaZqc4iOCyj',
+    appleMusicUrl: 'https://music.apple.com/artist/yoasobi/1490250505',
+    twitterUrl:    'https://twitter.com/YOASOBI_staff',
+    profilePhotoUrl: 'https://images.pexels.com/photos/164938/pexels-photo-164938.jpeg',
+  },
+  {
+    email: 'billie@example.com',
+    name: 'Billie Eilish',
+    description: 'American singer-songwriter.',
+    genre: 'Pop', bookingType: 'SOLO',
+    foundingYear: 2015, memberCount: 1, label: 'Darkroom/Interscope',
+    instagramUrl:  'https://www.instagram.com/billieeilish/',
+    facebookUrl:   'https://www.facebook.com/billieeilish',
+    youtubeUrl:    'https://www.youtube.com/@BillieEilish',
+    spotifyUrl:    'https://open.spotify.com/artist/6qqNVTkY8uBg9cP3Jd7DAH',
+    appleMusicUrl: 'https://music.apple.com/artist/billie-eilish/1065981054',
+    tiktokUrl:     'https://www.tiktok.com/@billieeilish',
+    shazamUrl:     'https://www.shazam.com/artist/201911193/billie-eilish',
+    soundcloudUrl: 'https://soundcloud.com/billieeilish',
+    twitterUrl:    'https://twitter.com/billieeilish',
+    profilePhotoUrl: 'https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg',
+  },
+  {
+    email: 'taylor@example.com',
+    name: 'Taylor Swift',
+    description: 'American singer-songwriter.',
+    genre: 'Pop', bookingType: 'SOLO',
+    foundingYear: 2006, memberCount: 1, label: 'Republic Records',
+    instagramUrl:  'https://www.instagram.com/taylorswift/',
+    facebookUrl:   'https://www.facebook.com/TaylorSwift',
+    youtubeUrl:    'https://www.youtube.com/@TaylorSwift',
+    spotifyUrl:    'https://open.spotify.com/artist/06HL4z0CvFAxyc27GXpf02',
+    appleMusicUrl: 'https://music.apple.com/artist/taylor-swift/159260351',
+    tiktokUrl:     'https://www.tiktok.com/@taylorswift',
+    shazamUrl:     'https://www.shazam.com/artist/4095465/taylor-swift',
+    twitterUrl:    'https://twitter.com/taylorswift13',
+    profilePhotoUrl: 'https://images.pexels.com/photos/167092/pexels-photo-167092.jpeg',
+  },
+  {
+    email: 'milli@example.com',
+    name: 'MILLI',
+    description: 'Thai rapper and singer.',
+    genre: 'Hip-hop', bookingType: 'SOLO',
+    foundingYear: 2019, memberCount: 1, label: 'YUPP!',
+    instagramUrl:  'https://www.instagram.com/phuckitol/',
+    youtubeUrl:    'https://www.youtube.com/@MILLIOfficialTH',
+    spotifyUrl:    'https://open.spotify.com/artist/6JpZEz9eJjwZ2tM4Xa7Y5Z',
+    twitterUrl:    'https://twitter.com/search?q=Milli',
+    profilePhotoUrl: 'https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg',
+  },
+  {
+    email: 'threemandown@example.com',
+    name: 'Three Man Down',
+    description: 'Thai pop band.',
+    genre: 'Pop', bookingType: 'FULL_BAND',
+    foundingYear: 2016, memberCount: 5, label: 'GMM Grammy',
+    facebookUrl:   'https://www.facebook.com/3mandown',
+    youtubeUrl:    'https://www.youtube.com/@ThreeManDownOfficial',
+    spotifyUrl:    'https://open.spotify.com/artist/3zAZgRKo23s83RGwhx8Rr2',
+    instagramUrl:  'https://www.instagram.com/3.man.down/',
+    twitterUrl:    'https://twitter.com/search?q=Three%20Man%20Down',
+    profilePhotoUrl: 'https://images.pexels.com/photos/164931/pexels-photo-164931.jpeg',
+  },
+];
+
+/* ---------- รายชื่อสมมติ (จะสร้าง 40 ศิลปินด้วยลิงก์ค้นหา) ---------- */
+const FAKE_NAMES = [
+  'Siam Sunset', 'Nimman Lights', 'Ping River Echo', 'Old City Rhythm',
+  'Tha Phae Folk', 'Santitham Lo-Fi', 'Chang Klan Beats', 'Wat Gate Ensemble',
+  'Lanna Groove', 'Chiang Chill Trio', 'North Star Duo', 'Golden Lotus',
+  'Jade Melody', 'Mountain Breeze', 'Lantern Pop', 'Indigo Night',
+  'Rattan Rock', 'Palm Shade', 'Mango Funk', 'Coconut Jazz',
+  'Hmong Harmony', 'Tribal Tide', 'Monsoon Sound', 'Saffron Soul',
+  'Bamboo Notes', 'Ricefield Riff', 'Temple Tone', 'Elephant March',
+  'Sukhothai Strings', 'Ayutthaya Echo', 'Khun Tan Crew', 'Doi Inthanon Band',
+  'Mekong Whisper', 'Nan River Blues', 'Phayao Phase', 'Lampang Line',
+  'Mae Ping Pulse', 'Chiang Dao Choir', 'Fang Forest', 'Mae Rim Mood'
+]; // 40 รายชื่อ
+
+/* ---------- Genres & Booking Types helper ---------- */
+const GENRES = [
+  'Pop','Rock','Indie','Hip-hop','R&B','EDM','Jazz','Blues','Metal','Folk','Country','Lo-fi','K-POP','J-POP'
+];
+const BOOKING_TYPES = ['FULL_BAND','TRIO','DUO','SOLO'];
+
+function rand(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+function randInt(a,b){ return a + Math.floor(Math.random()*(b-a+1)); }
+
+async function main() {
+  console.log('🌱 Seeding… (users, 50 artists, venues, events, likes, links)');
+
+  // ---------- ล้างข้อมูลที่มีความสัมพันธ์ก่อน ----------
+  await prisma.artistLike.deleteMany();
   await prisma.artistEvent.deleteMany();
   await prisma.event.deleteMany();
-  await prisma.artistProfile.deleteMany();
   await prisma.venueProfile.deleteMany();
-
-  // เพื่อลดผลข้างเคียง เราไม่ลบผู้ใช้ทั้งหมด แต่ลบเฉพาะอีเมลที่จะ seed ทับ
-  const seedEmails = [
-    'admin@example.com',
-    'fan@example.com',
-    'newjeans@example.com','iu@example.com',
-    'blackpink@example.com','bts@example.com',
-    'ado@example.com','yoasobi@example.com',
-    'nimman.studio@venue.example',
-    'oldcity.arena@venue.example',
-    'riverside.stage@venue.example',
-    'thaphae.court@venue.example',
-    'changklan.wh@venue.example',
-    'santitham.loft@venue.example',
-    'onenimman.terr@venue.example',
-    'watgate.pav@venue.example',
-  ];
-  await prisma.user.deleteMany({ where: { email: { in: seedEmails } } });
+  await prisma.artistProfile.deleteMany();
+  await prisma.user.deleteMany();
 
   // ---------- ผู้ใช้ระบบพื้นฐาน ----------
-  const adminUser = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email: 'admin@example.com',
       passwordHash: await bcrypt.hash('admin123', 10),
       role: 'ADMIN',
+      isVerified: true
     }
   });
-
-  const fanUser = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email: 'fan@example.com',
       passwordHash: await bcrypt.hash('password123', 10),
       role: 'AUDIENCE',
+      isVerified: true
     }
   });
 
-  // ---------- Artists (6) ----------
-  const artistDefs = [
-    {
-      email: 'newjeans@example.com',
-      name: 'NewJeans', description: 'K-pop girl group under ADOR.',
-      genre: 'K-POP', bookingType: 'FULL_BAND',
-      foundingYear: 2022, memberCount: 5, label: 'ADOR',
-      instagramUrl: 'https://instagram.com/newjeans_official',
-      spotifyUrl: 'https://open.spotify.com/artist/6HvZYsbFfjnjFrWF950C9d',
-      profilePhotoUrl: 'https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg',
-    },
-    {
-      email: 'iu@example.com',
-      name: 'IU', description: 'South Korean solo artist, singer-songwriter and actress.',
-      genre: 'K-POP', bookingType: 'SOLO',
-      foundingYear: 2008, memberCount: 1, label: 'EDAM Entertainment',
-      instagramUrl: 'https://instagram.com/dlwlrma',
-      spotifyUrl: 'https://open.spotify.com/artist/3HqSLMAZ3g3d5poNaI7GOU',
-      profilePhotoUrl: 'https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg',
-    },
-    {
-      email: 'blackpink@example.com',
-      name: 'BLACKPINK', description: 'K-pop group from YG.',
-      genre: 'K-POP', bookingType: 'FULL_BAND',
-      foundingYear: 2016, memberCount: 4, label: 'YG',
-      instagramUrl: 'https://instagram.com/blackpinkofficial',
-      spotifyUrl: 'https://open.spotify.com/artist/41MozSoPIsD1dJM0CLPjZF',
-      profilePhotoUrl: 'https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg',
-    },
-    {
-      email: 'bts@example.com',
-      name: 'BTS', description: 'K-pop group from HYBE.',
-      genre: 'K-POP', bookingType: 'FULL_BAND',
-      foundingYear: 2013, memberCount: 7, label: 'HYBE',
-      instagramUrl: 'https://instagram.com/bts.bighitofficial',
-      spotifyUrl: 'https://open.spotify.com/artist/3Nrfpe0tUJi4K4DXYWgMUX',
-      profilePhotoUrl: 'https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg',
-    },
-    {
-      email: 'ado@example.com',
-      name: 'Ado', description: 'Japanese solo singer.',
-      genre: 'J-POP', bookingType: 'SOLO',
-      foundingYear: 2020, memberCount: 1, label: 'Universal',
-      instagramUrl: 'https://instagram.com/ado1024imokenp',
-      spotifyUrl: 'https://open.spotify.com/artist/3bO3uNnW1n7IAw7G9q5G5O',
-      profilePhotoUrl: 'https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg',
-    },
-    {
-      email: 'yoasobi@example.com',
-      name: 'YOASOBI', description: 'Japanese duo.',
-      genre: 'J-POP', bookingType: 'DUO',
-      foundingYear: 2019, memberCount: 2, label: 'Sony',
-      instagramUrl: 'https://instagram.com/yoasobi_staff',
-      spotifyUrl: 'https://open.spotify.com/artist/64tJ2EAv1R6UaZqc4iOCyj',
-      profilePhotoUrl: 'https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg',
-    },
-  ];
-
+  /* ---------- Artists: 50 คน ---------- */
   const artistUsers = [];
-  for (const a of artistDefs) {
+
+  // 1) กลุ่ม official (~10 คน)
+  for (const a of OFFICIAL_ARTISTS) {
     const user = await prisma.user.create({
       data: {
         email: a.email,
         passwordHash: await bcrypt.hash('password123', 10),
         role: 'ARTIST',
+        isVerified: true
       },
     });
-    const { email, ...raw } = a;
+
     const artist = await prisma.artistProfile.create({
       data: {
-        name: raw.name,
-        description: raw.description || null,
-        genre: raw.genre,
-        bookingType: raw.bookingType,
-        foundingYear: raw.foundingYear || null,
-        memberCount: raw.memberCount || null,
-        label: raw.label || null,
-        instagramUrl: raw.instagramUrl || null,
-        youtubeUrl: raw.youtubeUrl || null,
-        spotifyUrl: raw.spotifyUrl || null,
-        profilePhotoUrl: raw.profilePhotoUrl || null,
-        userId: user.id,
+        name: a.name,
+        description: a.description ?? null,
+        genre: a.genre,
+        subGenre: a.subGenre ?? null,
+        bookingType: a.bookingType,
+        foundingYear: a.foundingYear ?? null,
+        label: a.label ?? null,
+        isIndependent: typeof a.isIndependent === 'boolean' ? a.isIndependent : true,
+        memberCount: a.memberCount ?? null,
+        contactEmail: a.contactEmail ?? null,
+        contactPhone: a.contactPhone ?? null,
+        priceMin: a.priceMin != null ? Number(a.priceMin) : null,
+        priceMax: a.priceMax != null ? Number(a.priceMax) : null,
+
+        photoUrl: a.photoUrl ?? null,
+        videoUrl: a.videoUrl ?? null,
+        profilePhotoUrl: a.profilePhotoUrl ?? null,
+        rateCardUrl: a.rateCardUrl ?? null,
+        epkUrl: a.epkUrl ?? null,
+        riderUrl: a.riderUrl ?? null,
+
+        spotifyUrl: a.spotifyUrl ?? null,
+        youtubeUrl: a.youtubeUrl ?? null,
+        appleMusicUrl: a.appleMusicUrl ?? null,
+        facebookUrl: a.facebookUrl ?? null,
+        instagramUrl: a.instagramUrl ?? null,
+        soundcloudUrl: a.soundcloudUrl ?? null,
+        shazamUrl: a.shazamUrl ?? null,
+        bandcampUrl: a.bandcampUrl ?? null,
+        tiktokUrl: a.tiktokUrl ?? null,
+        twitterUrl: a.twitterUrl ?? null,
+
+        user: { connect: { id: user.id } },
       },
     });
     artistUsers.push({ user, artist });
   }
 
-  // ---------- Venues (เชียงใหม่) ----------
+  // 2) กลุ่มสมมติ 40 คน (ใช้ลิงก์ค้นหาที่กดได้จริงทุกโดเมน)
+  for (let i = 0; i < FAKE_NAMES.length; i++) {
+    const name = FAKE_NAMES[i];
+    const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g,'_')}@example.com`;
+    const links = searchLinks(name);
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash: await bcrypt.hash('password123', 10),
+        role: 'ARTIST',
+        isVerified: true
+      }
+    });
+
+    const artist = await prisma.artistProfile.create({
+      data: {
+        name,
+        description: `${name} live act from Chiang Mai with intimate shows and unique vibe.`,
+        genre: rand(GENRES),
+        subGenre: Math.random() < 0.5 ? rand(GENRES) : null,
+        bookingType: rand(BOOKING_TYPES),
+        foundingYear: randInt(2005, 2024),
+        label: Math.random() < 0.3 ? 'Independent' : (Math.random()<0.5?'Local Circle':'-'),
+        isIndependent: Math.random() < 0.6,
+        memberCount: randInt(1, 7),
+        contactEmail: `booking+${user.id}@${name.replace(/\s+/g,'').toLowerCase()}.example`,
+        contactPhone: Math.random() < 0.4 ? `+66-8${randInt(10,99)}-${randInt(100,999)}-${randInt(1000,9999)}` : null,
+        priceMin: Math.random() < 0.7 ? randInt(3000, 15000) : null,
+        priceMax: Math.random() < 0.7 ? randInt(15000, 60000) : null,
+
+        profilePhotoUrl: `https://picsum.photos/seed/${encodeURIComponent(name)}/640/400`,
+
+        // ให้บางช่องเว้นว่างเพื่อความสมจริง (มีครบ/ขาดบ้าง)
+        spotifyUrl:   Math.random() < 0.85 ? links.spotifyUrl   : null,
+        youtubeUrl:   Math.random() < 0.9  ? links.youtubeUrl   : null,
+        appleMusicUrl:Math.random() < 0.6  ? links.appleMusicUrl: null,
+        facebookUrl:  Math.random() < 0.5  ? links.facebookUrl  : null,
+        instagramUrl: Math.random() < 0.9  ? links.instagramUrl : null,
+        soundcloudUrl:Math.random() < 0.4  ? links.soundcloudUrl: null,
+        shazamUrl:    Math.random() < 0.3  ? links.shazamUrl    : null,
+        bandcampUrl:  Math.random() < 0.3  ? links.bandcampUrl  : null,
+        tiktokUrl:    Math.random() < 0.6  ? links.tiktokUrl    : null,
+        twitterUrl:   Math.random() < 0.7  ? links.twitterUrl   : null,
+
+        user: { connect: { id: user.id } },
+      }
+    });
+
+    artistUsers.push({ user, artist });
+  }
+
+  console.log(`✅ Created artists: ${artistUsers.length}`);
+
+  /* ---------- ผู้ใช้ AUDIENCE สำหรับสุ่มไลก์ ---------- */
+  const likerUsers = [];
+  for (let i = 1; i <= 120; i++) {
+    const u = await prisma.user.create({
+      data: {
+        email: `aud${i}@example.com`,
+        passwordHash: await bcrypt.hash('password123', 10),
+        role: 'AUDIENCE',
+        isVerified: true
+      }
+    });
+    likerUsers.push(u);
+  }
+
+  // สุ่ม like ให้แต่ละศิลปิน
+  for (const { artist } of artistUsers) {
+    const likeCountTarget = randInt(5, 90);
+    const shuffled = likerUsers.slice().sort(() => Math.random() - 0.5);
+    for (let i = 0; i < likeCountTarget; i++) {
+      await prisma.artistLike.create({
+        data: { userId: shuffled[i].id, artistId: artist.id }
+      }).catch(()=>{});
+    }
+  }
+  console.log('👍 Random likes generated');
+
+  /* ---------- Venues (เชียงใหม่) ---------- */
   const venueDefs = [
     { email: 'nimman.studio@venue.example',   name: 'Nimman Studio',        lat: 18.79650, lng: 98.97890, genre: 'Indie/Alt' },
     { email: 'oldcity.arena@venue.example',   name: 'Old City Arena',       lat: 18.79410, lng: 98.98870, genre: 'Pop/Rock' },
@@ -198,6 +417,7 @@ async function main() {
         email: v.email,
         passwordHash: await bcrypt.hash('password123', 10),
         role: 'ORGANIZE',
+        isVerified: true
       }
     });
     const photos = pickVenuePhotos(4);
@@ -205,7 +425,7 @@ async function main() {
       data: {
         userId: u.id,
         name: v.name,
-        locationUrl: v.name,
+        locationUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.name+' Chiang Mai')}`,
         genre: v.genre,
         alcoholPolicy: 'SERVE',
         latitude: v.lat,
@@ -216,21 +436,27 @@ async function main() {
     });
     venueProfiles.push(vp);
   }
-
   const venueByName = Object.fromEntries(venueProfiles.map(v => [v.name, v.id]));
+  console.log(`🏟️ Venues created: ${venueProfiles.length}`);
 
-  // ---------- Events ----------
+  /* ---------- Events (16 งานในเดือนนี้) ---------- */
   const eventsPlan = [
-    { name: 'Nimman Indie Night',       venue: 'Nimman Studio',        date: dInThisMonth(5, 20, 0),  type: 'INDOOR',  ticketing: 'FREE',           genre: 'Indie',     door: '19:00', end: '22:30' },
-    { name: 'Ping Riverside Jazz',      venue: 'Ping Riverside Stage', date: dInThisMonth(8, 19, 30), type: 'OUTDOOR', ticketing: 'ONSITE_SALES',   genre: 'Jazz',      door: '18:30', end: '21:30' },
-    { name: 'Old City Acoustic Eve',    venue: 'Old City Arena',       date: dInThisMonth(12, 18, 30),type: 'INDOOR',  ticketing: 'DIRECT_CONTACT', genre: 'Acoustic',  door: '18:00', end: '21:00' },
-    { name: 'Tha Phae Folk Friday',     venue: 'Tha Phae Courtyard',   date: dInThisMonth(13, 19, 0), type: 'OUTDOOR', ticketing: 'DONATION',       genre: 'Folk',      door: '18:00', end: '22:00' },
-    { name: 'Warehouse Beats',          venue: 'Chang Klan Warehouse', date: dInThisMonth(15, 21, 0), type: 'INDOOR',  ticketing: 'ONSITE_SALES',   genre: 'EDM',       door: '20:00', end: '00:30' },
-    { name: 'Santitham Loft Session',   venue: 'Santitham Loft',       date: dInThisMonth(18, 20, 0), type: 'INDOOR',  ticketing: 'FREE',           genre: 'Lo-fi',     door: '19:00', end: '22:00' },
-    { name: 'Sunset Pop at One Nimman', venue: 'One Nimman Terrace',   date: dInThisMonth(20, 18, 0), type: 'OUTDOOR', ticketing: 'FREE',           genre: 'Pop',       door: '17:30', end: '20:30' },
-    { name: 'Crossover Night',          venue: 'Wat Gate Pavilion',    date: dInThisMonth(22, 19, 30),type: 'INDOOR',  ticketing: 'DIRECT_CONTACT', genre: 'Crossover', door: '19:00', end: '22:00' },
-    { name: 'Riverside Blues Jam',      venue: 'Ping Riverside Stage', date: dInThisMonth(25, 19, 0), type: 'OUTDOOR', ticketing: 'DONATION',       genre: 'Blues',     door: '18:00', end: '21:00' },
-    { name: 'Nimman Live Showcase',     venue: 'Nimman Studio',        date: dInThisMonth(28, 20, 0), type: 'INDOOR',  ticketing: 'TICKET_MELON',   genre: 'Mixed',     door: '19:00', end: '23:00', ticketLink: 'https://ticketmelon.com/demo/nimman-live' },
+    { name: 'Nimman Indie Night',       venue: 'Nimman Studio',        date: dInThisMonth(3, 20, 0),  type: 'INDOOR',  ticketing: 'FREE',           genre: 'Indie',     door: '19:00', end: '22:30' },
+    { name: 'Ping Riverside Jazz',      venue: 'Ping Riverside Stage', date: dInThisMonth(4, 19, 30), type: 'OUTDOOR', ticketing: 'ONSITE_SALES',   genre: 'Jazz',      door: '18:30', end: '21:30' },
+    { name: 'Old City Acoustic Eve',    venue: 'Old City Arena',       date: dInThisMonth(6, 18, 30), type: 'INDOOR',  ticketing: 'DIRECT_CONTACT', genre: 'Acoustic',  door: '18:00', end: '21:00' },
+    { name: 'Tha Phae Folk Friday',     venue: 'Tha Phae Courtyard',   date: dInThisMonth(7, 19, 0),  type: 'OUTDOOR', ticketing: 'DONATION',       genre: 'Folk',      door: '18:00', end: '22:00' },
+    { name: 'Warehouse Beats',          venue: 'Chang Klan Warehouse', date: dInThisMonth(9, 21, 0),  type: 'INDOOR',  ticketing: 'ONSITE_SALES',   genre: 'EDM',       door: '20:00', end: '00:30' },
+    { name: 'Santitham Loft Session',   venue: 'Santitham Loft',       date: dInThisMonth(10, 20, 0), type: 'INDOOR',  ticketing: 'FREE',           genre: 'Lo-fi',     door: '19:00', end: '22:00' },
+    { name: 'Sunset Pop at One Nimman', venue: 'One Nimman Terrace',   date: dInThisMonth(11, 18, 0), type: 'OUTDOOR', ticketing: 'FREE',           genre: 'Pop',       door: '17:30', end: '20:30' },
+    { name: 'Crossover Night',          venue: 'Wat Gate Pavilion',    date: dInThisMonth(12, 19, 30),type: 'INDOOR',  ticketing: 'DIRECT_CONTACT', genre: 'Crossover', door: '19:00', end: '22:00' },
+    { name: 'Riverside Blues Jam',      venue: 'Ping Riverside Stage', date: dInThisMonth(14, 19, 0), type: 'OUTDOOR', ticketing: 'DONATION',       genre: 'Blues',     door: '18:00', end: '21:00' },
+    { name: 'Nimman Live Showcase',     venue: 'Nimman Studio',        date: dInThisMonth(15, 20, 0), type: 'INDOOR',  ticketing: 'TICKET_MELON',   genre: 'Mixed',     door: '19:00', end: '23:00', ticketLink: 'https://ticketmelon.com' },
+    { name: 'Indigo Night Market Stage',venue: 'One Nimman Terrace',   date: dInThisMonth(17, 18, 30),type: 'OUTDOOR', ticketing: 'FREE',           genre: 'Indie',     door: '18:00', end: '21:30' },
+    { name: 'Loft Ambient Evening',     venue: 'Santitham Loft',       date: dInThisMonth(18, 19, 30),type: 'INDOOR',  ticketing: 'FREE',           genre: 'Ambient',   door: '19:00', end: '22:00' },
+    { name: 'Warehouse Hip-Hop Clash',  venue: 'Chang Klan Warehouse', date: dInThisMonth(20, 21, 0), type: 'INDOOR',  ticketing: 'ONSITE_SALES',   genre: 'Hip-hop',   door: '20:00', end: '00:30' },
+    { name: 'Old City Rock Revival',    venue: 'Old City Arena',       date: dInThisMonth(22, 19, 0), type: 'INDOOR',  ticketing: 'DIRECT_CONTACT', genre: 'Rock',      door: '18:30', end: '22:00' },
+    { name: 'Folk Under Lanterns',      venue: 'Tha Phae Courtyard',   date: dInThisMonth(24, 19, 0), type: 'OUTDOOR', ticketing: 'DONATION',       genre: 'Folk',      door: '18:00', end: '21:30' },
+    { name: 'Classics by the River',    venue: 'Wat Gate Pavilion',    date: dInThisMonth(26, 19, 0), type: 'INDOOR',  ticketing: 'DIRECT_CONTACT', genre: 'Classical', door: '18:30', end: '21:00' },
   ];
 
   const createdEvents = [];
@@ -249,42 +475,31 @@ async function main() {
         endTime: plan.end,
         genre: plan.genre,
         venueId: venueByName[plan.venue],
-        posterUrl: EVENT_POSTERS[i % EVENT_POSTERS.length], // ✅ ใส่โปสเตอร์สวยๆ
+        posterUrl: EVENT_POSTERS[i % EVENT_POSTERS.length],
       }
     });
     createdEvents.push(ev);
   }
+  console.log(`🎫 Events created: ${createdEvents.length}`);
 
-  // ---------- Link Artists ↔ Events ----------
-  const linkPlan = [
-    { evIdx: 0, artists: [0, 1] },
-    { evIdx: 1, artists: [1, 2] },
-    { evIdx: 2, artists: [3] },
-    { evIdx: 3, artists: [4, 5] },
-    { evIdx: 4, artists: [2, 4] },
-    { evIdx: 5, artists: [5] },
-    { evIdx: 6, artists: [0, 3] },
-    { evIdx: 7, artists: [1, 4] },
-    { evIdx: 8, artists: [2, 5] },
-    { evIdx: 9, artists: [0] },
-  ];
-
-  for (const lp of linkPlan) {
-    const ev = createdEvents[lp.evIdx];
-    for (let i = 0; i < lp.artists.length; i++) {
-      const a = artistUsers[lp.artists[i]].artist;
+  /* ---------- Link Artists ↔ Events (สุ่ม 3–6 วงต่ออีเวนต์) ---------- */
+  for (const ev of createdEvents) {
+    const shuffledArtists = artistUsers.slice().sort(() => Math.random() - 0.5);
+    const n = randInt(3, 6);
+    for (let i = 0; i < n; i++) {
+      const a = shuffledArtists[i].artist;
       await prisma.artistEvent.create({
         data: {
           artistId: a.id,
           eventId: ev.id,
           status: 'PENDING',
         }
-      });
+      }).catch(()=>{});
     }
   }
 
-  // ---------- Invite artist with id = 1 ----------
-  const artistOne = await prisma.artistProfile.findUnique({ where: { id: 1 } });
+  // ---------- เชิญศิลปิน id ต่ำสุดเข้าทุกงาน (เดโม) ----------
+  const artistOne = await prisma.artistProfile.findFirst({ orderBy: { id: 'asc' } });
   if (artistOne) {
     for (const ev of createdEvents) {
       const exists = await prisma.artistEvent.findUnique({
@@ -296,12 +511,10 @@ async function main() {
         });
       }
     }
-    console.log(`✅ Invited artist id=1 (${artistOne.name}) to all events.`);
-  } else {
-    console.warn('⚠️ Artist with id=1 not found — skipping invites for artistId=1');
+    console.log(`✅ Invited artist id=${artistOne.id} (${artistOne.name}) to all events.`);
   }
 
-  console.log('✅ Done! Chiang Mai venues + this-month events seeded.');
+  console.log('✅ Done! 50 artists, venues, events, likes & links seeded.');
 }
 
 main()
