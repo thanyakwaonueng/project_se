@@ -227,19 +227,45 @@ export default function Artist() {
       // ถ้าส่ง 401/403 มา อาจแจ้งให้ล็อกอินก่อนตาม UX ที่ต้องการ
     }
   };
+
+
+  // ===== Pagination state & helpers =====
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 16;
+
+  // รีเซ็ตหน้าเมื่อผลลัพธ์เปลี่ยน (เช่น เปลี่ยนแท็บ/ค้นหา)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, searchQuery, groups.length]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredGroups.length / ITEMS_PER_PAGE));
+  const start = (currentPage - 1) * ITEMS_PER_PAGE;
+  const pageItems = filteredGroups.slice(start, start + ITEMS_PER_PAGE);
+
+  const goToPage = (p) => setCurrentPage(Math.min(Math.max(1, p), totalPages));
+
+  // สร้างช่วงเลขหน้าแบบกระชับ (แสดงรอบ ๆ หน้าเดิม)
+  const pageNumbers = useMemo(() => {
+    const delta = 2; // โชว์เลขหน้าแถว ๆ ปัจจุบัน ±2
+    const from = Math.max(1, currentPage - delta);
+    const to = Math.min(totalPages, currentPage + delta);
+    const arr = [];
+    for (let i = from; i <= to; i++) arr.push(i);
+    return arr;
+  }, [currentPage, totalPages]);
+
+
+
   return (
     <div className="artist-container a-bleed">
       {/* ====== รายการวงทั้งหมด ====== */}
       {!selectedGroup ? (
         <>
-          <h1 className="artist-heading">
-              MELODY & MEMORIES<br />
-            {/* <span className="memories-line">& MEMORIES</span> */}
-          </h1>
+          <div className="container-heading">
+            <h1 className="artist-heading"> MELODY & MEMORIES</h1>
+          </div>
 
-          <h6 className="artist-heading-detail">
-            Music is the language of emotions when words are not enough.
-          </h6>
+          <h6 className="artist-heading-detail"> Music is the language of emotions when words are not enough.</h6>
 
           {/* Filter + Search */}
           <div className="seamless-filter-search a-card-min">
@@ -268,41 +294,118 @@ export default function Artist() {
 
           {/* Grid รายการวง */}
           <div className="group-grid">
-  {filteredGroups.map(group => (  
-    <div key={group.id} className="group-card-wrap" ref={lastFocusRef}>
-      {/* ✅ ปุ่มหัวใจ */}
-      <button
-  className={`like-button ${group.likedByMe ? "liked" : ""}`}
-  onClick={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toggleLike(group);               // << ใช้ API
-  }}
-  aria-label={group.likedByMe ? "Unlike" : "Like"}
-/>
-
-      <Link
-        to={`/page_artists/${group.slug}`}
-        className="group-card a-card-min"
-        onClick={() => { setSelectedGroup(group); }}
-      >
-        <div className="group-card-image">
-          <img
-            src={group.image}
-            alt={group.name}
-            loading="lazy"
-            onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
+            {pageItems.map(group => (  
+              <div key={group.id} className="group-card-wrap" ref={lastFocusRef}>
+                {/* ✅ ปุ่มหัวใจ */}
+                <button
+            className={`like-button ${group.likedByMe ? "liked" : ""}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleLike(group);               // << ใช้ API
+            }}
+            aria-label={group.likedByMe ? "Unlike" : "Like"}
           />
-        </div>
-      </Link>
 
-      <div className="group-card-caption">
-        <h3>{group.name}</h3>
-      </div>
-    </div>
-  ))}
-</div>
+                <Link
+                  to={`/page_artists/${group.slug}`}
+                  className="group-card a-card-min"
+                  onClick={() => { setSelectedGroup(group); }}
+                >
+                  <div className="group-card-image">
+                    <img
+                      src={group.image}
+                      alt={group.name}
+                      loading="lazy"
+                      onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
+                    />
+                  </div>
+                </Link>
+
+                <div className="group-card-caption">
+                  <h3>{group.name}</h3>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* เส้นคั่น */}
+          <div className="a-line"></div>
+
+          {/* ======== PAGINATION ======== */}
+          {/* ======== PAGINATION (แบบ 3 โซน) ======== */}
+          {filteredGroups.length > 0 && (
+            <nav className="artist-pagination" aria-label="artist pagination">
+              {/* ซ้าย: Previous */}
+              <div className="p-nav-left">
+                <button
+                  className="p-link"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  ← Previous
+                </button>
+              </div>
+
+              {/* กลาง: เลขหน้า + จุดไข่ปลา */}
+              <div className="p-nav-center">
+                {/* โชว์เลข 1 ด้านซ้ายถ้าจำเป็น */}
+                {pageNumbers[0] > 1 && (
+                  <>
+                    <button
+                      className={`p-num ${currentPage === 1 ? "is-active" : ""}`}
+                      onClick={() => goToPage(1)}
+                      aria-current={currentPage === 1 ? "page" : undefined}
+                    >
+                      1
+                    </button>
+                    {pageNumbers[0] > 2 && <span className="p-ellipsis">…</span>}
+                  </>
+                )}
+
+                {/* ช่วงเลขรอบ ๆ หน้าปัจจุบัน */}
+                {pageNumbers.map((p) => (
+                  <button
+                    key={p}
+                    className={`p-num ${p === currentPage ? "is-active" : ""}`}
+                    onClick={() => goToPage(p)}
+                    aria-current={p === currentPage ? "page" : undefined}
+                  >
+                    {p}
+                  </button>
+                ))}
+
+                {/* โชว์เลขสุดท้ายด้านขวาถ้าจำเป็น */}
+                {pageNumbers[pageNumbers.length - 1] < totalPages && (
+                  <>
+                    {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
+                      <span className="p-ellipsis">…</span>
+                    )}
+                    <button
+                      className={`p-num ${currentPage === totalPages ? "is-active" : ""}`}
+                      onClick={() => goToPage(totalPages)}
+                      aria-current={currentPage === totalPages ? "page" : undefined}
+                    >
+                      {totalPages}
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* ขวา: Next */}
+              <div className="p-nav-right">
+                <button
+                  className="p-link"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next →
+                </button>
+              </div>
+            </nav>
+          )}
         </>
+        
       ) : (
         /* ====== รายละเอียดวง (เลย์เอาต์ 3 คอลัมน์) ====== */
         <div className="group-detail-view a-fullwide">
