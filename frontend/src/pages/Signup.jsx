@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import '../css/Signup.css';
+import { useGoogleLogin } from '@react-oauth/google';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 //import { useAuth } from '../lib/auth';
@@ -14,6 +15,7 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   // const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -69,7 +71,51 @@ export default function Signup() {
     } finally {
       setBusy(false);
     }
+
   };
+
+
+  //Google Login Section
+  const Googlelogin = useGoogleLogin({
+    flow: "auth-code",
+    scope: "openid email profile",
+    onSuccess: async (accesstoken) => { //ทำการขอเป็น access token
+      console.log("Response: ", accesstoken)
+      try {
+        // ส่ง code ไปให้ backend แลก id_token + access_token พร้อม login ไปเลย
+        await axios.post("/api/googlesignup", {code: accesstoken.code,}, {withCredentials: true});
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Welcome!',
+            text: 'Your account has been created successfully.',
+            confirmButtonColor: '#3085d6'
+          }).then(() => {
+            window.location.assign('/account_setup');
+        });
+
+          
+        
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Google Signup Failed',
+          text: err?.response?.data?.error || 'Sign up failed',
+          confirmButtonColor: '#d33'
+        });
+      }
+
+    },
+    onError: () => {
+      Swal.fire({
+          icon: 'error',
+          title: 'Google Signup Failed',
+          text: err?.response?.data?.error || 'Google Sign up failed',
+          confirmButtonColor: '#d33'
+        });
+    },
+  });
+
 
 
   return (
@@ -126,16 +172,18 @@ export default function Signup() {
               </button>
             </form>
 
-          <p className="or-divider">─────── or ───────</p>
+            <p className="or-divider">─────── or ───────</p>
 
-          <button type="button" className="btn-google">
-            <img
-              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-              alt="Google logo"
-              className="google-icon"
-            />
-            Sign up with Google
-          </button>
+            <button type="button" className="btn-google" onClick={() => Googlelogin()}>
+              <img
+                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                alt="Google logo"
+                className="google-icon"
+              />
+              Sign up with Google
+            </button>
+
+
           </div>
         </div>
       </div>
