@@ -109,7 +109,6 @@ export default function Navbar() {
 
           {(user.role === 'ARTIST' || user.role === 'ADMIN') && (
             <>
-              <li><Link className="dropdown-item" to="/me/artist" onClick={closeMobileMenu}>My Artist</Link></li>
               <li><Link className="dropdown-item" to="/artist/invite_requests" onClick={closeMobileMenu}>Artist Pending Invite</Link></li>
             </>
           )}
