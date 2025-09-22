@@ -709,6 +709,53 @@ app.get('/artist-events/declined/:artistId', authMiddleware, async (req, res) =>
   }
 });
 
+// Get all artist-event entries for an event(using eventId)
+app.get('/artist-events/event/:eventId', authMiddleware, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const id = Number(eventId);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid eventId' });
+
+    const rows = await prisma.artistEvent.findMany({
+      where: { eventId: id },
+      include: { artist: true, event: true }, // include relations as you did before
+      orderBy: { createdAt: 'desc' }, // optional
+    });
+
+    res.json(rows);
+  } catch (err) {
+    console.error('Get artist-events by eventId error:', err);
+    res.status(500).json({ error: 'Could not fetch artist-events for this event' });
+  }
+});
+
+// Get artist-event entries for an event filtered by status (PENDING, ACCEPTED, DECLINED)
+app.get('/artist-events/event/:eventId/status/:status', authMiddleware, async (req, res) => {
+  try {
+    const { eventId, status } = req.params;
+    const id = Number(eventId);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid eventId' });
+
+    // Validate status to avoid invalid enum values hitting Prisma
+    const allowed = ['PENDING', 'ACCEPTED', 'DECLINED'];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Allowed: ${allowed.join(', ')}` });
+    }
+
+    const rows = await prisma.artistEvent.findMany({
+      where: { eventId: id, status },
+      include: { artist: true, event: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(rows);
+  } catch (err) {
+    console.error('Get artist-events by eventId & status error:', err);
+    res.status(500).json({ error: 'Could not fetch filtered artist-events' });
+  }
+});
+
+
 /* ───────────────────────────── ROLE REQUESTS ───────────────────────────── */
 app.post('/role-requests', authMiddleware, async (req, res) => {
   try {
