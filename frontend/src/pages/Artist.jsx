@@ -24,7 +24,7 @@ function SocialIcon({ href, img, label }) {
     </a>
   );
 }
-
+ 
 export default function Artist() {
   const [groups, setGroups] = useState([]);
   const [loadingGroups, setLoadingGroups] = useState(true);
@@ -257,7 +257,7 @@ export default function Artist() {
             ))}
           </div>
 
-          <div className="a-line"></div>
+          <div className="a-line-artist"></div>
 
           {/* Pagination */}
           {filteredGroups.length > 0 && (
