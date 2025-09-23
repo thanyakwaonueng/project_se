@@ -49,7 +49,7 @@ export default function Signup() {
           text: 'Your account has been created successfully.',
           confirmButtonColor: '#3085d6'
         }).then(() => {
-          window.location.assign('/account_setup');
+          window.location.assign('/accountsetup');
         });
       } catch (loginErr) {
         Swal.fire({

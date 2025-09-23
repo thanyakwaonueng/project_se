@@ -136,7 +136,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="profile-actions">
-            <Link to="/account_setup" className="btn-primary">Edit profile</Link>
+            <Link to="/accountsetup" className="btn-primary">Edit profile</Link>
             {artist && <Link to={`/page_artists/${slugify(artist.name)}`} className="btn-ghost">View public artist</Link>}
             {venue && <Link to="/me/venue" className="btn-ghost">Manage venue</Link>}
           </div>

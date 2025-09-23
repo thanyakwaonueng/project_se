@@ -37,19 +37,20 @@ export default function AppRoutes() {
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
 
-          <Route path="/page_artists" element={<Artist />} />
-          <Route path="/page_artists/:slug" element={<Artist />} />
+          <Route path="/artists" element={<Artist />} />
+          <Route path="/artists/:id" element={<Artist />} />
 
-          {/* ✅ หน้ารวม Venue = แผนที่ */}
-          <Route path="/page_venues" element={<VenueMap />} />
-          <Route path="/page_venues/map" element={<VenueMap />} />  {/* alias เพิ่มได้ */}
-          {/* ✅ หน้าร้าน (รายละเอียด) */}
-          <Route path="/page_venues/:slugOrId" element={<Venue />} />
+          {/*  หน้ารวม Venue = แผนที่ */}
+          <Route path="/venues" element={<VenueMap />} />
+          <Route path="/venues/map" element={<VenueMap />} />  {/* alias เพิ่มได้ */}
           
-          <Route path="/page_events" element={<Event />} />
-          <Route path="/page_events/:id" element={<EventDetail />} />
-          <Route path="/my_events" element={<MyEvents />} />
-          <Route path="/my_events/:id" element={<EventDetail />} />
+          {/*  หน้าร้าน (รายละเอียด) */}
+          <Route path="/venues/:slugOrId" element={<Venue />} />
+          
+          <Route path="/events" element={<Event />} />
+          <Route path="/events/:id" element={<EventDetail />} />
+          <Route path="/myevents" element={<MyEvents />} />
+          <Route path="/myevents/:id" element={<EventDetail />} />
 
           <Route
             path="/page_events/new"
@@ -87,7 +88,7 @@ export default function AppRoutes() {
           <Route path="/me/profile" element={<ProfilePage />} />
           {/* ✅ ใหม่: Account Setup หลังสมัคร/แก้โปรไฟล์ได้ */}
           <Route
-            path="/account_setup"
+            path="/accountsetup"
             element={
               <ProtectedRoute allow={['AUDIENCE', 'ARTIST', 'ORGANIZE', 'ADMIN']}>
                 <AccountSetupPage />
@@ -108,7 +109,7 @@ export default function AppRoutes() {
           />
 
           <Route
-            path="/artist/invite_requests"
+            path="/artist/inviterequests"
             element={
               <ProtectedRoute allow={['ADMIN', 'ARTIST']}>
                 <ArtistInviteRequestsPage />

@@ -120,11 +120,11 @@ function formatDT(iso) {
 // ===== path helpers =====
 const toEventDetailPath = (ev) => {
   const key = ev?.id ?? ev?._id ?? ev?.slug;
-  return key ? `/page_events/${encodeURIComponent(key)}` : (ev?.url || "#");
+  return key ? `/events/${encodeURIComponent(key)}` : (ev?.url || "#");
 };
 const toVenueDetailPath = (v) => {
   const key = v?.id ?? v?._id ?? v?.slug ?? v?.slugOrId;
-  return key ? `/page_venues/${encodeURIComponent(key)}` : "#";
+  return key ? `/venues/${encodeURIComponent(key)}` : "#";
 };
 
 // ===== เวลาเปิด–ปิด (รองรับหลายคีย์) =====

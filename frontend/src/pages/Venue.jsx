@@ -106,7 +106,7 @@ export default function Venue() {
     <div className="vn-page">
       <div className="vn-error">{err}</div>
       <div style={{ marginTop: 8 }}>
-        <Link to="/page_venues" className="vn-btn-ghost">← กลับแผนที่</Link>
+        <Link to="/venues" className="vn-btn-ghost">← กลับแผนที่</Link>
       </div>
     </div>
   );
@@ -247,7 +247,7 @@ export default function Venue() {
                   </div>
                   {(ev.id || ev.url || ev.ticketLink) && (
                     ev.id ? (
-                      <Link className="a-link" to={`/page_events/${ev.id}`}>Detail</Link>
+                      <Link className="a-link" to={`/events/${ev.id}`}>Detail</Link>
                     ) : ev.url ? (
                       <a className="a-link" href={ev.url} target="_blank" rel="noreferrer">Detail</a>
                     ) : (
@@ -267,7 +267,7 @@ export default function Venue() {
 
       {/* ปุ่มกลับ */}
       {/* <section className="vn-section" style={{ display: "flex", gap: 8 }}>
-        <Link to="/page_venues" className="vn-btn-ghost">← กลับแผนที่</Link>
+        <Link to="/venues" className="vn-btn-ghost">← กลับแผนที่</Link>
       </section> */}
     </div>
   );

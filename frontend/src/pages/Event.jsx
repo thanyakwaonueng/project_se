@@ -275,7 +275,7 @@ export default function Event() {
                   
                   <div className="popup-event-section">
                     <h3 className="popup-event-title">{ev.title}</h3>
-                    <Link to={`/my_events/${ev.id}`} className="btn-event-detail">
+                    <Link to={`/myevents/${ev.id}`} className="btn-event-detail">
                       View Event
                     </Link>
                   </div>

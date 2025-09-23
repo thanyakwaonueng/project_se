@@ -109,7 +109,7 @@ export default function Navbar() {
 
           {(user.role === 'ARTIST' || user.role === 'ADMIN') && (
             <>
-              <li><Link className="dropdown-item" to="/artist/invite_requests" onClick={closeMobileMenu}>Artist Pending Invite</Link></li>
+              <li><Link className="dropdown-item" to="/artist/inviterequests" onClick={closeMobileMenu}>Artist Pending Invite</Link></li>
             </>
           )}
 
@@ -117,7 +117,7 @@ export default function Navbar() {
             <>
               <li><Link className="dropdown-item" to="/me/venue" onClick={closeMobileMenu}>My Venue</Link></li>
               <li><Link className="dropdown-item" to="/me/event" onClick={closeMobileMenu}>Create Event</Link></li>
-              <li><Link className="dropdown-item" to="/my_events" onClick={closeMobileMenu}>My Event</Link></li>
+              <li><Link className="dropdown-item" to="/myevents" onClick={closeMobileMenu}>My Event</Link></li>
             </>
           )}
 
@@ -151,18 +151,18 @@ export default function Navbar() {
         {/* Collapsible menu */}
         <div className={`collapse navbar-collapse ${isMobileMenuOpen ? 'show' : ''}`}>
           <div className="navbar-menu-wrapper">
-            <a href="/page_artists" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
+            <a href="/artists" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
               <div className="navbar-menu-text">ARTISTS</div>
               <div className="navbar-menu-text">ARTISTS</div>
             </a>
 
-            <a href="/page_events" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
+            <a href="/events" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
               <div className="navbar-menu-text">EVENTS</div>
               <div className="navbar-menu-text">EVENTS</div>
             </a>
 
             {/* 🔁 เหลือเมนู VENUE อย่างเดียว (รวม list + map) */}
-            <a href="/page_venues/map" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
+            <a href="/venues/map" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
               <div className="navbar-menu-text">VENUES</div>
               <div className="navbar-menu-text">VENUES</div>
             </a>

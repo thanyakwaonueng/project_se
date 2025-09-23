@@ -19,12 +19,20 @@ const dtfEvent = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric
 function SocialIcon({ href, img, label }) {
   if (!href) return null;
   return (
-    <a className="a-social-btn" href={href} target="_blank" rel="noreferrer" aria-label={label} title={label} onClick={(e)=>e.stopPropagation()}>
+    <a
+      className="a-social-btn"
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      title={label}
+      onClick={(e) => e.stopPropagation()}
+    >
       <img src={img} alt={label} />
     </a>
   );
 }
- 
+
 export default function Artist() {
   const [groups, setGroups] = useState([]);
   const [loadingGroups, setLoadingGroups] = useState(true);
@@ -38,7 +46,7 @@ export default function Artist() {
   const [likingIds, setLikingIds] = useState(new Set());
 
   const lastFocusRef = useRef(null);
-  const { slug } = useParams();
+  const { id } = useParams();               // ✅ ใช้เฉพาะ id
   const navigate = useNavigate();
 
   /** fetch groups */
@@ -62,12 +70,12 @@ export default function Artist() {
     return () => { cancelled = true; };
   }, []);
 
-  /** open detail by slug */
+  /** open detail by id */
   useEffect(() => {
-    if (!slug) { setSelectedGroup(null); return; }
-    const found = groups.find((g) => g.slug === slug);
+    if (!id) { setSelectedGroup(null); return; }
+    const found = groups.find((g) => String(g.id) === String(id));
     setSelectedGroup(found || null);
-  }, [slug, groups]);
+  }, [id, groups]);
 
   /** keep selectedGroup fresh when groups changed */
   useEffect(() => {
@@ -145,7 +153,6 @@ export default function Artist() {
         );
       }
     } catch (err) {
-      // ถ้าไม่ได้ล็อกอินให้ไปหน้า login
       if (err?.response?.status === 401 || err?.response?.status === 403) {
         navigate("/login");
       } else {
@@ -237,7 +244,7 @@ export default function Artist() {
                   disabled={likingIds.has(group.id)}
                 />
                 <Link
-                  to={`/page_artists/${group.slug}`}
+                  to={`/artists/${group.id}`}       // ✅ id-only
                   className="group-card a-card-min"
                   onClick={() => { setSelectedGroup(group); }}
                 >
@@ -329,7 +336,7 @@ export default function Artist() {
                 <span className="eta-label">ETA</span>
                 <a
                   className="a-social-btn eta-btn"
-                  href={selectedGroup?.etaPdfUrl || `/pdf/${selectedGroup?.slug || "artist"}.pdf`}
+                  href={selectedGroup?.etaPdfUrl || `/pdf/artist-${selectedGroup?.id}.pdf`}  // ✅ fallback เป็น id
                   download
                   title="Download ETA PDF"
                   aria-label="Download ETA PDF"
@@ -369,7 +376,7 @@ export default function Artist() {
                     </div>
                     {(ev.id || ev.url || ev.ticketUrl) &&
                       (ev.id ? (
-                        <Link className="a-link" to={`/page_events/${ev.id}`}>Detail</Link>
+                        <Link className="a-link" to={`/events/${ev.id}`}>Detail</Link>
                       ) : ev.url ? (
                         <a className="a-link" href={ev.url} target="_blank" rel="noreferrer">Detail</a>
                       ) : (
