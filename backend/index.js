@@ -1,12 +1,18 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const SECRET = process.env.JWT_SECRET || 'your_secret_key';
+require('dotenv').config({path:'.env.dev'}) //อ่านข้อมูลใน .env.dev
 
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const { PrismaClient } = require('./generated/prisma');
 const prisma = new PrismaClient();
-const nodemailer = require('nodemailer');
+const nodemailer = require('nodemailer')
+const { OAuth2Client } = require('google-auth-library')
+//const { requireRole } = require('./authz');
+
+//Google OAuth
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, "http://localhost:5173")
 
 const app = express();
 app.use(express.json());
@@ -164,14 +170,19 @@ function validateEmail(email) {
   return regex.test(email);
 }
 
+
+
 //ใช้สำหรับส่งเมลไปหา user
 const transporter = nodemailer.createTransport({
   service: "gmail",
-  auth: {
-    user: "your_gmail@gmail.com",
-    pass: "xxxx xxxx xxxx xxxx"
-  }
+  auth:{
+    user: process.env.EMAIL_USER, // กำหนดใน .env Email ที่ใช้ส่ง
+    pass: process.env.EMAIL_PASS, // App Password email ที่ใช้ส่งใน .env
+  },
+  authMethod: 'PLAIN'
 })
+
+
 
 /* ───────────────────────────── OTP ───────────────────────────── */
 app.post('/verifyOTP', async (req, res) => {
@@ -223,7 +234,7 @@ app.post("/resendOTP", async (req, res) => {
     const otp_expired = new Date(Date.now() + 15 * 60 * 1000)
 
     const mailOption = {
-      from: `"Chiang Mai Original website" <no-reply@myapp.com`,
+      from: `"Chiang Mai Original website" <no-reply@myapp.com>`,
       to: email,
       subject: "Verify your email",
       html: `<p>Enter <b>${otp}</b> in the app to verify your email and complete sign up</p> 
@@ -243,7 +254,56 @@ app.post("/resendOTP", async (req, res) => {
     console.error('POST /resendOTP error:', err)
     return res.status(400).json({ error: err.message || 'Resend OTP failed' })
   }
-});
+})
+
+/* ───────────────────────────── Google Sign UP ───────────────────────────── */
+app.post('/googlesignup', async(req, res) =>{
+  console.log("Signing up Google...")
+  try {
+    const { code } = req.body; 
+    
+    // แลก code -> tokens (access_token + id_token)
+    const { tokens } = await client.getToken(code);
+    //console.log("Tokens:", tokens);
+
+    //Verify id token
+    const ticket = await client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    let { email, name, picture } = payload;
+
+    // sanitize
+    email = (email || '').trim().toLowerCase();
+    
+    let user = await prisma.user.findUnique({where: {email}})
+    //ถ้าไม่มีให้สร้าง user ใหม่
+    if(!user){
+      user = await prisma.user.create({data:{email, passwordHash: "", role: 'AUDIENCE', 
+                                      isVerified: true}}) //No need for OTP
+    }
+    
+    //Create Cookie like login function
+    const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '1d' });
+
+    // ✅ Set cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      sameSite: 'Lax',
+      secure: false, // production: true + SameSite=None + HTTPS
+      maxAge: 24 * 60 * 60 * 1000, //24 Hours (1 Day)
+    });
+    
+    return res.status(201).json({message: 'Logged in', user})
+  } catch (err) {
+    console.error('POST /googlesignup error:', err);
+    return res.status(400).json({ error: err.message || 'Google sign up failed' });
+  }
+})
+
+
 
 /* ───────────────────────────── USERS ───────────────────────────── */
 app.post('/users', async (req, res) => {
