@@ -1,0 +1,317 @@
+/* ================================
+   AccountSetupPage.css (no CSS vars)
+   ================================ */
+
+/* 0) PAGE WRAPPER */
+.acc-page { 
+    /* background: #fa0000;  */
+    color: #111111; 
+    padding: px; }
+.acc-container { 
+    max-width: 1600px; 
+    margin: 0 auto; 
+}
+
+.acc-title { 
+    font-size: 120px; 
+    margin: 0 0 18px 0; 
+    color: #111111; 
+    /* background: #fa0000; */
+}
+
+
+/* เส้นคั่น */
+.a-line { 
+  margin-inline: auto; 
+  width: 75%;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  height: 2px; 
+  background: #000000; }
+
+
+
+/* 1) SECTIONS */
+.acc-section {
+    margin-inline: auto; 
+  max-width: 1200px; 
+  /* border: 1px solid #e9e9ee; */
+  /* border-radius: 12px; */
+  padding: 16px;
+  margin-bottom: 18px;
+  /* background: #db1919; */
+}
+.acc-sectionTitle { 
+    font-size: 12px; 
+    margin: 0 0 12px 0; 
+    color: #111111; 
+}
+
+
+/* ===== Avatar upload (basic profile) ===== */
+.acc-basicGrid {
+  display: grid;
+  grid-template-columns: 325px 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+/* มือถือย่อให้พอดี */
+@media (max-width: 720px) {
+  .acc-basicGrid { grid-template-columns: 1fr; }
+  .acc-avatarCard { width: 180px; }
+}
+
+
+.acc-avatarCard {
+  width: 325px;
+  aspect-ratio: 1 / 1;
+  border: 1px dashed #111111;
+  border-radius: 12px;
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+}
+
+.acc-avatarCard:hover { 
+    background: #f9f9f9; 
+}
+
+.acc-avatarCard img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.acc-avatarHint {
+  font-size: 12px;
+  color: #666666;
+  text-align: center;
+  padding: 6px 8px;
+}
+
+.acc-avatarEdit {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  font-size: 12px;
+  text-align: center;
+  padding: 4px 6px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.acc-fileInput { display: none; }
+
+
+
+
+/* 2) FORM GRID */
+.acc-formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 16px;
+}
+.acc-formGrid .col-span-2 { 
+    grid-column: 1 / -1; 
+}
+
+@media (max-width: 720px) { .acc-formGrid { grid-template-columns: 1fr; } }
+
+/* Inputs */
+.acc-page :where(input[type="text"],
+                 input[type="url"],
+                 input[type="email"],
+                 input[type="tel"],
+                 input[type="number"],
+                 textarea,
+                 select) {
+  width: 100%;
+  border: 1px solid #e9eeec;
+  background: #ffffff;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font: inherit;
+  color: #111111;
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.acc-page :where(textarea) { min-height: 96px; resize: vertical; }
+.acc-page :where(input, textarea, select):focus-visible {
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.08);
+}
+
+/* Label + Help */
+.acc-label { font-weight: 600; margin-bottom: 6px; display: block; color: #111111; }
+.acc-help  { color: #666666; font-size: 13px; }
+
+/* 3) ROLE PICKER */
+.acc-roleGroup { display: flex; gap: 10px; flex-wrap: wrap; }
+.acc-roleBtn {
+  border: 1px solid #111111;
+  background: #ffffff;
+  color: #111111;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.acc-roleBtn:hover { background: #f5f5f5; }
+.acc-roleBtn.is-active { background: #111111; color: #ffffff; }
+
+/* 4) Chips */
+.acc-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* ปรับ 140px ได้ */
+  gap: 10px;
+}
+
+.acc-chip {
+  width: 100%;
+  text-align: center;
+  border: 1px solid #111111;
+  background: #ffffff;
+  color: #111111;
+  border-radius: 20px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background-color .4s ease, color .4s ease, border-color .4s ease;
+}
+
+.acc-chip:hover { 
+    background: #aaaaaa; 
+}
+.acc-chip.is-selected, .acc-chip[aria-pressed="true"], .acc-chip[data-selected="true"] {
+  background: #111111; color: #ffffff;
+}
+
+/* 5) ACTIONS */
+.acc-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.acc-btn {
+  border: 1px solid #111111; border-radius: 10px; padding: 10px 14px;
+  background: #ffffff; color: #111111; cursor: pointer;
+}
+.acc-btn:hover { background: #f5f5f5; }
+.acc-btnPrimary { background: #111111; color: #ffffff; }
+.acc-btnPrimary:hover { filter: brightness(0.92); }
+
+/* 6) FEEDBACK & GATE */
+.acc-msg { padding: 10px 12px; border-radius: 10px; font-size: 14px; }
+.acc-msg.ok  { background: #e9fbef; border: 1px solid #bce7cc; color: #145a22; }
+.acc-msg.err { background: #ffefef; border: 1px solid #ffd0d0; color: #981b1b; }
+
+.acc-gate {
+  border: 1px dashed #bfbfc6; background: #fafafa; color: #333333;
+  border-radius: 12px; padding: 16px; margin-bottom: 18px;
+}
+
+/* 7) Checkbox inline */
+.acc-check { display: flex; align-items: center; gap: 8px; padding-top: 8px; }
+
+
+
+
+
+
+
+
+
+/* ===== Role cards (landing with images) ===== */
+.acc-roleIntro { margin-bottom: 18px; }
+
+.acc-roleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+@media (max-width: 720px) { .acc-roleGrid { grid-template-columns: 1fr; } }
+
+.acc-roleCard {
+  border: 1px solid #111;
+  border-radius: 14px;
+  background: #fff;
+  padding: 16px;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+
+.acc-roleCard:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 20px rgba(0,0,0,.06);
+}
+
+.acc-roleCardLabel { font-weight: 600; color: #111; }
+
+.acc-roleThumb {
+  width: 220px;
+  aspect-ratio: 1/1;
+  /* border: 1px solid #ffffff; */
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.acc-roleImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;   /* หรือ "contain" ถ้าต้องการไม่ครอป */
+}
+
+
+
+/* === OVERRIDES: layout ของส่วน Basic ให้คลีนขึ้นนิดหน่อย === */
+.acc-sectionTitle { letter-spacing: .5px; }
+
+/* ช่อง Username/Date เป็นสไตล์เส้นใต้ให้เข้ากัน */
+.acc-page .acc-inputUnderline {
+  border: none;
+  border-bottom: 2px solid #11111133;
+  border-radius: 0;
+  padding: 10px 4px;
+  background: transparent;
+  transition: border-color .2s ease;
+  box-shadow: none;
+  width: min(825px, 100%); 
+}
+.acc-page .acc-inputUnderline:focus,
+.acc-page .acc-inputUnderline:focus-visible {
+  outline: none;
+  border-bottom-color: #000;   /* โฟกัสแล้วเป็นสีดำ */
+  box-shadow: none;
+}
+
+
+/* date input ให้หน้าตาเรียบ ๆ เหมือน Username */
+.acc-page .acc-inputDate {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: transparent;
+  color: #111;
+}
+/* ไอคอนปฏิทิน: ให้ดูคลิกได้ และโทนเข้มขึ้นนิด */
+.acc-page .acc-inputDate::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: grayscale(1) brightness(0.2);
+  opacity: .8;
+}
+.acc-page .acc-inputDate:hover::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
+
+/* ช่องว่างแนวยาวระหว่าง label/field ให้หายใจดีขึ้น */
+.acc-formGrid > div { min-width: 0; }

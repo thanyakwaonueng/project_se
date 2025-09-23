@@ -100,16 +100,15 @@ export default function Navbar() {
           </li>
           <li><hr className="dropdown-divider" /></li>
 
-          {/* ✅ เมนูแก้ไขโปรไฟล์ */}
+          {/*  ไปหน้าโปรไฟล์ก่อน */}
           <li>
-            <Link className="dropdown-item" to="/account_setup" onClick={closeMobileMenu}>
-              Profile / Edit
+            <Link className="dropdown-item" to="/me/profile" onClick={closeMobileMenu}>
+              Profile
             </Link>
           </li>
 
           {(user.role === 'ARTIST' || user.role === 'ADMIN') && (
             <>
-              <li><Link className="dropdown-item" to="/me/artist" onClick={closeMobileMenu}>My Artist</Link></li>
               <li><Link className="dropdown-item" to="/artist/invite_requests" onClick={closeMobileMenu}>Artist Pending Invite</Link></li>
             </>
           )}

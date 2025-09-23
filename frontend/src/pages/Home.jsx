@@ -14,28 +14,28 @@ export default function Home() {
     {
       id: 2,
       title: "Renjun",
-      date: "September 15. 2022",
+      date: "September 15, 2022",
       genre: "indie",
       image: "https://www.myband.co.th/uploads/20180516/2a4d42f0264c7563812aad9d07aeddf7.jpg"
     },
     {
       id: 3,
       title: "Jeno",
-      date: "August 26. 2022",
+      date: "August 26, 2022",
       genre: "pop",
       image: "https://www.myband.co.th/uploads/20180516/2a4d42f0264c7563812aad9d07aeddf7.jpg"
     },
     {
       id: 4,
       title: "Jaemin",
-      date: "August 26. 2022",
+      date: "August 26, 2022",
       genre: "indie",
       image: "https://www.myband.co.th/uploads/20180516/2a4d42f0264c7563812aad9d07aeddf7.jpg"
     },
     {
       id: 5,
       title: "Mark",
-      date: "August 26. 2022",
+      date: "August 26, 2022",
       genre: "alternative",
       image: "https://www.myband.co.th/uploads/20180516/2a4d42f0264c7563812aad9d07aeddf7.jpg"
     }
@@ -50,7 +50,7 @@ export default function Home() {
     {
       id: 1,
       title: "at cnxog",
-      date: "September 31. 2022",
+      date: "September 31, 2022",
       genre: "pop",
       image: "/img/at cnxog.jpg",
       desc: "Get ready for an unforgettable night of music and energy 🎶 Featuring talented artists across diverse genres — from soulful melodies to electrifying beats that will keep you on your feet. Immerse yourself in dazzling lights, powerful sound, and a vibrant atmosphere where music lovers come together to celebrate and create lasting memories"
@@ -58,7 +58,7 @@ export default function Home() {
     {
       id: 2,
       title: "tipyandtired",
-      date: "September 15. 2022",
+      date: "September 15, 2022",
       genre: "indie",
       image: "/img/tipyandtired.jpg",
       desc: "Get ready for an unforgettable night of music and energy 🎶 Featuring talented artists across diverse genres — from soulful melodies to electrifying beats that will keep you on your feet. Immerse yourself in dazzling lights, powerful sound, and a vibrant atmosphere where music lovers come together to celebrate and create lasting memories"
@@ -66,7 +66,7 @@ export default function Home() {
     {
       id: 3,
       title: "srwkslive",
-      date: "August 26. 2022",
+      date: "August 26, 2022",
       genre: "pop",
       image: "/img/srwkslive.jpg",
       desc: "Get ready for an unforgettable night of music and energy 🎶 Featuring talented artists across diverse genres — from soulful melodies to electrifying beats that will keep you on your feet. Immerse yourself in dazzling lights, powerful sound, and a vibrant atmosphere where music lovers come together to celebrate and create lasting memories"
@@ -189,7 +189,7 @@ function EventCard({ image, title, date, desc, genre }) {
 
       <div className="artist-content">
           <div className="artist-header">
-            <h1 className="latest-artists">Latest Artists</h1>
+            <h1 className="latest-artists">Discover new artists</h1>
             <a href="/page_artists">
               <h2>Explore more artists ↗</h2>
             </a>
@@ -236,9 +236,7 @@ function EventCard({ image, title, date, desc, genre }) {
       <div className="event-content">
         <div className="container-5">
             {/* <h1 className="chiangmai-original-playlist">Latest Event</h1> */}
-            
             <div className="event-grid">
-    
               {event.map(artist => (
                 <EventCard 
                   key={artist.id}
@@ -246,19 +244,23 @@ function EventCard({ image, title, date, desc, genre }) {
                   date={artist.date}
                   genre={artist.genre}
                   image={artist.image}
-                  desc={artist.desc}
-                  
+                  desc={artist.desc}       
                 />
               ))}
-      
             </div>
-
+        </div>
+        <div className="container-6">
+          <iframe src="https://open.spotify.com/embed/playlist/7D3gJBkWz9OjfWCdg2q3eA?utm_source=generator" 
+                  width="320" height="450" frameborder="0" allowfullscreen="" 
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture">    
+          </iframe>
         </div>
       </div>
 
 
 
-      <div className="chiangmai-original-playlist-content">
+
+      {/* <div className="chiangmai-original-playlist-content">
         <div className="container-6">
             <h1 className="chiangmai-original-playlist">Chiang mai original playlist</h1>
             <p className="chiangmai-original-playlist-subtitle">The sounds of Chiang Mai, all in one playlist</p>
@@ -273,9 +275,8 @@ function EventCard({ image, title, date, desc, genre }) {
 
               </div>
             </div>
-
         </div>
-      </div>
+      </div> */}
 
     </div>
   );
@@ -306,9 +307,3 @@ function EventCard({ image, title, date, desc, genre }) {
 
 //   );
 // }
-
-
-
-
-
-

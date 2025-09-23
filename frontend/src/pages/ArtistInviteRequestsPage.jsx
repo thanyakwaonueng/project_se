@@ -38,14 +38,14 @@ export default function ArtistInvitesPage() {
         return;
       }
 
-      if (!me.artistProfile || !me.artistProfile.id) {
+      if (!me.performerInfo.artistInfo || !me.performerInfo.artistInfo.performerId) {
         setErr('ไม่พบโปรไฟล์ศิลปินสำหรับผู้ใช้ของคุณ');
         setItems([]);
         setArtistId(null);
         return;
       }
 
-      const aid = me.artistProfile.id;
+      const aid = me.performerInfo.artistInfo.performerId;
       setArtistId(aid);
 
       // 2) fetch each status via its endpoint (use the new endpoints)

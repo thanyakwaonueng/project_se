@@ -70,7 +70,7 @@ export default function Venue() {
   const heroImg = useMemo(() => {
     if (!venue) return FALLBACK_IMG;
     return (
-      venue.profilePhotoUrl ||
+      venue.performer.user.profilePhotoUrl ||
       venue.bannerUrl ||
       venue.coverImage ||
       FALLBACK_IMG
@@ -78,7 +78,8 @@ export default function Venue() {
   }, [venue]);
 
   const mapPoint = useMemo(() => {
-    return parseLatLng(venue?.locationUrl || venue?.googleMapUrl, venue?.latitude, venue?.longitude);
+    return parseLatLng(venue?.location.locationUrl || venue?.googleMapUrl, 
+      venue?.location.latitude, venue?.location.longitude);
   }, [venue]);
 
 
@@ -126,14 +127,14 @@ export default function Venue() {
         <div className="vn-hero-media">
           <img
             src={heroImg}
-            alt={venue.name}
+            alt={venue.performer.user.name}
             loading="lazy"
             onError={(e)=>{ e.currentTarget.src = FALLBACK_IMG; }}
           />
         </div>
 
         <div className="vn-hero-body">
-          <h1 className="vn-title">{venue.name || "Unnamed Venue"}</h1>
+          <h1 className="vn-title">{venue.performer.user.name || "Unnamed Venue"}</h1>
           <div className="vn-chips">
             {venue.genre && <span className="vn-chip">{venue.genre}</span>}
             {venue.priceRate && <span className="vn-chip">Price: {venue.priceRate}</span>}
@@ -145,23 +146,23 @@ export default function Venue() {
 
           {/* โซเชียล/ลิงก์สำคัญ */}
           <div className="vn-actions">
-            {venue.website && <a className="vn-btn" href={venue.website} target="_blank" rel="noreferrer">Website ↗</a>}
-            {venue.facebook && <a className="vn-btn-ghost" href={venue.facebook} target="_blank" rel="noreferrer">Facebook</a>}
-            {venue.instagram && <a className="vn-btn-ghost" href={venue.instagram} target="_blank" rel="noreferrer">Instagram</a>}
-            {venue.tiktok && <a className="vn-btn-ghost" href={venue.tiktok} target="_blank" rel="noreferrer">TikTok</a>}
-            {venue.line && <a className="vn-btn-ghost" href={venue.line} target="_blank" rel="noreferrer">LINE</a>}
+            {venue.websiteUrl && <a className="vn-btn" href={venue.websiteUrl} target="_blank" rel="noreferrer">Website ↗</a>}
+            {venue.performer.facebookUrl && <a className="vn-btn-ghost" href={venue.performer.facebookUrl} target="_blank" rel="noreferrer">Facebook</a>}
+            {venue.performer.instagramUrl && <a className="vn-btn-ghost" href={venue.performer.instagramUrl} target="_blank" rel="noreferrer">Instagram</a>}
+            {venue.performer.tiktokUrl && <a className="vn-btn-ghost" href={venue.performer.tiktokUrl} target="_blank" rel="noreferrer">TikTok</a>}
+            {venue.performer.lineUrl && <a className="vn-btn-ghost" href={venue.performer.lineUrl} target="_blank" rel="noreferrer">LINE</a>}
           </div>
         </div>
 
         <aside className="vn-hero-side">
           <div className="vn-card">
             <div className="vn-card-title">Contact</div>
-            <div className="vn-kv"><div>Email</div><div>{venue.email ? <a className="vn-link" href={`mailto:${venue.email}`}>{venue.email}</a> : "—"}</div></div>
-            <div className="vn-kv"><div>Phone</div><div>{venue.phone ? <a className="vn-link" href={`tel:${venue.phone}`}>{venue.phone}</a> : "—"}</div></div>
+            <div className="vn-kv"><div>Email</div><div>{venue.performer.contactEmail ? <a className="vn-link" href={`mailto:${venue.performer.contactEmail}`}>{venue.performer.contactEmail}</a> : "—"}</div></div>
+            <div className="vn-kv"><div>Phone</div><div>{venue.performer.contactPhone ? <a className="vn-link" href={`tel:${venue.performer.contactPhone}`}>{venue.performer.contactPhone}</a> : "—"}</div></div>
             <div className="vn-kv"><div>Location</div>
               <div>
-                {venue.locationUrl
-                  ? <a className="vn-link" href={venue.locationUrl} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>
+                {venue.location.locationUrl
+                  ? <a className="vn-link" href={venue.location.locationUrl} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>
                   : (mapPoint ? <a className="vn-link" href={`https://www.google.com/maps?q=${mapPoint.lat},${mapPoint.lng}`} target="_blank" rel="noreferrer">Open in Google Maps ↗</a> : "—")
                 }
               </div>
@@ -202,12 +203,12 @@ export default function Venue() {
           <div className="vn-info-block">
             <div className="vn-info-title">Links</div>
             <ul className="vn-links">
-              {venue.website && <li><a className="vn-link" href={venue.website} target="_blank" rel="noreferrer">Website</a></li>}
-              {venue.facebook && <li><a className="vn-link" href={venue.facebook} target="_blank" rel="noreferrer">Facebook</a></li>}
-              {venue.instagram && <li><a className="vn-link" href={venue.instagram} target="_blank" rel="noreferrer">Instagram</a></li>}
-              {venue.tiktok && <li><a className="vn-link" href={venue.tiktok} target="_blank" rel="noreferrer">TikTok</a></li>}
-              {venue.line && <li><a className="vn-link" href={venue.line} target="_blank" rel="noreferrer">LINE</a></li>}
-              {!(venue.website||venue.facebook||venue.instagram||venue.tiktok||venue.line) && <li>—</li>}
+              {venue.websiteUrl && <li><a className="vn-link" href={venue.websiteUrl} target="_blank" rel="noreferrer">Website</a></li>}
+              {venue.performer.facebookUrl && <li><a className="vn-link" href={venue.performer.facebookUrl} target="_blank" rel="noreferrer">Facebook</a></li>}
+              {venue.performer.instagramUrl && <li><a className="vn-link" href={venue.performer.instagramUrl} target="_blank" rel="noreferrer">Instagram</a></li>}
+              {venue.performer.tiktokUrl && <li><a className="vn-link" href={venue.performer.tiktokUrl} target="_blank" rel="noreferrer">TikTok</a></li>}
+              {venue.performer.lineUrl && <li><a className="vn-link" href={venue.performer.lineUrl} target="_blank" rel="noreferrer">LINE</a></li>}
+              {!(venue.websiteUrl||venue.performer.facebookUrl||venue.performer.instagramUrl||venue.performer.tiktokUrl||venue.performer.lineUrl) && <li>—</li>}
             </ul>
           </div>
         </div>
@@ -240,7 +241,7 @@ export default function Venue() {
                   <div className="a-event">
                     <div className="a-event-title">{ev.title || ev.name}</div>
                     <div className="a-event-sub">
-                      {(ev.venue || venue.name) || ""}
+                      {(ev.venue || venue.performer.user.name) || ""}
                       {ev.city ? ` • ${ev.city}` : ""}
                       {ev.price ? ` • ${ev.price}` : ""}
                     </div>

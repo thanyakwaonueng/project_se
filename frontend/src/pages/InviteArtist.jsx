@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
+import InviteArtistStatusList from './InviteArtistStatusList'
 
 export default function InviteArtist() {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ export default function InviteArtist() {
   };
 
   return (
-    <div className="container mt-4" style={{ maxWidth: 600 }}>
+    <div className="container mt-4" style={{ maxWidth: 600,  display: "flex", flexDirection: "column"  }}>
       <h2>Invite Artist to Event</h2>
       <form onSubmit={handleSubmit}>
         <div className="mb-3">
@@ -95,7 +96,7 @@ export default function InviteArtist() {
       </form>
 
       {message && <p className="mt-3">{message}</p>}
+      <InviteArtistStatusList/>
     </div>
   );
 }
-

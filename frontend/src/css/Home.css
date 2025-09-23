@@ -360,19 +360,39 @@ body {
     box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
 }
 
-.evet-content {
+.event-content {
+  display: flex;            
+  justify-content: space-between; 
+  align-items: flex-start;    
+  /* gap: 20px;                */
   width: 100%;
+  box-sizing: border-box;  
 }
 
+/* left box */
 .container-5 {
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   gap: 10px;
   width: 70%;
-  padding: 90px;
-  /* background-color: #292929; */
-  margin-bottom: 30px;
+  padding: 60px;
+  /* background-color: #452727; */
+  box-sizing: border-box;
 }
+
+/* right box */
+.container-6 {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; 
+  gap: 10px;
+  width: 30%;
+  padding: 60px;
+  /* background-color: #000; */
+  box-sizing: border-box;
+}
+
 
 .event-grid {
   display: flex;
@@ -507,7 +527,7 @@ body {
   width: 100%;
 }
 
-.container-6 {
+.container-7 {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -618,8 +638,14 @@ body {
   .artist-date {
     font-size: 12px;
   }
+
+  .container-5 {
+    width: 100%;
+    padding: 40px;
+  }
 }
 
+/* mobile */
 @media (max-width: 768px) {
   .topic-1 {
     font-size: 60px;
@@ -643,19 +669,54 @@ body {
     padding: 0 20px;
   }
 
-    .discover-music {
-        font-size: 2.2rem;
-    }
+  .discover-music {
+    font-size: 2.2rem;
+  }
     
-    .container-4 {
-        padding: 30px 20px;
-    }
+  .container-4 {
+    padding: 30px 20px;
+  }
     
-    .genre-item, .location-item {
-        padding: 12px 20px;
-        font-size: 0.9rem;
-    }
+  .genre-item, .location-item {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
 
+  .event-content {
+    flex-direction: column;
+  }
+  .container-5, .container-6 {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .event-grid {
+    grid-template-columns: 1fr; /* เหลือคอลัมน์เดียวในจอมือถือ */
+  }
+
+  .event-card {
+    flex-direction: column;   /* ซ้อนเป็นแนวตั้ง */
+  }
+
+  .event-image {
+    max-width: 100%;
+    min-width: auto;
+    padding: 15px;
+  }
+
+  .event-details {
+    padding: 15px;
+  }
+
+  .event-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .view-detail-btn {
+    align-self: flex-start; /* ปุ่มอยู่ซ้าย ไม่โดด */
+  }
 }
 
 @media (max-width: 480px) {

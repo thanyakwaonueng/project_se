@@ -1,373 +1,611 @@
-// frontend/src/pages/AccountSetupPage.jsx
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import api, { extractErrorMessage } from "../lib/api";
+import "../css/AccountSetupPage.css";
 
-const PRESET_GENRES = [
-  'Pop','Rock','Indie','Hip-hop','R&B','EDM','Jazz','Blues','Metal','Folk','Country'
-];
+/* แนวเพลงตัวอย่าง */
+const PRESET_GENRES = ["Pop", "Rock", "Indie", "Jazz", "Blues", "Hip-Hop", "EDM", "Folk", "Metal", "R&B"];
+
+/* ล้างค่าว่างออกก่อนส่ง */
+function cleanObject(obj) {
+  const out = {};
+  Object.entries(obj).forEach(([k, v]) => {
+    if (v === null || v === undefined) return;
+    if (typeof v === "string" && v.trim() === "") return;
+    if (Array.isArray(v) && v.length === 0) return;
+    out[k] = typeof v === "string" ? v.trim() : v;
+  });
+  return out;
+}
 
 export default function AccountSetupPage() {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState('');
-  const [ok, setOk] = useState('');
 
-  // ----- โปรไฟล์ผู้ใช้ทั่วไป -----
-  const [displayName, setDisplayName] = useState('');
-  const [firstName, setFirst] = useState('');
-  const [lastName, setLast] = useState('');
-  const [bio, setBio] = useState('');
-  const [favoriteGenres, setFav] = useState([]); // string[]
+  // Avatar (basic)
+  const [avatarPreview, setAvatarPreview] = useState(""); // URL สำหรับพรีวิว
+  const [avatarFile, setAvatarFile] = useState(null);     // ไฟล์ดิบ
 
-  // ----- เลือกบทบาท: ให้เลือกได้แค่ AUDIENCE หรือ ARTIST -----
-  const [selectedRole, setSelectedRole] = useState('AUDIENCE'); // 'AUDIENCE' | 'ARTIST'
+  // 1) Role (เริ่มจากยังไม่เลือก)
+  const [role, setRole] = useState(""); // "", "AUDIENCE", "ARTIST"
 
-  // ----- ฟอร์มยื่นสมัครศิลปิน (แบบสั้น) -----
+  // 2) โปรไฟล์พื้นฐาน
+  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [bio, setBio] = useState("");
+  const [favoriteGenres, setFavoriteGenres] = useState([]);
+  const [birthDate, setBirthDate] = useState("");
+
+  // ใช้คุม max ให้เลือกได้ไม่เกิน “วันนี้”
+  const todayStr = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  // 3) ฟอร์ม Artist (ครบทุกฟิลด์ตามที่ให้มา)
   const [artist, setArtist] = useState({
-    name: '',
-    genre: '',
-    bookingType: 'FULL_BAND', // FULL_BAND | TRIO | DUO | SOLO
-    description: '',
-    youtubeUrl: '',
-    spotifyUrl: '',
-    soundcloudUrl: '',
-    contactEmail: '',
-    contactPhone: '',
-    priceMin: '',
-    priceMax: '',
-    profilePhotoUrl: '',
+    name: "",
+    profilePhotoUrl: "",
+    description: "",
+
+    genre: "",
+    subGenre: "",
+    bookingType: "", // FULL_BAND | TRIO | DUO | SOLO | etc.
+    foundingYear: "",
+
+    label: "",
+    isIndependent: false,
+
+    memberCount: "",
+    priceMin: "",
+    priceMax: "",
+
+    contactEmail: "",
+    contactPhone: "",
+
+    photoUrl: "",
+    videoUrl: "",
+
+    rateCardUrl: "",
+    epkUrl: "",
+    riderUrl: "",
+
+    spotifyUrl: "",
+    youtubeUrl: "",
+    appleMusicUrl: "",
+    facebookUrl: "",
+    instagramUrl: "",
+    twitterUrl: "",
+    soundcloudUrl: "",
+    shazamUrl: "",
+    bandcampUrl: "",
+    tiktokUrl: "",
   });
 
-  const handleArtistChange = (key, val) => {
-    setArtist(prev => ({ ...prev, [key]: val }));
-  };
+  const setA = (key, value) => setArtist(prev => ({ ...prev, [key]: value }));
 
-  const toggleGenre = (g) => {
-    setFav(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
-  };
+  // 4) UX
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [ok, setOk] = useState(false);
+  const [err, setErr] = useState("");
 
-  // โหลดโปรไฟล์ถ้ามี (พยายาม GET /api/me/profile; ถ้าไม่มี endpoint ก็ไม่เป็นไร)
+  // Prefill
   useEffect(() => {
-    let alive = true;
+    let mounted = true;
     (async () => {
+      setLoading(true);
+      setErr("");
+      setOk(false);
       try {
-        setLoading(true);
-        setErr('');
-        // ถ้ามี GET /api/me/profile ให้ใช้; ถ้าไม่มีจะ throw แล้วเราจะ ignore
-        const res = await axios.get('/api/auth/me', { withCredentials: true });
-        if (!alive) return;
-        const p = res?.data?.profile || null;
-        if (p) {
-          setDisplayName(p.displayName || '');
-          setFirst(p.firstName || '');
-          setLast(p.lastName || '');
-          setBio(p.bio || '');
-          setFav(Array.isArray(p.favoriteGenres) ? p.favoriteGenres : []);
-        }
-      } catch {
-        // เงียบไว้ (บางโปรเจ็กต์ไม่มี GET /me/profile)
+        const { data } = await api.get("/api/auth/me", { withCredentials: true });
+        if (!mounted || !data) return;
+
+        setName(data.name || "");
+        setFirstName(data.firstName || "");
+        setLastName(data.lastName || "");
+        setBio(data.bio || "");
+        setFavoriteGenres(Array.isArray(data.favoriteGenres) ? data.favoriteGenres : []);
+
+        const p = data.performerInfo
+        const a = p.artistInfo
+        setArtist({
+          name: data.name || "", profilePhotoUrl: data.profilePhotoUrl || "", 
+          description: a.description || "", genre: a.genre || "", subGenre: a.subGenre || "", 
+          bookingType: a.bookingType || "", foundingYear: a.foundingYear || "", label: a.label || "", 
+          isIndependent: a.isIndependent || false, memberCount: a.memberCount || "", priceMin: a.priceMin || "", 
+          priceMax: a.priceMax || "", contactEmail: p.contactEmail || "", contactPhone: p.contactPhone || "",
+          photoUrl: a.photoUrl || "", videoUrl: a.videoUrl || "", rateCardUrl: a.rateCardUrl || "", 
+          epkUrl: a.epkUrl || "", riderUrl: a.riderUrl || "", spotifyUrl: a.spotifyUrl || "", 
+          youtubeUrl: p.youtubeUrl || "", appleMusicUrl: a.appleMusicUrl || "", facebookUrl: p.facebookUrl || "", 
+          instagramUrl: p.instagramUrl || "", twitterUrl: p.twitterUrl || "", soundcloudUrl: a.soundcloudUrl || "", 
+          shazamUrl: a.shazamUrl || "", bandcampUrl: a.bandcampUrl || "", tiktokUrl: p.tiktokUrl || "",
+        });
+      } catch (_e) {
+        // ไม่ fatal
       } finally {
-        if (alive) setLoading(false);
+        mounted && setLoading(false);
       }
     })();
-    return () => { alive = false; };
+    return () => { mounted = false; };
   }, []);
 
-  // ตรวจฟอร์ม “ยื่น ARTIST” ขั้นต่ำ
-  const validateArtistApplication = () => {
-    if (selectedRole !== 'ARTIST') return null;
-
-    if (!artist.name.trim()) return 'กรุณาใส่ Stage name (ชื่อศิลปิน)';
-    if (!artist.genre.trim()) return 'กรุณาใส่แนวดนตรีหลัก (Genre)';
-    if (!artist.bookingType) return 'กรุณาเลือก Booking type';
-    const hasSample = Boolean(artist.youtubeUrl.trim() || artist.spotifyUrl.trim() || artist.soundcloudUrl.trim());
-    if (!hasSample) return 'กรุณาใส่อย่างน้อย 1 ลิงก์สาธิตผลงาน (YouTube/Spotify/SoundCloud)';
-    const hasContact = Boolean(artist.contactEmail.trim() || artist.contactPhone.trim());
-    if (!hasContact) return 'กรุณาใส่อย่างน้อย 1 ช่องทางติดต่อ (Email/Phone)';
-    return null;
+  const toggleGenre = (g) => {
+    setFavoriteGenres(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
   };
 
-const submit = async (e) => {
-  e.preventDefault();
-  setErr('');
-  setOk('');
+  const resetForm = () => {
+    setRole("");
+    setName(""); setFirstName(""); setLastName(""); setBio(""); setFavoriteGenres([]);
+    setArtist({
+      name: "", profilePhotoUrl: "", description: "",
+      genre: "", subGenre: "", bookingType: "", foundingYear: "",
+      label: "", isIndependent: false,
+      memberCount: "", priceMin: "", priceMax: "",
+      contactEmail: "", contactPhone: "",
+      photoUrl: "", videoUrl: "",
+      rateCardUrl: "", epkUrl: "", riderUrl: "",
+      spotifyUrl: "", youtubeUrl: "", appleMusicUrl: "", facebookUrl: "",
+      instagramUrl: "", twitterUrl: "", soundcloudUrl: "", shazamUrl: "",
+      bandcampUrl: "", tiktokUrl: "",
+    });
+    setOk(false); setErr("");
+  };
 
-  const artistErr = validateArtistApplication();
-  if (artistErr) {
-    setErr(artistErr);
-    return;
-  }
 
-  setSaving(true);
-  try {
-    // 1) เรียก /me/setup เพื่อบันทึกโปรไฟล์ + สร้าง role request + ยิง noti
-    const payload = {
-      displayName, firstName, lastName, bio, favoriteGenres,
-      desiredRole: selectedRole === 'ARTIST' ? 'ARTIST' : undefined,
-    };
-    const { data: setupRes } = await axios.post('/api/me/setup', payload, { withCredentials: true });
 
-    // 2) ถ้าเลือก ARTIST ส่งใบสมัครศิลปินแบบสั้นเข้าไปเก็บ (optional)
-    if (selectedRole === 'ARTIST') {
-      const payloadArtist = {
-        name: artist.name.trim(),
-        description: artist.description.trim() || null,
-        genre: artist.genre.trim(),
-        bookingType: artist.bookingType,
-        profilePhotoUrl: artist.profilePhotoUrl.trim() || null,
-        youtubeUrl: artist.youtubeUrl.trim() || null,
-        spotifyUrl: artist.spotifyUrl.trim() || null,
-        soundcloudUrl: artist.soundcloudUrl.trim() || null,
-        contactEmail: artist.contactEmail.trim() || null,
-        contactPhone: artist.contactPhone.trim() || null,
-        priceMin: artist.priceMin ? Number(artist.priceMin) : null,
-        priceMax: artist.priceMax ? Number(artist.priceMax) : null,
+  const handleSave = async () => {
+    setSaving(true);
+    setErr(""); setOk(false);
+    try {
+      if (!role) throw new Error("กรุณาเลือก Role ก่อน");
+
+      // (ทางเลือก) อัปโหลดไฟล์ก่อน เพื่อให้ได้ URL จริง
+      let avatarUrl = null;
+      try {
+        avatarUrl = await uploadAvatarIfNeeded(); // ถ้าไม่ได้เลือกภาพ จะเป็น null
+      } catch (_) {
+        // ถ้าอัปโหลดล้มเหลว ไม่ถือเป็น fatal ในขั้นนี้ (ยังเซฟฟิลด์อื่นได้)
+        // คุณจะเลือก throw เพื่อบังคับให้สำเร็จทั้งหมดก็ได้
+      }
+
+      // 1) บันทึกโปรไฟล์พื้นฐาน
+      const setupPayload = {
+        name,
+        favoriteGenres,
+        ...(avatarUrl ? { avatarUrl } : {}),        // ใส่เฉพาะเมื่อมี URL จริง
+        ...(birthDate ? { birthDate } : {}),        // ใส่เมื่อผู้ใช้เลือกจริง
+        ...(role === "ARTIST" ? { desiredRole: "ARTIST" } : {}),
       };
-      const clean = Object.fromEntries(Object.entries(payloadArtist).filter(([, v]) => v !== null && v !== ''));
-      await axios.post('/api/artists', clean, { withCredentials: true });
+
+      await api.post("/api/me/setup", setupPayload, { withCredentials: true });
+
+      // 2) ถ้า ARTIST -> ตรวจและส่งแบบฟอร์มครบทุกฟิลด์
+      if (role === "ARTIST") {
+        // validate ขั้นต่ำ
+        if (!artist.name.trim()) throw new Error("กรุณากรอก Name (Stage name)");
+        if (!artist.genre.trim()) throw new Error("กรุณากรอก Genre");
+        if (!artist.bookingType.trim()) throw new Error("กรุณาเลือก Booking type");
+
+        const hasSample =
+          [artist.spotifyUrl, artist.youtubeUrl, artist.appleMusicUrl, artist.soundcloudUrl,
+          artist.bandcampUrl, artist.tiktokUrl, artist.shazamUrl].some(v => v && v.trim() !== "");
+        if (!hasSample) throw new Error("ใส่ลิงก์เพลง/ตัวอย่างผลงานอย่างน้อย 1 ช่อง");
+
+        const hasContact =
+          (artist.contactEmail && artist.contactEmail.trim() !== "") ||
+          (artist.contactPhone && artist.contactPhone.trim() !== "");
+        if (!hasContact) throw new Error("ใส่ช่องทางติดต่ออย่างน้อย 1 อย่าง (อีเมลหรือเบอร์)");
+
+        // แปลงตัวเลข
+        const foundingYearNum = artist.foundingYear ? parseInt(artist.foundingYear, 10) : undefined;
+        const memberCountNum = artist.memberCount ? parseInt(artist.memberCount, 10) : undefined;
+        const priceMinNum = artist.priceMin ? Number(artist.priceMin) : undefined;
+        const priceMaxNum = artist.priceMax ? Number(artist.priceMax) : undefined;
+
+        const artistPayload = cleanObject({
+          // mapping เข้ากับ backend (คงทั้งชื่อที่ตรง backend เดิม + ช่องใหม่)
+          stageName: artist.name,         // เดิมเราเรียก stageName
+          name: artist.name,              // เก็บซ้ำไว้ทั้งสอง key เผื่อ backend เครื่องคุณรองรับแบบใดแบบหนึ่ง
+          genre: artist.genre,
+          subGenre: artist.subGenre,
+          bookingType: artist.bookingType,
+          description: artist.description, // รายละเอียดยาว
+          profilePhotoUrl: artist.profilePhotoUrl, // โปรไฟล์
+
+          foundingYear: foundingYearNum,
+          label: artist.label,
+          isIndependent: !!artist.isIndependent,
+          memberCount: memberCountNum,
+
+          priceMin: priceMinNum,
+          priceMax: priceMaxNum,
+
+          contact: cleanObject({
+            email: artist.contactEmail,
+            phone: artist.contactPhone,
+          }),
+
+          // รูป/วิดีโอ/ไฟล์
+          photoUrl: artist.photoUrl,
+          videoUrl: artist.videoUrl,
+          rateCardUrl: artist.rateCardUrl,
+          epkUrl: artist.epkUrl,
+          riderUrl: artist.riderUrl,
+
+          // ลิงก์โซเชียล/สตรีมมิ่ง (รวมเป็นกลุ่ม links)
+          links: cleanObject({
+            spotify: artist.spotifyUrl,
+            youtube: artist.youtubeUrl,
+            appleMusic: artist.appleMusicUrl,
+            facebook: artist.facebookUrl,
+            instagram: artist.instagramUrl,
+            twitter: artist.twitterUrl,
+            soundcloud: artist.soundcloudUrl,
+            shazam: artist.shazamUrl,
+            bandcamp: artist.bandcampUrl,
+            tiktok: artist.tiktokUrl,
+          }),
+        });
+
+        await api.post("/api/artists", artistPayload, { withCredentials: true });
+      }
+
+      setOk(true);
+    } catch (e) {
+      setErr(extractErrorMessage?.(e) || e.message || "เกิดข้อผิดพลาด");
+    } finally {
+      setSaving(false);
     }
+  };
 
-    setOk(
-      selectedRole === 'ARTIST'
-        ? 'บันทึกแล้ว และส่งคำขอศิลปินให้แอดมินเรียบร้อย (มีแจ้งเตือนที่ฝั่งแอดมิน)'
-        : 'บันทึกโปรไฟล์เรียบร้อย!'
-    );
-  } catch (e2) {
-    setErr(e2?.response?.data?.error || 'บันทึกไม่สำเร็จ');
-  } finally {
-    setSaving(false);
+
+  const avatarInputRef = React.useRef(null);
+
+  const handlePickAvatar = () => {
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    const url = URL.createObjectURL(file);
+    setAvatarPreview(url);
+  };
+
+  /** (ทางเลือก) อัปโหลดไฟล์ไปเซิร์ฟเวอร์เพื่อให้ได้ URL จริง
+   *  - เปลี่ยน endpoint ให้ตรงหลังบ้านของคุณ เช่น /api/uploads/avatar
+   *  - ถ้า backend ยังไม่พร้อม เราจะส่งเฉพาะข้อมูลอื่นไปก่อนก็ได้
+   */
+  async function uploadAvatarIfNeeded() {
+    if (!avatarFile) return null;
+    const form = new FormData();
+    form.append("file", avatarFile);
+    // NOTE: เปลี่ยนเป็น endpoint จริงของคุณ
+    const { data } = await api.post("/api/uploads/avatar", form, {
+      withCredentials: true,
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data?.url || null; // สมมติ backend ส่ง { url: "https://..." }
   }
-};
 
-  if (loading) return <div style={{ maxWidth: 800, margin: '24px auto' }}>Loading…</div>;
 
-  const isArtist = selectedRole === 'ARTIST';
+  const formRef = React.useRef(null);
+
+  const chooseRole = (r) => {
+    setRole(r);
+    // เลื่อนลงไปยังฟอร์มหลังเลือก
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  };
+
+
+
 
   return (
-    <div style={{ maxWidth: 900, margin: '24px auto', padding: 16 }}>
-      <h2>Account Setup</h2>
-      <p style={{ color: '#666' }}>
-        เลือกบทบาทการใช้งาน: <b>AUDIENCE</b> (ผู้ชม) หรือ <b>ARTIST</b> (ยื่นสมัครเป็นศิลปิน).<br />
-        <b>Organizer</b> จะให้เฉพาะแอดมินกำหนดเท่านั้น — ผู้ใช้ทั่วไปไม่สามารถยื่นขอเองได้
-      </p>
+    <div className="acc-page">
+      <div className="acc-container">
+        <h1 className="acc-title">Account setup</h1>
 
-      {err && <div className="alert alert-danger">{err}</div>}
-      {ok && <div className="alert alert-success">{ok}</div>}
+        {/* เส้นคั่น */}
+        <div className="a-line"></div>
 
-      <form onSubmit={submit} style={{ display: 'grid', gap: 16 }}>
-        {/* ----- User profile block ----- */}
-        <div className="row">
-          <div className="col-md-6">
-            <label className="form-label fw-bold">Display name</label>
-            <input className="form-control" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-          </div>
-          <div className="col-md-3">
-            <label className="form-label fw-bold">First name</label>
-            <input className="form-control" value={firstName} onChange={(e) => setFirst(e.target.value)} />
-          </div>
-          <div className="col-md-3">
-            <label className="form-label fw-bold">Last name</label>
-            <input className="form-control" value={lastName} onChange={(e) => setLast(e.target.value)} />
-          </div>
-        </div>
+        {ok && <div className="acc-msg ok">บันทึกโปรไฟล์เรียบร้อย!</div>}
+        {err && <div className="acc-msg err">{err}</div>}
 
-        <div>
-          <label className="form-label fw-bold">About you</label>
-          <textarea className="form-control" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} />
-        </div>
+        {/* ===== เลือก ROLE (แสดงเฉพาะยังไม่เลือก) ===== */}
+        {!role && (
+          <section className="acc-section acc-roleIntro">
+            <h2 className="acc-sectionTitle">เลือกบทบาทของคุณ</h2>
 
-        <div>
-          <label className="form-label fw-bold">Favorite genres</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {PRESET_GENRES.map(g => (
+            <div className="acc-roleGrid">
+              {/* Audience Card */}
               <button
-                key={g}
                 type="button"
-                className={`btn btn-sm ${favoriteGenres.includes(g) ? 'btn-primary' : 'btn-outline-secondary'}`}
-                onClick={() => toggleGenre(g)}
+                className="acc-roleCard"
+                onClick={() => chooseRole("AUDIENCE")}
+                aria-label="เลือกบทบาท Audience"
               >
-                {g}
+                <div className="acc-roleCardLabel">Audience</div>
+                <div className="acc-roleThumb">
+                  <img src="/img/audience.png" alt="" className="acc-roleImg" />
+                </div>
               </button>
-            ))}
-          </div>
-          <small className="text-muted">คลิกเลือก/ยกเลิกได้หลายอัน</small>
-        </div>
 
-        {/* ----- Role select (ไม่มี Organizer ให้เลือก) ----- */}
-        <div>
-          <label className="form-label fw-bold">Role</label>
-          <div className="d-flex gap-3 flex-wrap">
-            <label className="d-flex align-items-center gap-2">
-              <input
-                type="radio"
-                name="role"
-                value="AUDIENCE"
-                checked={selectedRole === 'AUDIENCE'}
-                onChange={(e) => setSelectedRole(e.target.value)}
-              />
-              <span>AUDIENCE</span>
-            </label>
-            <label className="d-flex align-items-center gap-2">
-              <input
-                type="radio"
-                name="role"
-                value="ARTIST"
-                checked={selectedRole === 'ARTIST'}
-                onChange={(e) => setSelectedRole(e.target.value)}
-              />
-              <span>ARTIST (ยื่นสมัคร)</span>
-            </label>
-          </div>
-          <small className="text-muted">
-            ผู้ใช้ทั่วไปไม่สามารถยื่นขอ Organizer ได้ — แอดมินเป็นผู้กำหนดเท่านั้น
-          </small>
-        </div>
-
-        {/* ----- Artist short application (เฉพาะตอนเลือก ARTIST) ----- */}
-        {isArtist && (
-          <div style={{ border: '1px solid #eee', borderRadius: 12, padding: 16 }}>
-            <h4 className="mb-3">Artist Application (Short)</h4>
-
-            <div className="row g-3">
-              <div className="col-md-6">
-                <label className="form-label fw-bold">Stage name *</label>
-                <input
-                  className="form-control"
-                  value={artist.name}
-                  onChange={e => handleArtistChange('name', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="col-md-3">
-                <label className="form-label fw-bold">Genre *</label>
-                <input
-                  className="form-control"
-                  value={artist.genre}
-                  onChange={e => handleArtistChange('genre', e.target.value)}
-                  placeholder="Pop / Indie / Rock"
-                  required
-                />
-              </div>
-
-              <div className="col-md-3">
-                <label className="form-label fw-bold">Booking type *</label>
-                <select
-                  className="form-select"
-                  value={artist.bookingType}
-                  onChange={e => handleArtistChange('bookingType', e.target.value)}
-                >
-                  <option value="FULL_BAND">Full-band</option>
-                  <option value="TRIO">Trio</option>
-                  <option value="DUO">Duo</option>
-                  <option value="SOLO">Solo</option>
-                </select>
-              </div>
-
-              <div className="col-12">
-                <label className="form-label fw-bold">Short pitch (1–2 บรรทัด)</label>
-                <textarea
-                  className="form-control"
-                  rows={2}
-                  maxLength={240}
-                  value={artist.description}
-                  onChange={e => handleArtistChange('description', e.target.value)}
-                  placeholder="ตัวอย่าง: อินดี้ป๊อปโทนอบอุ่น เหมาะกับงานคาเฟ่/อีเวนต์กลางแจ้ง"
-                />
-              </div>
-
-              {/* Sample links — บังคับอย่างน้อย 1 ช่องให้ไม่ว่าง */}
-              <div className="col-md-4">
-                <label className="form-label fw-bold">YouTube (อย่างน้อย 1 ช่อง)</label>
-                <input
-                  className="form-control"
-                  value={artist.youtubeUrl}
-                  onChange={e => handleArtistChange('youtubeUrl', e.target.value)}
-                  placeholder="https://youtube.com/..."
-                />
-              </div>
-              <div className="col-md-4">
-                <label className="form-label fw-bold">Spotify</label>
-                <input
-                  className="form-control"
-                  value={artist.spotifyUrl}
-                  onChange={e => handleArtistChange('spotifyUrl', e.target.value)}
-                  placeholder="https://open.spotify.com/..."
-                />
-              </div>
-              <div className="col-md-4">
-                <label className="form-label fw-bold">SoundCloud</label>
-                <input
-                  className="form-control"
-                  value={artist.soundcloudUrl}
-                  onChange={e => handleArtistChange('soundcloudUrl', e.target.value)}
-                  placeholder="https://soundcloud.com/..."
-                />
-              </div>
-
-              {/* Contact (ต้องมีอย่างน้อย 1) */}
-              <div className="col-md-6">
-                <label className="form-label fw-bold">Contact email</label>
-                <input
-                  className="form-control"
-                  value={artist.contactEmail}
-                  onChange={e => handleArtistChange('contactEmail', e.target.value)}
-                  placeholder="example@mail.com"
-                />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label fw-bold">Phone</label>
-                <input
-                  className="form-control"
-                  value={artist.contactPhone}
-                  onChange={e => handleArtistChange('contactPhone', e.target.value)}
-                  placeholder="080-xxx-xxxx"
-                />
-              </div>
-
-              {/* Optional */}
-              <div className="col-md-3">
-                <label className="form-label fw-bold">Price min (optional)</label>
-                <input
-                  className="form-control"
-                  value={artist.priceMin}
-                  onChange={e => handleArtistChange('priceMin', e.target.value.replace(/[^0-9.]/g,''))}
-                  placeholder="เช่น 8000"
-                />
-              </div>
-              <div className="col-md-3">
-                <label className="form-label fw-bold">Price max (optional)</label>
-                <input
-                  className="form-control"
-                  value={artist.priceMax}
-                  onChange={e => handleArtistChange('priceMax', e.target.value.replace(/[^0-9.]/g,''))}
-                  placeholder="เช่น 20000"
-                />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label fw-bold">Profile photo (URL, optional)</label>
-                <input
-                  className="form-control"
-                  value={artist.profilePhotoUrl}
-                  onChange={e => handleArtistChange('profilePhotoUrl', e.target.value)}
-                  placeholder="https://..."
-                />
-              </div>
+              {/* Artist Card */}
+              <button
+                type="button"
+                className="acc-roleCard"
+                onClick={() => chooseRole("ARTIST")}
+                aria-label="เลือกบทบาท Artist"
+              >
+                <div className="acc-roleCardLabel">Artist</div>
+                <div className="acc-roleThumb">
+                  <img src="/img/artist.png" alt="" className="acc-roleImg" />
+                </div>
+              </button>
             </div>
 
-            <small className="text-muted d-block mt-2">
-              เมื่อส่งแล้ว แอดมินจะตรวจและเป็นผู้กำหนดสิทธิ์ <b>ARTIST</b> ให้
-              (จากนั้นค่อยไปกรอกโปรไฟล์ศิลปินฉบับเต็ม)
-            </small>
+            {/* <div className="acc-help" style={{ marginTop: 10 }}>
+              Organizer จะขอสิทธิ์ผ่านผู้ดูแลระบบเท่านั้น
+            </div> */}
+          </section>
+        )}
+
+        {/* ===== Basic profile ===== */}
+        {role && (
+          <div ref={formRef}>
+            <section className="acc-section" aria-busy={loading}>
+              <h2 className="acc-sectionTitle">Without music, life would be a mistake.</h2>
+
+              <div className="acc-basicGrid">
+                {/* ซ้าย: อวาตาร์ (ของเดิม) */}
+                <div>
+                  <div className="acc-avatarCard" onClick={handlePickAvatar} role="button" aria-label="Upload avatar">
+                    {avatarPreview ? (
+                      <>
+                        <img src={avatarPreview} alt="avatar preview" />
+                        <div className="acc-avatarEdit">เปลี่ยนรูป</div>
+                      </>
+                    ) : (
+                      <div className="acc-avatarHint">คลิกเพื่อเพิ่มรูป<br />(สัดส่วน 1:1)</div>
+                    )}
+                  </div>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="acc-fileInput"
+                    onChange={handleAvatarChange}
+                  />
+                </div>
+
+                {/* ขวา: ฟิลด์ */}
+                <div>
+                  <div className="acc-formGrid">
+                    {/* Username (เส้นใต้ + โฟกัสดำ) */}
+                    <div className="col-span-2">
+                      <label className="acc-label">Username</label>
+                      <input
+                        type="text"
+                        className="acc-inputUnderline"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="ตั้งชื่อผู้ใช้"
+                      />
+                    </div>
+
+                    {/* วันเกิด */}
+                    <div className="col-span-2">
+                      <label className="acc-label">Birth date</label>
+
+                      <input
+                        type="date"
+                        className="acc-inputUnderline acc-inputDate"
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                        max={todayStr}
+                        inputMode="numeric"      // บนมือถือจะขึ้นแป้นตัวเลข
+                        // ✅ อนุญาตให้พิมพ์: ไม่ใส่ onKeyDown ป้องกันอีกต่อไป
+                        onFocus={(e) => e.target.showPicker?.()} // ยังเด้งปฏิทินได้
+                      />
+                    </div>
+
+
+
+                    {/* Favorite genres (เดิม) */}
+                    <div className="col-span-2">
+                      <label className="acc-label">Favorite genres</label>
+                      <div className="acc-chips">
+                        {PRESET_GENRES.map((g) => {
+                          const selected = favoriteGenres.includes(g);
+                          return (
+                            <button
+                              key={g}
+                              type="button"
+                              className={`acc-chip ${selected ? "is-selected" : ""}`}
+                              aria-pressed={selected}
+                              onClick={() => toggleGenre(g)}
+                            >
+                              {g}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
         )}
 
-        <div>
-          <button type="submit" className="btn btn-success" disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
+        {/* ===== ARTIST: คงอยู่ตลอด (ซ่อนด้วย hidden กัน state หาย) ===== */}
+        <section className="acc-section" hidden={role !== "ARTIST"}>
+          <h2 className="acc-sectionTitle">Artist Application (ครบทุกฟิลด์)</h2>
+
+          <div className="acc-formGrid">
+            <div>
+              <label className="acc-label">Name *</label>
+              <input className="form-control"
+                value={artist.name}
+                onChange={e => setA("name", e.target.value)}
+                required />
+            </div>
+            <div>
+              <label className="acc-label">Profile Photo URL</label>
+              <input value={artist.profilePhotoUrl}
+                onChange={e => setA("profilePhotoUrl", e.target.value)}
+                placeholder="https://..." />
+            </div>
+
+            <div className="col-span-2">
+              <label className="acc-label">Description</label>
+              <textarea rows={3}
+                value={artist.description}
+                onChange={e => setA("description", e.target.value)} />
+            </div>
+
+            <div>
+              <label className="acc-label">Genre *</label>
+              <input value={artist.genre}
+                onChange={e => setA("genre", e.target.value)}
+                required />
+            </div>
+            <div>
+              <label className="acc-label">Sub-genre</label>
+              <input value={artist.subGenre}
+                onChange={e => setA("subGenre", e.target.value)} />
+            </div>
+            <div>
+              <label className="acc-label">Booking type *</label>
+              <select value={artist.bookingType}
+                onChange={e => setA("bookingType", e.target.value)}>
+                <option value="">-- เลือกรูปแบบ --</option>
+                <option value="FULL_BAND">Full-band</option>
+                <option value="TRIO">Trio</option>
+                <option value="DUO">Duo</option>
+                <option value="SOLO">Solo</option>
+              </select>
+            </div>
+            <div>
+              <label className="acc-label">Founding year</label>
+              <input value={artist.foundingYear}
+                onChange={e => setA("foundingYear", e.target.value.replace(/[^\d]/g, ""))}
+                placeholder="YYYY" />
+            </div>
+
+            <div>
+              <label className="acc-label">Label</label>
+              <input value={artist.label}
+                onChange={e => setA("label", e.target.value)} />
+            </div>
+            <div>
+              <label className="acc-label">Independent artist</label>
+              <div className="acc-check">
+                <input id="isIndie"
+                  type="checkbox"
+                  checked={artist.isIndependent}
+                  onChange={(e) => setA("isIndependent", e.target.checked)} />
+                <label htmlFor="isIndie">Yes</label>
+              </div>
+            </div>
+
+            <div>
+              <label className="acc-label">Member count</label>
+              <input value={artist.memberCount}
+                onChange={e => setA("memberCount", e.target.value.replace(/[^\d]/g, ""))} />
+            </div>
+            <div>
+              <label className="acc-label">Price min</label>
+              <input value={artist.priceMin}
+                onChange={e => setA("priceMin", e.target.value.replace(/[^0-9.]/g, ""))} />
+            </div>
+            <div>
+              <label className="acc-label">Price max</label>
+              <input value={artist.priceMax}
+                onChange={e => setA("priceMax", e.target.value.replace(/[^0-9.]/g, ""))} />
+            </div>
+
+            <div>
+              <label className="acc-label">Contact email</label>
+              <input value={artist.contactEmail}
+                onChange={e => setA("contactEmail", e.target.value)}
+                placeholder="example@mail.com" />
+            </div>
+            <div>
+              <label className="acc-label">Contact phone</label>
+              <input value={artist.contactPhone}
+                onChange={e => setA("contactPhone", e.target.value)}
+                placeholder="080-xxx-xxxx" />
+            </div>
+
+            <div>
+              <label className="acc-label">Photo URL</label>
+              <input value={artist.photoUrl}
+                onChange={e => setA("photoUrl", e.target.value)}
+                placeholder="https://..." />
+            </div>
+            <div>
+              <label className="acc-label">Video URL</label>
+              <input value={artist.videoUrl}
+                onChange={e => setA("videoUrl", e.target.value)}
+                placeholder="https://..." />
+            </div>
+
+            <div>
+              <label className="acc-label">Rate card URL</label>
+              <input value={artist.rateCardUrl}
+                onChange={e => setA("rateCardUrl", e.target.value)} />
+            </div>
+            <div>
+              <label className="acc-label">EPK URL</label>
+              <input value={artist.epkUrl}
+                onChange={e => setA("epkUrl", e.target.value)} />
+            </div>
+            <div>
+              <label className="acc-label">Rider URL</label>
+              <input value={artist.riderUrl}
+                onChange={e => setA("riderUrl", e.target.value)} />
+            </div>
+
+            {[
+              ["spotifyUrl", "Spotify"],
+              ["youtubeUrl", "YouTube"],
+              ["appleMusicUrl", "Apple Music"],
+              ["facebookUrl", "Facebook"],
+              ["instagramUrl", "Instagram"],
+              ["twitterUrl", "X (Twitter)"],
+              ["soundcloudUrl", "SoundCloud"],
+              ["shazamUrl", "Shazam"],
+              ["bandcampUrl", "Bandcamp"],
+              ["tiktokUrl", "TikTok"],
+            ].map(([key, label]) => (
+              <div key={key}>
+                <label className="acc-label">{label} URL</label>
+                <input value={artist[key]}
+                  onChange={e => setA(key, e.target.value)}
+                  placeholder="https://..." />
+              </div>
+            ))}
+          </div>
+          <small className="acc-help" style={{ display: "block", marginTop: 8 }}>
+            เมื่อส่งแล้ว ระบบจะสร้าง/อัปเดตคำขออัปเกรดสิทธิ์เป็น ARTIST เพื่อให้แอดมินตรวจอนุมัติ
+          </small>
+        </section>
+
+        {/* Actions */}
+        <div className="acc-actions">
+          <button type="button" className="acc-btn" onClick={resetForm}>
+            Reset
+          </button>
+          <button
+            type="button"
+            className="acc-btn acc-btnPrimary"
+            disabled={!role || saving}
+            onClick={handleSave}
+          >
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
-      </form>
+      </div>
     </div>
   );
 }
