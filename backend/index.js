@@ -7,11 +7,24 @@ const cookieParser = require('cookie-parser');
 const { PrismaClient } = require('./generated/prisma');
 const prisma = new PrismaClient();
 const nodemailer = require('nodemailer');
+const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
 const port = process.env.PORT || 4000;
+
+/**
+ * ✅ รองรับ FE ที่เรียก /api/* โดยรีไรท์เป็นเส้นทางเดิม
+ *    เช่น /api/groups -> /groups
+ *    วาง middleware นี้ไว้ "ก่อน" ประกาศ route ทั้งหมด
+ */
+app.use((req, _res, next) => {
+  if (req.url.startsWith('/api/')) {
+    req.url = req.url.slice(4); // ตัด "/api"
+  }
+  next();
+});
 
 /**
  * ✅ รองรับ FE ที่เรียก /api/* โดยรีไรท์เป็นเส้นทางเดิม
@@ -99,9 +112,26 @@ app.get('/auth/me', authMiddleware, async (req, res) => {
         id: true,
         email: true,
         role: true,
-        artistProfile: true,
-        venueProfile: true,
-        profile: true,
+        isVerified: true,
+        name: true,
+        profilePhotoUrl: true,
+        birthday: true,
+        favoriteGenres: true,
+        performerInfo: {
+          include: {
+            artistInfo: {
+              include: {
+                artistRecords: true,
+              }
+            },
+            venueInfo: {
+              include: {
+                location: true,
+              }
+            },
+            likedBy: true,
+          }
+        },
         roleRequests: {
           where: { status: 'PENDING' },
           orderBy: { createdAt: 'desc' },
@@ -131,86 +161,88 @@ app.get('/auth/me', authMiddleware, async (req, res) => {
 /*------------Function for checking email by using Regex-----------*/
 function validateEmail(email) {
   const regex =
-   /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\\.,;:\s@\"]+\.)+[^<>()[\]\\.,;:\s@\"]{2,})$/i;
+    /^(([^<>()[\]\.,;:\s@\"]+(\.[^<>()[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
   return regex.test(email);
 }
 
 //ใช้สำหรับส่งเมลไปหา user
 const transporter = nodemailer.createTransport({
   service: "gmail",
-  auth:{
+  auth: {
     user: "your_gmail@gmail.com",
     pass: "xxxx xxxx xxxx xxxx"
   }
-});
+})
 
 /* ───────────────────────────── OTP ───────────────────────────── */
-app.post('/verifyOTP', async(req, res) =>{
+app.post('/verifyOTP', async (req, res) => {
   console.log("Verifying OTP...")
-  try{
-    const {email, otp} = req.body
+  try {
+    const { email, otp } = req.body
     if (!validateEmail(email)) {
       return res.status(400).json({ error: 'Invalid email!' });
     }
 
-    const user = await prisma.user.findUnique({where:{email}})
+    const user = await prisma.user.findUnique({ where: { email } })
     const valid = user ? await bcrypt.compare(otp, user.otpHash || '') : false;
 
-    if(!user){
-      return res.status(404).json({error: "User not found!"})
-    }else if(user.isVerified){
-      return res.status(400).json({error: "User already verified!"})
-    }else if(!valid || (user.otpExpiredAt && user.otpExpiredAt < new Date())){
-      return res.status(400).json({error: "Invalid or Expired OTP!"})
+    if (!user) {
+      return res.status(404).json({ error: "User not found!" })
+    } else if (user.isVerified) {
+      return res.status(400).json({ error: "User already verified!" })
+    } else if (!valid || (user.otpExpiredAt && user.otpExpiredAt < new Date())) {
+      return res.status(400).json({ error: "Invalid or Expired OTP!" })
     }
+
 
     await prisma.user.update({
       where: { email },
-      data: {isVerified: true, otpHash: null, otpExpiredAt: null}
+      data: { isVerified: true, otpHash: null, otpExpiredAt: null }
     })
 
-    return res.status(201).json({message: "Email verified successfully!"})
-  }catch(err){
+    return res.status(201).json({ message: "Email verified successfully!" })
+  } catch (err) {
     console.error('POST /verifyOTP error:', err);
     return res.status(400).json({ error: err.message || 'OTP failed' });
   }
 });
 
-app.post("/resendOTP", async(req, res)=>{
+app.post("/resendOTP", async (req, res) => {
   console.log("Resending OTP...")
   try {
-    const {email} = req.body
+    const { email } = req.body
     if (!validateEmail(email)) {
       return res.status(400).json({ error: 'Invalid email!' });
     }
-    const user = await prisma.user.findUnique({where: {email}})
+    const user = await prisma.user.findUnique({ where: { email } })
 
-    if(!user){
-      return res.status(404).json({error: "User not found!"})
+    if (!user) {
+      return res.status(404).json({ error: "User not found!" })
     }
 
     const otp = `${Math.floor(100000 + Math.random() * 900000)}`
-    const otp_expired = new Date(Date.now()+15 * 60 * 1000)
+    const otp_expired = new Date(Date.now() + 15 * 60 * 1000)
 
     const mailOption = {
-      from: `"Chiang Mai Original website" <no-reply@myapp.com>`,
+      from: `"Chiang Mai Original website" <no-reply@myapp.com`,
       to: email,
       subject: "Verify your email",
-      html: `<p>Enter <b>${otp}</b> in the app to verify your email and complete sign up</p>
-             <p>This code <b>expired in 15 minutes</b></p>`,
+      html: `<p>Enter <b>${otp}</b> in the app to verify your email and complete sign up</p> 
+          <p>This code <b>expired in 15 minutes</b></p>`,
     }
     await transporter.sendMail(mailOption)
+
 
     const hashotp = await bcrypt.hash(otp, 10)
     await prisma.user.update({
       where: { email },
-      data: {otpHash: hashotp, otpExpiredAt: otp_expired}
+      data: { otpHash: hashotp, otpExpiredAt: otp_expired }
     })
 
-    return res.status(201).json({status:"PENDING", message: "OTP has been resent"})
+    return res.status(201).json({ status: "PENDING", message: "OTP has been resent" })
   } catch (err) {
     console.error('POST /resendOTP error:', err)
-    return res.status(400).json({error: err.message || 'Resend OTP failed'})
+    return res.status(400).json({ error: err.message || 'Resend OTP failed' })
   }
 });
 
@@ -233,14 +265,16 @@ app.post('/users', async (req, res) => {
       return res.status(400).json({ error: 'This User is already exist!' });
     }
 
-    const otp = `${Math.floor(100000 + Math.random() * 900000)}`
-    const otp_expired = new Date(Date.now()+15 * 60 * 1000)
+    const otp = `${Math.floor(100000 + Math.random() * 900000)}` //สุ่มเลข OTP 6 หลัก
+    const otp_expired = new Date(Date.now() + 15 * 60 * 1000) //อายุ otp 15 นาที
 
     const hashotp = await bcrypt.hash(otp, 10)
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, passwordHash, role: 'AUDIENCE',
-        otpHash:hashotp, otpExpiredAt:otp_expired},
+      data: {
+        email, passwordHash, role: 'AUDIENCE',
+        otpHash: hashotp, otpExpiredAt: otp_expired
+      },
     });
 
     return res.status(201).json(user);
@@ -252,7 +286,7 @@ app.post('/users', async (req, res) => {
 
 app.get('/users', authMiddleware, async (_req, res) => {
   const users = await prisma.user.findMany({
-    include: { artistProfile: true, venueProfile: true },
+    include: { performerInfo: true },
   });
   res.json(users);
 });
@@ -261,7 +295,7 @@ app.get('/users/:id', async (req, res) => {
   const id = +req.params.id;
   const user = await prisma.user.findUnique({
     where: { id },
-    include: { artistProfile: true, venueProfile: true },
+    include: { performerInfo: true },
   });
   user ? res.json(user) : res.status(404).send('User not found');
 });
@@ -272,24 +306,58 @@ app.post('/artists', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const data = req.body;
 
-    const existing = await prisma.artistProfile.findUnique({ where: { userId } });
+    // Split data into performer fields vs artist fields
+    const performerData = {
+      contactEmail: data.contact.email,
+      contactPhone: data.contact.phone,
+      youtubeUrl: data.links.youtube,
+      tiktokUrl: data.links.tiktok,
+      facebookUrl: data.links.facebook,
+      instagramUrl: data.links.instagram,
+      lineUrl: data.links.line,
+    };
 
-    if (existing) {
-      const updated = await prisma.artistProfile.update({
-        where: { userId },
-        data,
+    const artistData = {
+      description: data.description,
+      genre: data.genre,
+      subGenre: data.subGenre,
+      bookingType: data.bookingType,
+      foundingYear: data.foundingYear,
+      label: data.label,
+      isIndependent: data.isIndependent,
+      memberCount: data.memberCount,
+      priceMin: data.priceMin,
+      priceMax: data.priceMax,
+      spotifyUrl: data.links.spotify,
+      appleMusicUrl: data.links.appleMusic,
+      soundcloudUrl: data.links.soundcloud,
+      shazamUrl: data.links.shazam,
+      bandcampUrl: data.links.bandcamp,
+    };
+
+    const result = await prisma.$transaction(async (tx) => {
+      const performer = await tx.performer.upsert({
+        where: { userId: userId },
+        update: performerData,
+        create: {
+          userId,
+          ...performerData,
+        },
       });
-      return res.json(updated);
-    }
 
-    const artist = await prisma.artistProfile.create({
-      data: {
-        ...data,
-        user: { connect: { id: userId } },
-      },
+      const artist = await tx.artist.upsert({
+        where: { performerId: userId },
+        update: artistData,
+        create: {
+          performerId: userId,
+          ...artistData,
+        },
+      });
+
+      return { performer, artist };
     });
 
-    res.status(201).json(artist);
+    res.status(201).json(result);
 
   } catch (err) {
     console.error(err);
@@ -299,98 +367,146 @@ app.post('/artists', authMiddleware, async (req, res) => {
 
 app.get('/artists', async (req, res) => {
   try {
-    const artists = await prisma.artistProfile.findMany({ include: { user: true } });
+    const artists = await prisma.artist.findMany({
+      include: {
+        performer: {
+          include: {
+            user: true,
+          },
+        },
+        artistRecords: true,
+      },
+    });
     res.json(artists);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Could not fetch artists' });
   }
 });
 
 app.get('/artists/:id', async (req, res) => {
   const id = +req.params.id;
-  const artist = await prisma.artistProfile.findUnique({
-    where: { id },
-    include: { user: true },
-  });
-  artist ? res.json(artist) : res.status(404).send('Artist not found');
+  try {
+    const artist = await prisma.artist.findUnique({
+      where: { performerId: id },
+      include: {
+        performer: {
+          include: {
+            user: true,
+          },
+        },
+        artistRecords: true,
+      },
+    });
+
+    if (artist) {
+      res.json(artist);
+    } else {
+      res.status(404).send('Artist not found');
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not fetch artist' });
+  }
 });
 
-/* ───────────────────────────── GROUPS (artists + schedule) ─────────── */
+
 app.get("/groups", async (req, res) => {
   try {
     let meId = null;
     try {
-      await authMiddleware(req, res, () => {});
+      await authMiddleware(req, res, () => { });
       meId = req.user?.id ?? null;
-    } catch {}
+    } catch { }
 
-    const artists = await prisma.artistProfile.findMany({
+    const artists = await prisma.artist.findMany({
       include: {
-        artistEvents: {
+        performer: {
           include: {
-            event: {
-              include: { venue: true }
-            }
-          }
-        },
-        _count: { select: { likes: true } },
-        ...(meId
-          ? {
-              likes: {
+            user: true,
+            likedBy: meId
+              ? {
                 where: { userId: meId },
                 select: { userId: true },
                 take: 1,
+              }
+              : false,
+          },
+        },
+        artistEvents: {
+          include: {
+            event: {
+              include: {
+                venue: {
+                  include: {
+                    performer: {
+                      include: {
+                        user: true,
+                      },
+                    },
+                    location: true,
+                  },
+                },
               },
-            }
-          : {}),
-      }
+            },
+          },
+        },
+      },
     });
 
-    const groups = artists.map(a => {
+    const groups = artists.map((a) => {
+
       const schedule = (Array.isArray(a.artistEvents) ? a.artistEvents : [])
-        .map(ae => {
+        .map((ae) => {
           const e = ae.event;
           if (!e) return null;
+
+          const venue = e.venue;
+          const venueName =
+            venue?.performer?.user?.name ?? "Unknown Venue";
+
           return {
             id: e.id,
             dateISO: e.date.toISOString(),
             title: e.name,
-            venue: e.venue?.name ?? "",
-            city: e.venue?.locationUrl ? "" : "",
+            venue: venueName,
+            city: venue?.venueLocation?.locationUrl ? "" : "",
             ticketUrl: e.ticketLink ?? "#",
             performanceRole: ae.role ?? null,
             performanceOrder: ae.order ?? null,
-            performanceFee: ae.fee ?? null
+            performanceFee: ae.fee ?? null,
           };
         })
         .filter(Boolean)
         .sort((a, b) => new Date(a.dateISO) - new Date(b.dateISO));
 
       return {
-        id: a.id,
-        slug: a.name.toLowerCase().replace(/\s+/g, "-"),
-        name: a.name,
-        image: a.profilePhotoUrl ?? "https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg",
+        id: a.performerId,
+        slug:
+          (a.performer?.user?.name ?? "unknown")
+            .toLowerCase()
+            .replace(/\s+/g, "-") || `artist-${a.performerId}`,
+        name: a.performer?.user?.name ?? "Unnamed Artist",
+        image:
+          a.performer?.user?.profilePhotoUrl ??
+          "https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg",
         description: a.description ?? "",
         details: a.genre ?? "",
         stats: {
           members: a.memberCount ?? 1,
           debut: a.foundingYear ? String(a.foundingYear) : "N/A",
-          followers: "N/A"
+          followers: "N/A",
         },
-        followersCount: a._count?.likes ?? 0,
-        likedByMe: !!(a.likes && a.likes.length),
-        artists: [],
-
-        //  ส่งครบ instagram / facebook / twitter / youtube / spotify
+        followersCount: a._count?.performer?.likedBy ?? 0,
+        likedByMe: !!(a.performer.likedBy && a.performer.likedBy.length),
         socials: {
-          instagram: a.instagramUrl || null,
-          facebook:  a.facebookUrl  || null,
-          twitter:   a.twitterUrl   || null,
-          youtube:   a.youtubeUrl   || null,
-          spotify:   a.spotifyUrl   || null,
+          instagram: a.performer.instagramUrl,
+          youtube: a.performer.youtubeUrl,
+          tiktok: a.performer.tiktokUrl,
+          facebook: a.performer.facebookUrl,
+          spotify: a.spotifyUrl || null,
+          line: a.performer.lineUrl,
         },
-
         schedule,
 
         techRider: {
@@ -416,32 +532,73 @@ app.get("/groups", async (req, res) => {
 app.post('/venues', authMiddleware, async (req, res) => {
   try {
 
-     if (!['ORGANIZE', 'ADMIN'].includes(req.user.role)) {
-       return res.status(403).json({ error: 'Only ORGANIZE or ADMIN can manage venues' });
-        }
+    if (!['ORGANIZE', 'ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Only ORGANIZE or ADMIN can manage venues' });
+    }
     const userId = req.user.id;
     const data = req.body;
 
-    const existing = await prisma.venueProfile.findUnique({
+    const performerData = {
+      contactEmail: data.contactEmail,
+      contactPhone: data.contactPhone,
+      youtubeUrl: data.youtubeUrl,
+      tiktokUrl: data.tiktokUrl,
+      facebookUrl: data.facebookUrl,
+      instagramUrl: data.instagramUrl,
+      lineUrl: data.lineUrl,
+    };
+
+    const venueData = {
+      description: data.description,
+      genre: data.genre,
+      capacity: data.capacity,
+      dateOpen: data.dateOpen,
+      dateClose: data.dateClose,
+      priceRate: data.priceRate,
+      timeOpen: data.timeOpen,
+      timeClose: data.timeClose,
+      alcoholPolicy: data.alcoholPolicy,
+      ageRestriction: data.ageRestriction,
+      photoUrls: data.photoUrls,
+      websiteUrl: data.websiteUrl,
+      shazamUrl: data.shazamUrl,
+      bandcampUrl: data.bandcampUrl,
+    };
+
+    const venueLocationData = {
+      latitude: data.latitude,
+      longitude: data.longitude,
+      locationUrl: data.locationUrl,
+    };
+
+    const existing = await prisma.performer.findUnique({
       where: { userId },
+      include: { venueInfo: true },
     });
 
-    if (existing) {
-      const updated = await prisma.venueProfile.update({
+    const result = await prisma.$transaction(async (tx) => {
+      const performer = await tx.performer.upsert({
         where: { userId },
-        data,
+        update: performerData,
+        create: {
+          userId,
+          ...performerData,
+        },
       });
-      return res.json(updated);
-    }
 
-    const venue = await prisma.venueProfile.create({
-      data: {
-        ...data,
-        user: { connect: { id: userId } },
-      },
+      const venue = await tx.venue.upsert({
+        where: { performerId: userId },
+        update: venueData,
+        create: {
+          performerId: userId,
+          ...venueData,
+        },
+      });
+
+      return { performer, venue };
     });
 
-    res.status(201).json(venue);
+    res.status(201).json(result);
 
   } catch (err) {
     console.error(err);
@@ -449,21 +606,39 @@ app.post('/venues', authMiddleware, async (req, res) => {
   }
 });
 
+
 app.get('/venues', async (_req, res) => {
-  const venues = await prisma.venueProfile.findMany({
-    include: { user: true, events: true },
+  const venues = await prisma.venue.findMany({
+    include: {
+      performer: {
+        include: {
+          user: true,
+        },
+      },
+      location: true,
+      events: true
+    },
   });
   res.json(venues);
 });
 
 app.get('/venues/:id', async (req, res) => {
   const id = +req.params.id;
-  const venue = await prisma.venueProfile.findUnique({
-    where: { id },
-    include: { user: true, events: true },
+  const venue = await prisma.venue.findUnique({
+    where: { performerId: id },
+    include: {
+      performer: {
+        include: {
+          user: true,
+        },
+      },
+      location: true,
+      events: true
+    },
   });
   venue ? res.json(venue) : res.status(404).send('Venue not found');
 });
+
 
 /* ───────────────────────────── EVENTS ─────────── */
 app.post('/events', authMiddleware, async (req, res) => {
@@ -471,24 +646,33 @@ app.post('/events', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const data = req.body;
 
-    const venue = await prisma.venueProfile.findUnique({
-      where: { userId },
+    const venue = await prisma.venue.findUnique({
+      where: { performerId: userId },
+      include: {
+        performer: {
+          include: {
+            user: true
+          }
+        },
+        location: true,
+      },
     });
 
-    if(!venue){
-        return res.status(400).json({ error: "Venue profile not found for this user" });
+    if (!venue) {
+      return res.status(400).json({ error: "Venue profile not found for this user" });
     }
 
     let event;
 
-    if(data.id){
+    if (data.id) {
+
       const existing = await prisma.event.findUnique({
         where: { id: data.id },
       });
 
-      if(existing && existing.venueId === venue.id){
+      if (existing && existing.venueId === venue.performerId) {
         event = await prisma.event.update({
-          where: {id: data.id},
+          where: { id: data.id },
           data,
         });
       } else {
@@ -496,7 +680,7 @@ app.post('/events', authMiddleware, async (req, res) => {
         event = await prisma.event.create({
           data: {
             ...createData,
-            venue: { connect: { id: venue.id } },
+            venue: { connect: { performerId: venue.performerId } },
           },
         });
       }
@@ -504,7 +688,7 @@ app.post('/events', authMiddleware, async (req, res) => {
       event = await prisma.event.create({
         data: {
           ...data,
-          venue: { connect: { id: venue.id} },
+          venue: { connect: { performerId: venue.performerId } },
         },
       });
     }
@@ -521,9 +705,27 @@ app.get('/events', async (_req, res) => {
   try {
     const events = await prisma.event.findMany({
       include: {
-        venue: true,
+        venue: {
+          include: {
+            performer: {
+              include: { user: true }
+            },
+            location: true,
+          }
+        },
         artistEvents: {
-          include: { artist: true },
+          include: {
+            artist: {
+              include: {
+                performer: {
+                  include: { user: true }
+                },
+                artistEvents: true,
+                artistRecords: true,
+              }
+
+            }
+          },
         },
       },
     });
@@ -538,11 +740,28 @@ app.get('/events/:id', async (req, res) => {
   try {
     const id = +req.params.id;
     const event = await prisma.event.findUnique({
-      where: { id },
+      where: { id: id },
       include: {
-        venue: true,
+        venue: {
+          include: {
+            performer: {
+              include: { user: true }
+            },
+            location: true,
+          }
+        },
         artistEvents: {
-          include: { artist: true },
+          include: {
+            artist: {
+              include: {
+                performer: {
+                  include: { user: true }
+                },
+                artistEvents: true,
+                artistRecords: true,
+              }
+            }
+          },
         },
       },
     });
@@ -599,7 +818,16 @@ app.get('/artist-events/pending/:artistId', authMiddleware, async (req, res) => 
     const { artistId } = req.params;
     const pending = await prisma.artistEvent.findMany({
       where: { artistId: Number(artistId), status: "PENDING" },
-      include: { event: true, artist: true },
+      include: {
+        event: true, 
+        artist: {
+          include: {
+            performer: {
+              include: { user: true }
+            }
+          }
+        }
+      },
     });
     res.json(pending);
   } catch (err) {
@@ -613,7 +841,16 @@ app.get('/artist-events/accepted/:artistId', authMiddleware, async (req, res) =>
     const { artistId } = req.params;
     const pending = await prisma.artistEvent.findMany({
       where: { artistId: Number(artistId), status: "ACCEPTED" },
-      include: { event: true, artist: true },
+      include: {
+        event: true,
+        artist: {
+          include: {
+            performer: {
+              include: { user: true }
+            }
+          }
+        }
+      },
     });
     res.json(pending);
   } catch (err) {
@@ -627,7 +864,16 @@ app.get('/artist-events/declined/:artistId', authMiddleware, async (req, res) =>
     const { artistId } = req.params;
     const pending = await prisma.artistEvent.findMany({
       where: { artistId: Number(artistId), status: "DECLINED" },
-      include: { event: true, artist: true },
+      include: {
+        event: true,
+        artist: {
+          include: {
+            performer: {
+              include: { user: true }
+            }
+          }
+        }
+      },
     });
     res.json(pending);
   } catch (err) {
@@ -684,6 +930,7 @@ app.get('/artist-events/event/:eventId/status/:status', authMiddleware, async (r
 
 
 /* ───────────────────────────── ROLE REQUESTS ───────────────────────────── */
+
 app.post('/role-requests', authMiddleware, async (req, res) => {
   try {
     const { role, reason } = req.body;
@@ -734,7 +981,6 @@ app.get('/role-requests', authMiddleware, requireAdmin, async (_req, res) => {
   }
 });
 
-
 /*  อนุมัติ ARTIST: สร้าง/อัปเดต ArtistProfile จาก application */
 app.post('/role-requests/:id/approve', authMiddleware, requireAdmin, async (req, res) => {
   try {
@@ -747,9 +993,27 @@ app.post('/role-requests/:id/approve', authMiddleware, requireAdmin, async (req,
     await prisma.$transaction(async (tx) => {
       // ถ้าขอเป็น ARTIST และมี application -> สร้าง/อัปเดต ArtistProfile
       if (rr.requestedRole === 'ARTIST' && rr.application) {
-        const a = rr.application; // JSON from AccountSetup
+        const js = rr.application; // JSON from AccountSetup
+
+        const userData = {
+          name: js.name?.trim() || 'Untitled',
+          profilePhotoUrl: js.profilePhotoUrl || null,
+          id: rr.userId,
+        };
+
+        const performerData = {
+          contactEmail: a.contactEmail || null,
+          contactPhone: a.contactPhone || null,
+          spotifyUrl: a.spotifyUrl || null,
+          youtubeUrl: a.youtubeUrl || null,
+          facebookUrl: a.facebookUrl || null,
+          instagramUrl: a.instagramUrl || null,
+          tiktokUrl: a.tiktokUrl || null,
+          twitterUrl: a.twitterUrl || null,
+          userId: rr.userId,
+        };
+
         const artistData = {
-          name: a.name?.trim() || 'Untitled',
           description: a.description || null,
           genre: a.genre || 'Pop',
           subGenre: a.subGenre || null,
@@ -758,37 +1022,29 @@ app.post('/role-requests/:id/approve', authMiddleware, requireAdmin, async (req,
           label: a.label || null,
           isIndependent: a.isIndependent !== false,
           memberCount: a.memberCount ?? null,
-          contactEmail: a.contactEmail || null,
-          contactPhone: a.contactPhone || null,
           priceMin: a.priceMin ?? null,
           priceMax: a.priceMax ?? null,
-          photoUrl: a.photoUrl || null,
-          videoUrl: a.videoUrl || null,
-          profilePhotoUrl: a.profilePhotoUrl || null,
           rateCardUrl: a.rateCardUrl || null,
           epkUrl: a.epkUrl || null,
           riderUrl: a.riderUrl || null,
           spotifyUrl: a.spotifyUrl || null,
-          youtubeUrl: a.youtubeUrl || null,
           appleMusicUrl: a.appleMusicUrl || null,
-          facebookUrl: a.facebookUrl || null,
-          instagramUrl: a.instagramUrl || null,
           soundcloudUrl: a.soundcloudUrl || null,
           shazamUrl: a.shazamUrl || null,
           bandcampUrl: a.bandcampUrl || null,
-          tiktokUrl: a.tiktokUrl || null,
-          twitterUrl: a.twitterUrl || null,
-          userId: rr.userId,
+          performerId: rr.userId,
         };
 
-        const exists = await tx.artistProfile.findUnique({ where: { userId: rr.userId } });
+        const exists = await tx.artistProfile.findUnique({ where: { performerId: rr.userId } });
         if (exists) {
-          await tx.artistProfile.update({ where: { userId: rr.userId }, data: artistData });
+          await tx.user.update({ where: { performerId: rr.userId }, data: userData });
+          await tx.performer.update({ where: { performerId: rr.userId }, data: performerData });
+          await tx.artist.update({ where: { performerId: rr.userId }, data: artistData });
         } else {
-          await tx.artistProfile.create({ data: artistData });
+          await tx.performer.create({ data: performerData });
+          await tx.artist.create({ data: artistData });
         }
       }
-
       await tx.roleRequest.update({
         where: { id: rr.id },
         data: {
@@ -816,6 +1072,7 @@ app.post('/role-requests/:id/approve', authMiddleware, requireAdmin, async (req,
     res.status(400).json({ error: 'Approve failed' });
   }
 });
+
 
 app.post('/role-requests/:id/reject', authMiddleware, requireAdmin, async (req, res) => {
   try {
@@ -907,6 +1164,7 @@ app.get('/notifications', authMiddleware, async (req, res) => {
   }
 });
 
+
 app.post('/notifications/:id/read', authMiddleware, async (req, res) => {
   try {
     await prisma.notification.update({
@@ -920,13 +1178,14 @@ app.post('/notifications/:id/read', authMiddleware, async (req, res) => {
   }
 });
 
+
 /* ───────────── ONBOARDING / EDIT PROFILE ───────────── */
 /* ✅ รับ artistApplication + desiredRole และเก็บลง RoleRequest.application */
 // ---------- REPLACE: /me/setup ----------
 app.post('/me/setup', authMiddleware, async (req, res) => {
   try {
     const {
-      displayName,
+      name,
       favoriteGenres,
       profileImageUrl,
       birthday,
@@ -938,29 +1197,24 @@ app.post('/me/setup', authMiddleware, async (req, res) => {
     const genres = Array.isArray(favoriteGenres)
       ? favoriteGenres.map(String).map(s => s.trim()).filter(Boolean)
       : typeof favoriteGenres === 'string'
-      ? favoriteGenres.split(',').map(s => s.trim()).filter(Boolean)
-      : [];
+        ? favoriteGenres.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
 
-    // upsert เฉพาะฟิลด์ที่มีจริงใน UserProfile
-    await prisma.userProfile.upsert({
-      where: { userId: req.user.id },
-      update: {
-        displayName: displayName ?? null,
+    // update เฉพาะฟิลด์ที่มีจริงใน UserProfile
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        name: name ?? null,
         favoriteGenres: genres,
-        profileImageUrl: profileImageUrl ?? null,
-        birthday: birthday ? new Date(birthday) : null,
-      },
-      create: {
-        userId: req.user.id,
-        displayName: displayName ?? null,
-        favoriteGenres: genres,
-        profileImageUrl: profileImageUrl ?? null,
+        profilePhotoUrl: profileImageUrl ?? null,
         birthday: birthday ? new Date(birthday) : null,
       },
     });
 
+    // อัปเกรดบทบาท: ให้ "ยื่นขอ" ได้เฉพาะ ARTIST เท่านั้น
+    // ORGANIZE ต้องให้แอดมินกำหนดเอง
     let createdRoleRequest = null;
-    let organizeRequestIgnored = false;
+    let venueequestIgnored = false;
 
     if (desiredRole === 'ORGANIZE') {
       // ตอนนี้ยังไม่รองรับยื่น ORGANIZE จากหน้านี้
@@ -987,7 +1241,7 @@ app.post('/me/setup', authMiddleware, async (req, res) => {
             },
           });
 
-          // แจ้งแอดมิน
+          // แจ้งเตือนแอดมิน
           const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
           await Promise.all(
             admins.map((a) =>
@@ -1014,7 +1268,7 @@ app.post('/me/setup', authMiddleware, async (req, res) => {
     res.json({
       ok: true,
       createdRoleRequest: Boolean(createdRoleRequest),
-      organizeRequestIgnored,
+      venueequestIgnored,
     });
   } catch (e) {
     console.error('POST /me/setup error', e);
@@ -1022,28 +1276,27 @@ app.post('/me/setup', authMiddleware, async (req, res) => {
   }
 });
 
-// ---------- REPLACE: /me/profile ----------
+
 app.patch('/me/profile', authMiddleware, async (req, res) => {
   try {
-    const { displayName, favoriteGenres, profileImageUrl, birthday } = req.body;
-
+    const { name, favoriteGenres, profileImageUrl, birthday } = req.body;
     const genres = Array.isArray(favoriteGenres)
       ? favoriteGenres.map(String).map(s => s.trim()).filter(Boolean)
       : typeof favoriteGenres === 'string'
-      ? favoriteGenres.split(',').map(s => s.trim()).filter(Boolean)
-      : [];
+        ? favoriteGenres.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
 
-    await prisma.userProfile.upsert({
+    await prisma.user.upsert({
       where: { userId: req.user.id },
       update: {
-        displayName: displayName ?? null,
+        name: name ?? null,
         favoriteGenres: genres,
         profileImageUrl: profileImageUrl ?? null,
         birthday: birthday ? new Date(birthday) : null,
       },
       create: {
         userId: req.user.id,
-        displayName: displayName ?? null,
+        name: name ?? null,
         favoriteGenres: genres,
         profileImageUrl: profileImageUrl ?? null,
         birthday: birthday ? new Date(birthday) : null,
@@ -1057,20 +1310,21 @@ app.patch('/me/profile', authMiddleware, async (req, res) => {
   }
 });
 
-/* ---------- LIKE / UNLIKE ARTIST ---------- */
+
+// ---------- LIKE / UNLIKE ARTIST ----------
 app.post('/artists/:id/like', authMiddleware, async (req, res) => {
   try {
     const artistId = Number(req.params.id);
     const userId = req.user.id;
 
-    const exists = await prisma.artistProfile.findUnique({ where: { id: artistId } });
+    const exists = await prisma.artist.findUnique({ where: { performerId: artistId } });
     if (!exists) return res.status(404).json({ error: 'Artist not found' });
 
-    await prisma.artistLike.create({
+    await prisma.likePerformer.create({
       data: { userId, artistId },
-    }).catch(() => {});
+    }).catch(() => { });
 
-    const count = await prisma.artistLike.count({ where: { artistId } });
+    const count = await prisma.likePerformer.count({ where: { performerId: artistId } });
     res.json({ liked: true, count });
   } catch (e) {
     console.error('POST /artists/:id/like error', e);
@@ -1083,11 +1337,11 @@ app.delete('/artists/:id/like', authMiddleware, async (req, res) => {
     const artistId = Number(req.params.id);
     const userId = req.user.id;
 
-    await prisma.artistLike.delete({
+    await prisma.likePerformer.delete({
       where: { userId_artistId: { userId, artistId } },
-    }).catch(() => {});
+    }).catch(() => { });
 
-    const count = await prisma.artistLike.count({ where: { artistId } });
+    const count = await prisma.likePerformer.count({ where: {performerId: artistId } });
     res.json({ liked: false, count });
   } catch (e) {
     console.error('DELETE /artists/:id/like error', e);

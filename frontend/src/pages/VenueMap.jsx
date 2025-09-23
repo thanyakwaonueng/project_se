@@ -123,8 +123,8 @@ const toEventDetailPath = (ev) => {
   return key ? `/events/${encodeURIComponent(key)}` : (ev?.url || "#");
 };
 const toVenueDetailPath = (v) => {
-  const key = v?.id ?? v?._id ?? v?.slug ?? v?.slugOrId;
-  return key ? `/venues/${encodeURIComponent(key)}` : "#";
+  const key = v?.performerId ?? v?._id ?? v?.slug ?? v?.slugOrId;
+  return key ? `/page_venues/${encodeURIComponent(key)}` : "#";
 };
 
 // ===== เวลาเปิด–ปิด (รองรับหลายคีย์) =====
@@ -206,16 +206,16 @@ export default function VenueMap() {
   // ===== กรอง VENUES =====
   const visibleVenuesBase = useMemo(() => {
     return venues.filter(v => {
-      if (v.latitude == null || v.longitude == null) return false;
+      if (v.location.latitude == null || v.location.longitude == null) return false;
       if (bounds) {
-        const inLat = v.latitude <= bounds.north && v.latitude >= bounds.south;
+        const inLat = v.location.latitude <= bounds.north && v.location.latitude >= bounds.south;
         const inLng = bounds.west <= bounds.east
-          ? (v.longitude >= bounds.west && v.longitude <= bounds.east)
-          : (v.longitude >= bounds.west || v.longitude <= bounds.east);
+          ? (v.location.longitude >= bounds.west && v.location.longitude <= bounds.east)
+          : (v.location.longitude >= bounds.west || v.location.longitude <= bounds.east);
         if (!(inLat && inLng)) return false;
       }
       if (q.trim()) {
-        const hit = (v.name || '').toLowerCase().includes(q.trim().toLowerCase());
+        const hit = (v.performer.user.name || '').toLowerCase().includes(q.trim().toLowerCase());
         if (!hit) return false;
       }
       if (genre !== 'ALL' && v.genre !== genre) return false;
@@ -227,7 +227,7 @@ export default function VenueMap() {
     if (!myLoc || radiusKm === 'ALL') return visibleVenuesBase;
     const r = Number(radiusKm);
     return visibleVenuesBase.filter(v => {
-      const d = haversineKm(myLoc, { lat: v.latitude, lng: v.longitude });
+      const d = haversineKm(myLoc, { lat: v.location.latitude, lng: v.location.longitude });
       return d <= r;
     });
   }, [visibleVenuesBase, myLoc, radiusKm]);
@@ -240,17 +240,17 @@ export default function VenueMap() {
 
     let filtered = events.filter(ev => {
       const v = ev.venue;
-      if (!v || v.latitude == null || v.longitude == null) return false;
+      if (!v || v.location.latitude == null || v.location.longitude == null) return false;
 
       const dt = ev?.date ? new Date(ev.date) : null;
       if (!dt) return false;
       if (dt < now || dt > until) return false;
 
       if (bounds) {
-        const inLat = v.latitude <= bounds.north && v.latitude >= bounds.south;
+        const inLat = v.location.latitude <= bounds.north && v.location.latitude >= bounds.south;
         const inLng = bounds.west <= bounds.east
-          ? (v.longitude >= bounds.west && v.longitude <= bounds.east)
-          : (v.longitude >= bounds.west || v.longitude <= bounds.east);
+          ? (v.location.longitude >= bounds.west && v.location.longitude <= bounds.east)
+          : (v.location.longitude >= bounds.west || v.location.longitude <= bounds.east);
         if (!(inLat && inLng)) return false;
       }
 
@@ -268,7 +268,7 @@ export default function VenueMap() {
       const r = Number(radiusKm);
       filtered = filtered.filter(ev => {
         const v = ev.venue;
-        const d = haversineKm(myLoc, { lat: v.latitude, lng: v.longitude });
+        const d = haversineKm(myLoc, { lat: v.location.latitude, lng: v.location.longitude });
         return d <= r;
       });
     }
@@ -277,7 +277,7 @@ export default function VenueMap() {
   }, [events, bounds, q, eventType, daysForward, myLoc, radiusKm]);
 
   const totalVenuesWithCoords = useMemo(
-    () => venues.filter(v => v.latitude != null && v.longitude != null).length,
+    () => venues.filter(v => v.location.latitude != null && v.location.longitude != null).length,
     [venues]
   );
 
@@ -287,7 +287,7 @@ export default function VenueMap() {
     if (!source.length) return null;
     let best = null;
     for (const v of source) {
-      const d = haversineKm(myLoc, { lat: v.latitude, lng: v.longitude });
+      const d = haversineKm(myLoc, { lat: v.location.latitude, lng: v.location.longitude });
       if (!best || d < best.distanceKm) best = { venue: v, distanceKm: d };
     }
     return best;
@@ -313,7 +313,7 @@ export default function VenueMap() {
   const flyToNearestVenue = () => {
     if (!nearestVenue || !mapRef.current) return;
     const v = nearestVenue.venue;
-    mapRef.current.flyTo([v.latitude, v.longitude], 17, { duration: 0.8 });
+    mapRef.current.flyTo([v.location.latitude, v.location.longitude], 17, { duration: 0.8 });
   };
 
   if (loading) return <div style={{ padding: 16 }}>กำลังโหลด…</div>;
@@ -485,15 +485,15 @@ export default function VenueMap() {
               {mode === 'VENUES'
                 ? visibleVenues.map(v => (
                     <Marker
-                      key={`v-${v.id || v.slug}`}
-                      position={[v.latitude, v.longitude]}
+                      key={`v-${v.performerId || v.slug}`}
+                      position={[v.location.latitude, v.location.longitude]}
                       icon={ICON_VENUE}
                     >
                       {/* Popup โหมด VENUES: ชื่อ + เวลาเปิด–ปิด */}
                       <Popup>
                         <div className="vmap-popupTitle">
                           <Link to={toVenueDetailPath(v)} className="vmap-popupTitleLink">
-                            {v.name || 'Unnamed Venue'}
+                            {v.performer.user.name || 'Unnamed Venue'}
                           </Link>
                         </div>
                         {(() => {
@@ -506,7 +506,7 @@ export default function VenueMap() {
                 : visibleEvents.map(ev => (
                     <Marker
                       key={`e-${ev.id || ev._id || ev.slug}`}
-                      position={[ev.venue.latitude, ev.venue.longitude]}
+                      position={[ev.venue.location.latitude, ev.venue.location.longitude]}
                       icon={ICON_EVENT}
                     >
                       {/* Popup โหมด EVENTS: ชื่ออย่างเดียว */}
@@ -541,10 +541,10 @@ export default function VenueMap() {
                 {visibleVenues.map(v => {
                   const img = v.bannerUrl
                     || v.coverImage
-                    || v.profilePhotoUrl
+                    || v.performer.user.profilePhotoUrl
                     || (Array.isArray(v.photoUrls) && v.photoUrls[0])
                     || '/img/fallback.jpg';
-                  const hasLoc = v.latitude != null && v.longitude != null;
+                  const hasLoc = v.location.latitude != null && v.location.longitude != null;
 
                   // สตริงบรรทัดย่อย (เวลาเปิด–ปิด ถ้าไม่มีใช้ address)
                   const oc = getOpenCloseText(v);
@@ -552,15 +552,15 @@ export default function VenueMap() {
 
                   // คำนวณระยะทาง (แสดงใน badge)
                   const distKm = myLoc
-                    ? haversineKm(myLoc, { lat: v.latitude, lng: v.longitude })
+                    ? haversineKm(myLoc, { lat: v.location.latitude, lng: v.location.longitude })
                     : null;
 
                   return (
-                    <div key={v.id || v.slug} className="vmap-card">
+                    <div key={v.performerId || v.slug} className="vmap-card">
                       <div className="vmap-cardImg">
                         <img
                           src={img}
-                          alt={v.name}
+                          alt={v.performer.user.name}
                           loading="lazy"
                           onError={(e)=>{e.currentTarget.src='/img/fallback.jpg';}}
                         />
@@ -573,7 +573,7 @@ export default function VenueMap() {
                             to={toVenueDetailPath(v)}
                             className="vmap-cardTitleLink"
                           >
-                            {v.name || 'Unnamed Venue'}
+                            {v.performer.user.name || 'Unnamed Venue'}
                           </Link>
                         </div>
 
@@ -604,7 +604,7 @@ export default function VenueMap() {
                           {hasLoc && (
                             <a
                               className="vmap-btn vmap-btnGhost"
-                              href={`https://www.google.com/maps?q=${v.latitude},${v.longitude}`}
+                              href={`https://www.google.com/maps?q=${v.location.latitude},${v.location.longitude}`}
                               target="_blank" rel="noreferrer"
                             >
                               เปิดแผนที่
@@ -679,7 +679,7 @@ export default function VenueMap() {
                           {hasLoc && (
                             <a
                               className="vmap-btn vmap-btnGhost"
-                              href={`https://www.google.com/maps?q=${ev.venue.latitude},${ev.venue.longitude}`}
+                              href={`https://www.google.com/maps?q=${ev.venue.location.latitude},${ev.venue.location.longitude}`}
                               target="_blank" rel="noreferrer"
                             >
                               เปิดแผนที่

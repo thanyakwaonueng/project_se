@@ -43,34 +43,36 @@ export default function CreateVenue() {
     axios
       .get('/api/auth/me', { withCredentials: true })
       .then((res) => {
-        const profile = res.data?.venueProfile;
-        if (profile) {
+        const u = res.data;
+        if (u?.performerInfo?.venueInfo) {
+          const p = u.performerInfo;
+          const v = p.venueInfo;
           setHasProfile(true);
-          setName(profile.name || '');
-          setLocationUrl(profile.locationUrl || '');
-          setGenre(profile.genre || '');
-          setDescription(profile.description || '');
-          setCapacity(profile.capacity || '');
-          setDateOpen(profile.dateOpen ? profile.dateOpen.slice(0, 10) : '');
-          setDateClose(profile.dateClose ? profile.dateClose.slice(0, 10) : '');
-          setPriceRate(profile.priceRate || 'BUDGET');
-          setTimeOpen(profile.timeOpen || '');
-          setTimeClose(profile.timeClose || '');
-          setAlcoholPolicy(profile.alcoholPolicy || 'SERVE');
-          setAgeRestriction(profile.ageRestriction || 'ALL');
-          setProfilePhotoUrl(profile.profilePhotoUrl || '');
-          setPhotoUrls((profile.photoUrls || []).join(', '));
-          setContactEmail(profile.contactEmail || '');
-          setContactPhone(profile.contactPhone || '');
-          setFacebookUrl(profile.facebookUrl || '');
-          setInstagramUrl(profile.instagramUrl || '');
-          setLineUrl(profile.lineUrl || '');
-          setTiktokUrl(profile.tiktokUrl || '');
-          setWebsiteUrl(profile.websiteUrl || '');
-          if (profile.latitude && profile.longitude) {
+          setName(u.name || '');
+          setLocationUrl(v.location.locationUrl || '');
+          setGenre(v.genre || '');
+          setDescription(v.description || '');
+          setCapacity(v.capacity || '');
+          setDateOpen(v.dateOpen ? v.dateOpen.slice(0, 10) : '');
+          setDateClose(v.dateClose ? v.dateClose.slice(0, 10) : '');
+          setPriceRate(v.priceRate || 'BUDGET');
+          setTimeOpen(v.timeOpen || '');
+          setTimeClose(v.timeClose || '');
+          setAlcoholPolicy(v.alcoholPolicy || 'SERVE');
+          setAgeRestriction(v.ageRestriction || 'ALL');
+          setProfilePhotoUrl(u.profilePhotoUrl || '');
+          setPhotoUrls((v.photoUrls || []).join(', '));
+          setContactEmail(p.contactEmail || '');
+          setContactPhone(p.contactPhone || '');
+          setFacebookUrl(p.facebookUrl || '');
+          setInstagramUrl(p.instagramUrl || '');
+          setLineUrl(p.lineUrl || '');
+          setTiktokUrl(p.tiktokUrl || '');
+          setWebsiteUrl(v.websiteUrl || '');
+          if (v.location.latitude && v.location.longitude) {
             setLocation({
-              lat: profile.latitude,
-              lng: profile.longitude,
+              lat: v.location.latitude,
+              lng: v.location.longitude,
               address: '', // ถ้ามี column address ค่อยเติมภายหลัง
             });
           }
