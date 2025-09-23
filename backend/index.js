@@ -234,7 +234,7 @@ app.post("/resendOTP", async (req, res) => {
     const otp_expired = new Date(Date.now() + 15 * 60 * 1000)
 
     const mailOption = {
-      from: `"Chiang Mai Original website" <no-reply@myapp.com`,
+      from: `"Chiang Mai Original website" <no-reply@myapp.com>`,
       to: email,
       subject: "Verify your email",
       html: `<p>Enter <b>${otp}</b> in the app to verify your email and complete sign up</p> 
