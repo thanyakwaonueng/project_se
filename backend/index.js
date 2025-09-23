@@ -7,11 +7,24 @@ const cookieParser = require('cookie-parser');
 const { PrismaClient } = require('./generated/prisma');
 const prisma = new PrismaClient();
 const nodemailer = require('nodemailer');
+const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
 const port = process.env.PORT || 4000;
+
+/**
+ * ✅ รองรับ FE ที่เรียก /api/* โดยรีไรท์เป็นเส้นทางเดิม
+ *    เช่น /api/groups -> /groups
+ *    วาง middleware นี้ไว้ "ก่อน" ประกาศ route ทั้งหมด
+ */
+app.use((req, _res, next) => {
+  if (req.url.startsWith('/api/')) {
+    req.url = req.url.slice(4); // ตัด "/api"
+  }
+  next();
+});
 
 /**
  * ✅ รองรับ FE ที่เรียก /api/* โดยรีไรท์เป็นเส้นทางเดิม
@@ -181,6 +194,7 @@ app.post('/verifyOTP', async (req, res) => {
       return res.status(400).json({ error: "Invalid or Expired OTP!" })
     }
 
+
     await prisma.user.update({
       where: { email },
       data: { isVerified: true, otpHash: null, otpExpiredAt: null }
@@ -191,7 +205,7 @@ app.post('/verifyOTP', async (req, res) => {
     console.error('POST /verifyOTP error:', err);
     return res.status(400).json({ error: err.message || 'OTP failed' });
   }
-})
+});
 
 app.post("/resendOTP", async (req, res) => {
   console.log("Resending OTP...")
@@ -217,6 +231,7 @@ app.post("/resendOTP", async (req, res) => {
           <p>This code <b>expired in 15 minutes</b></p>`,
     }
     await transporter.sendMail(mailOption)
+
 
     const hashotp = await bcrypt.hash(otp, 10)
     await prisma.user.update({
@@ -513,7 +528,6 @@ app.get("/groups", async (req, res) => {
   }
 });
 
-
 /* ───────────────────────────── VENUES (POST = upsert by userId) ─────────── */
 app.post('/venues', authMiddleware, async (req, res) => {
   try {
@@ -687,7 +701,6 @@ app.post('/events', authMiddleware, async (req, res) => {
   }
 });
 
-/* ───────────────────────────── EVENTS (GET all) ─────────── */
 app.get('/events', async (_req, res) => {
   try {
     const events = await prisma.event.findMany({
@@ -723,7 +736,6 @@ app.get('/events', async (_req, res) => {
   }
 });
 
-/* ───────────────────────────── EVENT (GET by id) ─────────── */
 app.get('/events/:id', async (req, res) => {
   try {
     const id = +req.params.id;
@@ -763,10 +775,7 @@ app.get('/events/:id', async (req, res) => {
   }
 });
 
-/* ───────────────────────────── LIST OF ALL INVITATION TO ARTIST ─────────── */
-
-/* ───────────────────────────── VENUE SENDS INVITE TO ARTIST ─────────── */
-
+/* ───────────────────────────── ARTIST INVITES ─────────── */
 app.post('/artist-events/invite', authMiddleware, async (req, res) => {
   try {
     const { artistId, eventId, ...rest } = req.body;
@@ -783,8 +792,6 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Could not send invite" });
   }
 });
-
-/* ───────────────────────────── ARTIST RESPONDS TO INVITE(APPROVE/DECLINE) ─────────── */
 
 app.post('/artist-events/respond', authMiddleware, async (req, res) => {
   try {
@@ -805,8 +812,6 @@ app.post('/artist-events/respond', authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Could not respond to invite" });
   }
 });
-
-/* ───────────────────────────── GET PENDING INVITES FOR AN ARTIST ─────────── */
 
 app.get('/artist-events/pending/:artistId', authMiddleware, async (req, res) => {
   try {
@@ -831,8 +836,6 @@ app.get('/artist-events/pending/:artistId', authMiddleware, async (req, res) => 
   }
 });
 
-/* ───────────────────────────── GET APPROVED INVITES FOR AN ARTIST ─────────── */
-
 app.get('/artist-events/accepted/:artistId', authMiddleware, async (req, res) => {
   try {
     const { artistId } = req.params;
@@ -855,8 +858,6 @@ app.get('/artist-events/accepted/:artistId', authMiddleware, async (req, res) =>
     res.status(500).json({ error: "Could not fetch accepted invites" });
   }
 });
-
-/* ───────────────────────────── GET REJECTED INVITES FOR AN ARTIST ─────────── */
 
 app.get('/artist-events/declined/:artistId', authMiddleware, async (req, res) => {
   try {
@@ -1053,7 +1054,9 @@ app.post('/role-requests/:id/approve', authMiddleware, requireAdmin, async (req,
           reviewedAt: new Date(),
         },
       });
+
       await tx.user.update({ where: { id: rr.userId }, data: { role: rr.requestedRole } });
+
       await notify(
         tx,
         rr.userId,
@@ -1119,7 +1122,6 @@ app.get('/role-requests/:id/detail', authMiddleware, requireAdmin, async (req, r
     if (request.requestedRole === 'ARTIST') {
       application = { artist: request.application || null };
     }
-
     res.json({ request, application });
   } catch (e) {
     console.error('GET /role-requests/:id/detail error', e);
@@ -1346,21 +1348,6 @@ app.delete('/artists/:id/like', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Unlike failed' });
   }
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /* ───────────────────────────── HEALTH ───────────────────────────── */
 app.get('/', (_req, res) => res.send('🎵 API is up!'));

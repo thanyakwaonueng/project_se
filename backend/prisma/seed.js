@@ -253,6 +253,7 @@ async function main() {
       email: 'admin@example.com',
       passwordHash: await bcrypt.hash('admin123', 10),
       role: 'ADMIN',
+      isVerified: true
     }
   });
 
@@ -466,7 +467,6 @@ async function main() {
       name: u.name,      
     });
   }
-
   const venueByName = Object.fromEntries(venueProfiles.map(v => [v.name, v.id]));
   console.log(`🏟️ Venues created: ${venueProfiles.length}`);
 
@@ -507,6 +507,7 @@ async function main() {
         endTime: plan.end,
         genre: plan.genre,
         venueId: venueByName[plan.venue],
+        posterUrl: EVENT_POSTERS[i % EVENT_POSTERS.length],
         posterUrl: EVENT_POSTERS[i % EVENT_POSTERS.length],
       }
     });
@@ -555,6 +556,7 @@ async function main() {
     console.log(`✅ Invited artist id=${artistOne.performerId} (${artistOne.performer.user.name}) to all events.`);
   } 
 
+  console.log('✅ Done! 50 artists, venues, events, likes & links seeded.');
   console.log('✅ Done! 50 artists, venues, events, likes & links seeded.');
 }
 
