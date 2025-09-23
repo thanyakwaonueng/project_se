@@ -124,7 +124,7 @@ const toEventDetailPath = (ev) => {
 };
 const toVenueDetailPath = (v) => {
   const key = v?.performerId ?? v?._id ?? v?.slug ?? v?.slugOrId;
-  return key ? `/page_venues/${encodeURIComponent(key)}` : "#";
+  return key ? `/venues/${encodeURIComponent(key)}` : "#";
 };
 
 // ===== เวลาเปิด–ปิด (รองรับหลายคีย์) =====

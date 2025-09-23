@@ -10,42 +10,38 @@ function dInThisMonth(day, hour = 19, minute = 30) {
   return new Date(now.getFullYear(), now.getMonth(), day, hour, minute, 0);
 }
 
-/* ---------- รูปสุ่มสำหรับ Venue ---------- */
+/* ---------- รูปสุ่มจาก picsum (เสถียร ใช้ได้จริง) ---------- */
 const VENUE_PICS = [
-  "https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg",
-  "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg",
-  "https://images.pexels.com/photos/3359713/pexels-photo-3359713.jpeg",
-  "https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg",
-  "https://images.pexels.com/photos/21067/pexels-photo.jpg",
-  "https://images.pexels.com/photos/164938/pexels-photo-164938.jpeg",
-  "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg",
-  "https://images.pexels.com/photos/167092/pexels-photo-167092.jpeg"
+  "https://picsum.photos/id/1011/800/600",
+  "https://picsum.photos/id/1015/800/600",
+  "https://picsum.photos/id/1025/800/600",
+  "https://picsum.photos/id/1035/800/600",
+  "https://picsum.photos/id/1043/800/600",
+  "https://picsum.photos/id/1050/800/600",
+  "https://picsum.photos/id/1062/800/600",
+  "https://picsum.photos/id/1074/800/600",
 ];
 function pickVenuePhotos(n = 4) {
   const out = [];
-  const used = new Set();
   while (out.length < n) {
     const idx = Math.floor(Math.random() * VENUE_PICS.length);
-    if (!used.has(idx)) {
-      used.add(idx);
-      out.push(VENUE_PICS[idx]);
-    }
+    out.push(VENUE_PICS[idx]); // ยอมซ้ำได้ เพื่อความเสถียร
   }
   return out;
 }
 
-/* ---------- โปสเตอร์ Event (แนวคอนเสิร์ต/เวที/ไฟสวยๆ) ---------- */
+/* ---------- โปสเตอร์ Event (picsum) ---------- */
 const EVENT_POSTERS = [
-  "https://images.pexels.com/photos/1190298/pexels-photo-1190298.jpeg",
-  "https://images.pexels.com/photos/3359713/pexels-photo-3359713.jpeg",
-  "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg",
-  "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg",
-  "https://images.pexels.com/photos/167092/pexels-photo-167092.jpeg",
-  "https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg",
-  "https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg",
-  "https://images.pexels.com/photos/21067/pexels-photo.jpg",
-  "https://images.pexels.com/photos/164938/pexels-photo-164938.jpeg",
-  "https://images.pexels.com/photos/164931/pexels-photo-164931.jpeg"
+  "https://picsum.photos/id/237/800/600",
+  "https://picsum.photos/id/238/800/600",
+  "https://picsum.photos/id/239/800/600",
+  "https://picsum.photos/id/240/800/600",
+  "https://picsum.photos/id/241/800/600",
+  "https://picsum.photos/id/242/800/600",
+  "https://picsum.photos/id/243/800/600",
+  "https://picsum.photos/id/244/800/600",
+  "https://picsum.photos/id/245/800/600",
+  "https://picsum.photos/id/246/800/600",
 ];
 
 /* ---------- ยูทิลลิงก์ค้นหา (ลิงก์กดได้จริงทุกโดเมน) ---------- */
@@ -65,7 +61,7 @@ const searchLinks = (name) => {
   };
 };
 
-/* ---------- ศิลปิน official (ลิงก์จริง) ---------- */
+/* ---------- ศิลปิน official (ปรับ profilePhotoUrl เป็น picsum) ---------- */
 const OFFICIAL_ARTISTS = [
   {
     email: 'newjeans@example.com',
@@ -80,7 +76,7 @@ const OFFICIAL_ARTISTS = [
     appleMusicUrl:'https://music.apple.com/artist/newjeans/1636058531',
     tiktokUrl:    'https://www.tiktok.com/@newjeans_official',
     twitterUrl:   'https://twitter.com/NewJeans_ADOR',
-    profilePhotoUrl: 'https://images.pexels.com/photos/167092/pexels-photo-167092.jpeg',
+    profilePhotoUrl: 'https://picsum.photos/id/250/640/400',
   },
   {
     email: 'iu@example.com',
@@ -93,7 +89,7 @@ const OFFICIAL_ARTISTS = [
     spotifyUrl:    'https://open.spotify.com/artist/3HqSLMAZ3g3d5poNaI7GOU',
     appleMusicUrl: 'https://music.apple.com/artist/iu/1434084167',
     twitterUrl:    'https://twitter.com/search?q=IU',
-    profilePhotoUrl: 'https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg',
+    profilePhotoUrl: 'https://picsum.photos/id/251/640/400',
   },
   {
     email: 'blackpink@example.com',
@@ -109,7 +105,7 @@ const OFFICIAL_ARTISTS = [
     tiktokUrl:     'https://www.tiktok.com/@blackpinkofficial',
     shazamUrl:     'https://www.shazam.com/artist/204939476/blackpink',
     twitterUrl:    'https://twitter.com/search?q=BLACKPINK',
-    profilePhotoUrl: 'https://images.pexels.com/photos/3359713/pexels-photo-3359713.jpeg',
+    profilePhotoUrl: 'https://picsum.photos/id/252/640/400',
   },
   {
     email: 'bts@example.com',
@@ -124,7 +120,7 @@ const OFFICIAL_ARTISTS = [
     appleMusicUrl: 'https://music.apple.com/artist/bts/883131348',
     tiktokUrl:     'https://www.tiktok.com/@bts_official_bighit',
     twitterUrl:    'https://twitter.com/BTS_twt',
-    profilePhotoUrl: 'https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg',
+    profilePhotoUrl: 'https://picsum.photos/id/253/640/400',
   },
   {
     email: 'ado@example.com',
@@ -137,7 +133,7 @@ const OFFICIAL_ARTISTS = [
     spotifyUrl:    'https://open.spotify.com/artist/3bUqLQ8N9d2EapD5YdLK4Q',
     appleMusicUrl: 'https://music.apple.com/artist/ado/1530426666',
     twitterUrl:    'https://twitter.com/ado1024imokenp',
-    profilePhotoUrl: 'https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg',
+    profilePhotoUrl: 'https://picsum.photos/id/254/640/400',
   },
   {
     email: 'yoasobi@example.com',
@@ -150,7 +146,7 @@ const OFFICIAL_ARTISTS = [
     spotifyUrl:    'https://open.spotify.com/artist/64tJ2EAv1R6UaZqc4iOCyj',
     appleMusicUrl: 'https://music.apple.com/artist/yoasobi/1490250505',
     twitterUrl:    'https://twitter.com/YOASOBI_staff',
-    profilePhotoUrl: 'https://images.pexels.com/photos/164938/pexels-photo-164938.jpeg',
+    profilePhotoUrl: 'https://picsum.photos/id/254/640/400',
   },
   {
     email: 'billie@example.com',
@@ -167,7 +163,7 @@ const OFFICIAL_ARTISTS = [
     shazamUrl:     'https://www.shazam.com/artist/201911193/billie-eilish',
     soundcloudUrl: 'https://soundcloud.com/billieeilish',
     twitterUrl:    'https://twitter.com/billieeilish',
-    profilePhotoUrl: 'https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg',
+    profilePhotoUrl: 'https://picsum.photos/id/256/640/400',
   },
   {
     email: 'taylor@example.com',
@@ -183,7 +179,7 @@ const OFFICIAL_ARTISTS = [
     tiktokUrl:     'https://www.tiktok.com/@taylorswift',
     shazamUrl:     'https://www.shazam.com/artist/4095465/taylor-swift',
     twitterUrl:    'https://twitter.com/taylorswift13',
-    profilePhotoUrl: 'https://images.pexels.com/photos/167092/pexels-photo-167092.jpeg',
+    profilePhotoUrl: 'https://picsum.photos/id/257/640/400',
   },
   {
     email: 'milli@example.com',
@@ -195,7 +191,7 @@ const OFFICIAL_ARTISTS = [
     youtubeUrl:    'https://www.youtube.com/@MILLIOfficialTH',
     spotifyUrl:    'https://open.spotify.com/artist/6JpZEz9eJjwZ2tM4Xa7Y5Z',
     twitterUrl:    'https://twitter.com/search?q=Milli',
-    profilePhotoUrl: 'https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg',
+    profilePhotoUrl: 'https://picsum.photos/id/258/640/400',
   },
   {
     email: 'threemandown@example.com',
@@ -208,7 +204,7 @@ const OFFICIAL_ARTISTS = [
     spotifyUrl:    'https://open.spotify.com/artist/3zAZgRKo23s83RGwhx8Rr2',
     instagramUrl:  'https://www.instagram.com/3.man.down/',
     twitterUrl:    'https://twitter.com/search?q=Three%20Man%20Down',
-    profilePhotoUrl: 'https://images.pexels.com/photos/164931/pexels-photo-164931.jpeg',
+    profilePhotoUrl: 'https://picsum.photos/id/259/640/400',
   },
 ];
 
@@ -253,7 +249,9 @@ async function main() {
       email: 'admin@example.com',
       passwordHash: await bcrypt.hash('admin123', 10),
       role: 'ADMIN',
-      isVerified: true
+      isVerified: true,
+      profilePhotoUrl: 'https://picsum.photos/id/259/640/400'
+
     }
   });
 
@@ -290,7 +288,7 @@ async function main() {
         youtubeUrl: a.youtubeUrl || null,
         contactEmail: a.contactEmail || null,
         contactPhone: a.contactPhone || null,
-        
+
         user: { connect: { id: user.id } },
       },
     });
@@ -321,7 +319,7 @@ async function main() {
     artistUsers.push({ user, artist });
   }
 
-    // 2) กลุ่มสมมติ 40 คน (ใช้ลิงก์ค้นหาที่กดได้จริงทุกโดเมน)
+  // 2) กลุ่มสมมติ 40 คน (ใช้ลิงก์ค้นหา + รูป picsum แบบ seed)
   for (let i = 0; i < FAKE_NAMES.length; i++) {
     const name = FAKE_NAMES[i];
     const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g,'_')}@example.com`;
@@ -348,7 +346,7 @@ async function main() {
         youtubeUrl:   Math.random() < 0.9  ? links.youtubeUrl   : null,
         contactEmail: `booking+${user.id}@${name.replace(/\s+/g,'').toLowerCase()}.example`,
         contactPhone: Math.random() < 0.4 ? `+66-8${randInt(10,99)}-${randInt(100,999)}-${randInt(1000,9999)}` : null,
-        
+
         user: { connect: { id: user.id } },
       },
     });
@@ -365,9 +363,11 @@ async function main() {
         memberCount: randInt(1, 7),
         priceMin: Math.random() < 0.7 ? randInt(3000, 15000) : null,
         priceMax: Math.random() < 0.7 ? randInt(15000, 60000) : null,
-        rateCardUrl: links.rateCardUrl ?? null,
-        epkUrl: links.epkUrl ?? null,
-        riderUrl: links.riderUrl ?? null,
+        // เอกสารแนบปล่อยเป็น null เพื่อเลี่ยงลิงก์เสีย
+        rateCardUrl: null,
+        epkUrl: null,
+        riderUrl: null,
+
         spotifyUrl:   Math.random() < 0.85 ? links.spotifyUrl   : null,
         appleMusicUrl:Math.random() < 0.6  ? links.appleMusicUrl: null,
         soundcloudUrl:Math.random() < 0.4  ? links.soundcloudUrl: null,
@@ -397,17 +397,18 @@ async function main() {
     likerUsers.push(u);
   }
 
-  // สุ่ม like ให้แต่ละศิลปิน
+  // สุ่ม like ให้แต่ละศิลปิน (⭐ แก้ให้ชี้ performerId เท่านั้น)
   for (const { artist } of artistUsers) {
     const likeCountTarget = randInt(5, 90);
     const shuffled = likerUsers.slice().sort(() => Math.random() - 0.5);
     for (let i = 0; i < likeCountTarget; i++) {
       await prisma.likePerformer.create({
-        data: { userId: shuffled[i].id, artistId: artist.performerId }
+        data: { userId: shuffled[i].id, performerId: artist.performerId }  // ← ใช้ performerId (ถูกต้องตาม schema)
       }).catch(()=>{});
     }
   }
-  console.log('👍 Random likes generated');
+  console.log('👍 Random likes (artists only) generated');
+
   // ---------- Venues (เชียงใหม่) ----------
   const venueDefs = [
     { email: 'nimman.studio@venue.example',   name: 'Nimman Studio',        lat: 18.79650, lng: 98.97890, genre: 'Indie/Alt' },
@@ -453,7 +454,7 @@ async function main() {
         photoUrls: photos,
       }
     });
-    const vl = await prisma.venueLocation.create({
+    await prisma.venueLocation.create({
       data: {
         venueId: vp.performerId,
         locationUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.name+' Chiang Mai')}`,
@@ -463,15 +464,14 @@ async function main() {
     });
 
     venueProfiles.push({
-      id: vp.performerId,       
-      name: u.name,      
+      id: vp.performerId,
+      name: u.name,
     });
   }
   const venueByName = Object.fromEntries(venueProfiles.map(v => [v.name, v.id]));
   console.log(`🏟️ Venues created: ${venueProfiles.length}`);
 
-  // ---------- Events ----------
-  /* ---------- Events (16 งานในเดือนนี้) ---------- */
+  // ---------- Events (16 งานในเดือนนี้) ----------
   const eventsPlan = [
     { name: 'Nimman Indie Night',       venue: 'Nimman Studio',        date: dInThisMonth(3, 20, 0),  type: 'INDOOR',  ticketing: 'FREE',           genre: 'Indie',     door: '19:00', end: '22:30' },
     { name: 'Ping Riverside Jazz',      venue: 'Ping Riverside Stage', date: dInThisMonth(4, 19, 30), type: 'OUTDOOR', ticketing: 'ONSITE_SALES',   genre: 'Jazz',      door: '18:30', end: '21:30' },
@@ -507,8 +507,7 @@ async function main() {
         endTime: plan.end,
         genre: plan.genre,
         venueId: venueByName[plan.venue],
-        posterUrl: EVENT_POSTERS[i % EVENT_POSTERS.length],
-        posterUrl: EVENT_POSTERS[i % EVENT_POSTERS.length],
+        posterUrl: EVENT_POSTERS[i % EVENT_POSTERS.length], // ✅ ไม่มีการ assign ซ้ำ
       }
     });
     createdEvents.push(ev);
@@ -532,8 +531,8 @@ async function main() {
   }
 
   // ---------- เชิญศิลปิน id ต่ำสุดเข้าทุกงาน (เดโม) ----------
-  const artistOne = await prisma.artist.findFirst({ 
-    orderBy: { performerId: 'asc' }, 
+  const artistOne = await prisma.artist.findFirst({
+    orderBy: { performerId: 'asc' },
     include: {
       performer: {
         include: {
@@ -554,9 +553,8 @@ async function main() {
       }
     }
     console.log(`✅ Invited artist id=${artistOne.performerId} (${artistOne.performer.user.name}) to all events.`);
-  } 
+  }
 
-  console.log('✅ Done! 50 artists, venues, events, likes & links seeded.');
   console.log('✅ Done! 50 artists, venues, events, likes & links seeded.');
 }
 

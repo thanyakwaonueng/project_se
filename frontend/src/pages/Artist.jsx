@@ -43,7 +43,7 @@ export default function Artist() {
 
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [followed, setFollowed] = useState(loadFollowed());
-  const [likingIds, setLikingIds] = useState(new Set());
+  const [followingIds, setFollowingIds] = useState(new Set()); // เดิมชื่อ likingIds
 
   const lastFocusRef = useRef(null);
   const { id } = useParams();               // ✅ ใช้เฉพาะ id
@@ -127,13 +127,14 @@ export default function Artist() {
     return arr.sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
   }, [selectedGroup, now]);
 
-  /** like/unlike (DB-based) */
-  const toggleLike = async (group) => {
+  /** follow/unfollow (DB-based; backend ใช้ endpoint like เดิม) */
+  const toggleFollow = async (group) => {
     if (!group?.id) return;
-    if (likingIds.has(group.id)) return;
-    setLikingIds((s) => new Set(s).add(group.id));
+    if (followingIds.has(group.id)) return;
+    setFollowingIds((s) => new Set(s).add(group.id));
     try {
       if (group.likedByMe) {
+        // UNFOLLOW
         const { data } = await axios.delete(`/api/artists/${group.id}/like`, { withCredentials: true });
         setGroups((prev) =>
           prev.map((g) =>
@@ -143,6 +144,7 @@ export default function Artist() {
           )
         );
       } else {
+        // FOLLOW
         const { data } = await axios.post(`/api/artists/${group.id}/like`, {}, { withCredentials: true });
         setGroups((prev) =>
           prev.map((g) =>
@@ -156,10 +158,10 @@ export default function Artist() {
       if (err?.response?.status === 401 || err?.response?.status === 403) {
         navigate("/login");
       } else {
-        console.error("toggleLike error:", err);
+        console.error("toggleFollow error:", err);
       }
     } finally {
-      setLikingIds((s) => { const next = new Set(s); next.delete(group.id); return next; });
+      setFollowingIds((s) => { const next = new Set(s); next.delete(group.id); return next; });
     }
   };
 
@@ -239,9 +241,10 @@ export default function Artist() {
               <div key={group.id} className="group-card-wrap" ref={lastFocusRef}>
                 <button
                   className={`like-button ${group.likedByMe ? "liked" : ""}`}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleLike(group); }}
-                  aria-label={group.likedByMe ? "Unlike" : "Like"}
-                  disabled={likingIds.has(group.id)}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFollow(group); }}
+                  aria-label={group.likedByMe ? "Unfollow" : "Follow"}
+                  disabled={followingIds.has(group.id)}
+                  title={group.likedByMe ? "Unfollow" : "Follow"}
                 />
                 <Link
                   to={`/artists/${group.id}`}       // ✅ id-only
@@ -259,6 +262,15 @@ export default function Artist() {
                 </Link>
                 <div className="group-card-caption">
                   <h3>{group.name}</h3>
+                </div>
+
+                {/* [FOLLOWERS] แสดงยอดผู้ติดตามใต้รูป */}
+                <div
+                  className="group-card-likes"
+                  aria-label={`${group.followersCount || 0} followers`}
+                  style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}
+                >
+                  👥 {group.followersCount || 0} followers
                 </div>
               </div>
             ))}
@@ -323,6 +335,20 @@ export default function Artist() {
                     <img src="/img/wave-sound.png" alt="Sound" />
                   </span>
                 </div>
+              </div>
+
+              {/* [FOLLOW] ปุ่ม + ตัวเลข */}
+              <div className="a-hero-likebox" style={{display: 'flex', alignItems: 'center', gap: 8, marginTop: 8}}>
+                <button
+                  className={`like-button ${selectedGroup.likedByMe ? "liked" : ""}`}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFollow(selectedGroup); }}
+                  aria-label={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
+                  disabled={followingIds.has(selectedGroup.id)}
+                  title={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
+                />
+                <span style={{fontSize: 14, opacity: 0.9}}>
+                  👥 {selectedGroup.followersCount || 0} followers
+                </span>
               </div>
 
               <div className="a-hero-photo-line"></div>

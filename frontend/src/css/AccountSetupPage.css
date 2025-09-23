@@ -1,54 +1,64 @@
-/* ================================
-   AccountSetupPage.css (no CSS vars)
-   ================================ */
-
-/* 0) PAGE WRAPPER */
-.acc-page { 
-    /* background: #fa0000;  */
-    color: #111111; 
-    padding: px; }
-.acc-container { 
-    max-width: 1600px; 
-    margin: 0 auto; 
+/* ─────────────────────────────────────────────
+   0) PAGE WRAPPER / BASE
+   ───────────────────────────────────────────── */
+.acc-page {
+  /* background: #fa0000; */
+  color: #111111;
+  padding: 0;                 /* แก้จาก padding: px; ซึ่งไม่ถูกต้อง */
 }
 
-.acc-title { 
-    font-size: 120px; 
-    margin: 0 0 18px 0; 
-    color: #111111; 
-    /* background: #fa0000; */
+.acc-container {
+  /* max-width: 1600px; */
+  width: 100%;
+  margin: 0 auto;
+}
+
+.acc-title {
+  
+  font-size: 120px;
+  margin: 0 0 18px 0;
+  color: #111111;
+  /* background: #fa0000; */
 }
 
 
-/* เส้นคั่น */
-.a-line { 
-  margin-inline: auto; 
-  width: 75%;
-  margin-top: 20px;
-  margin-bottom: 20px;
-  height: 2px; 
-  background: #000000; }
+/* เส้นคั่นกลางหน้า */
+.a-line {
+  margin-inline: auto;
+  width: 80%;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  height: 1px;
+  background: #000000;
+}
 
 
-
-/* 1) SECTIONS */
+/* ─────────────────────────────────────────────
+   1) SECTIONS
+   ───────────────────────────────────────────── */
 .acc-section {
-    margin-inline: auto; 
-  max-width: 1200px; 
+  margin-inline: auto;
+  width: 80%;
+  /* max-width: 1200px; */
   /* border: 1px solid #e9e9ee; */
   /* border-radius: 12px; */
   padding: 16px;
   margin-bottom: 18px;
   /* background: #db1919; */
 }
-.acc-sectionTitle { 
-    font-size: 12px; 
-    margin: 0 0 12px 0; 
-    color: #111111; 
+
+.acc-sectionTitle {
+  font-weight: 700;
+  font-size: 12px;
+  margin: 0 0 12px 0;
+  color: #111111;
+  letter-spacing: .5px;       /* รวม override เดิมเข้ามา */
 }
 
 
-/* ===== Avatar upload (basic profile) ===== */
+/* ─────────────────────────────────────────────
+   2) BASIC PROFILE — Avatar & Layout
+   ───────────────────────────────────────────── */
 .acc-basicGrid {
   display: grid;
   grid-template-columns: 325px 1fr;
@@ -56,12 +66,11 @@
   align-items: start;
 }
 
-/* มือถือย่อให้พอดี */
+/* มือถือ */
 @media (max-width: 720px) {
   .acc-basicGrid { grid-template-columns: 1fr; }
   .acc-avatarCard { width: 180px; }
 }
-
 
 .acc-avatarCard {
   width: 325px;
@@ -77,9 +86,7 @@
   user-select: none;
 }
 
-.acc-avatarCard:hover { 
-    background: #f9f9f9; 
-}
+.acc-avatarCard:hover { background: #f9f9f9; }
 
 .acc-avatarCard img {
   width: 100%;
@@ -114,48 +121,135 @@
 
 
 
-/* 2) FORM GRID */
+/* ─────────────────────────────────────────────
+   3) FORM GRID (ใช้ทั้ง Basic & Artist)
+   ───────────────────────────────────────────── */
 .acc-formGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px 16px;
 }
-.acc-formGrid .col-span-2 { 
-    grid-column: 1 / -1; 
+
+.acc-formGrid .col-span-2 { grid-column: 1 / -1; }
+
+@media (max-width: 720px) {
+  .acc-formGrid { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 720px) { .acc-formGrid { grid-template-columns: 1fr; } }
+/* ให้คอลัมน์ยุบตัวได้ดี */
+.acc-formGrid > div { min-width: 0; }
 
-/* Inputs */
-.acc-page :where(input[type="text"],
-                 input[type="url"],
-                 input[type="email"],
-                 input[type="tel"],
-                 input[type="number"],
-                 textarea,
-                 select) {
-  width: 100%;
-  border: 1px solid #e9eeec;
-  background: #ffffff;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font: inherit;
+/* Label */
+.acc-label {
+  /* font-weight: 600; */
+  font-size: 16px;
+  margin-bottom: 6px;
+  display: block;
   color: #111111;
+}
+
+
+
+
+
+/* ─────────────────────────────────────────────
+   4) UNIFIED UNDERLINE INPUTS (ทุกฟิลด์กรอก)
+   - ใช้ “เส้นใต้เส้นเดียว” ตามที่ต้องการ
+   - ครอบทั้ง Basic (.acc-basicFields) และ Artist (.acc-formGrid)
+   - ลบ/ปิด "บล็อก Inputs แบบมีกรอบ" เดิมเพื่อไม่ให้ทับกัน
+   ───────────────────────────────────────────── */
+
+/* !!! หมายเหตุ (ทับกัน): 
+   เดิมมีบล็อก .acc-page :where(input/textarea/select) ที่ใส่ border 1px + border-radius 10px
+   แนะนำให้ลบ/คอมเมนต์ทิ้ง เพื่อให้สไตล์เส้นใต้ชุดนี้ทำงาน 100% */
+.acc-page :is(.acc-basicFields, .acc-formGrid)
+  :is(input, textarea, select, .form-control):not([type="checkbox"]):not([type="radio"]) {
+  border: none;                                    /* ไม่มีกรอบ */
+  border-bottom: 2px solid #11111133;              /* เส้นใต้เทาโปร่ง */
+  border-radius: 0;
+  padding: 10px 4px;
+  background: transparent;
+  transition: border-color .2s ease, border-bottom-color .2s ease;
+  box-shadow: none;
+  width: min(825px, 100%);                         /* คุมความกว้างสูงสุดต่อช่อง */
+  font-size: 16px;
+  line-height: 1.2;
   outline: none;
-  transition: border-color .2s ease, box-shadow .2s ease;
-}
-.acc-page :where(textarea) { min-height: 96px; resize: vertical; }
-.acc-page :where(input, textarea, select):focus-visible {
-  border-color: #000000;
-  box-shadow: 0 0 0 3px rgba(0,0,0,.08);
 }
 
-/* Label + Help */
-.acc-label { font-weight: 600; margin-bottom: 6px; display: block; color: #111111; }
-.acc-help  { color: #666666; font-size: 13px; }
+/* hover → เข้มขึ้นเล็กน้อย */
+.acc-page :is(.acc-basicFields, .acc-formGrid)
+  :is(input, textarea, select, .form-control):not([type="checkbox"]):not([type="radio"]):hover {
+  border-bottom-color: #11111180;                  /* เทาเข้มขึ้น */
+}
 
-/* 3) ROLE PICKER */
+/* focus → ดำทึบ */
+.acc-page :is(.acc-basicFields, .acc-formGrid)
+  :is(input, textarea, select, .form-control):not([type="checkbox"]):not([type="radio"]):focus,
+.acc-page :is(.acc-basicFields, .acc-formGrid)
+  :is(input, textarea, select, .form-control):not([type="checkbox"]):not([type="radio"]):focus-visible {
+  border-bottom-color: #000;
+  box-shadow: none;
+}
+
+/* placeholder สีอ่อน */
+.acc-page :is(.acc-basicFields, .acc-formGrid) :is(input, textarea)::placeholder {
+  color: #9a9a9a;
+}
+
+/* textarea ยืดได้ */
+.acc-page :is(.acc-basicFields, .acc-formGrid) textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+/* select — ให้เรียบเหมือน input */
+.acc-page :is(.acc-basicFields, .acc-formGrid) select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: 18px;                              /* เผื่อพื้นที่ไอคอน native */
+  background-image: none;                           /* กันธีมบางตัว */
+}
+
+/* disabled */
+.acc-page :is(.acc-basicFields, .acc-formGrid)
+  :is(input, textarea, select, .form-control):disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+
+
+
+/* ─────────────────────────────────────────────
+   5) DATE INPUT (หน้าตาเรียบแบบ Username)
+   ───────────────────────────────────────────── */
+.acc-page .acc-inputDate {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: transparent;
+  color: #111;
+}
+
+.acc-page .acc-inputDate::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: grayscale(1) brightness(0.2);
+  opacity: .8;
+}
+
+.acc-page .acc-inputDate:hover::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
+
+
+
+
+/* ─────────────────────────────────────────────
+   6) ROLE PICKER
+   ───────────────────────────────────────────── */
 .acc-roleGroup { display: flex; gap: 10px; flex-wrap: wrap; }
+
 .acc-roleBtn {
   border: 1px solid #111111;
   background: #ffffff;
@@ -165,13 +259,20 @@
   cursor: pointer;
   user-select: none;
 }
+
 .acc-roleBtn:hover { background: #f5f5f5; }
 .acc-roleBtn.is-active { background: #111111; color: #ffffff; }
 
-/* 4) Chips */
+
+
+
+
+/* ─────────────────────────────────────────────
+   7) GENRE CHIPS
+   ───────────────────────────────────────────── */
 .acc-chips {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* ปรับ 140px ได้ */
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 10px;
 }
 
@@ -187,45 +288,132 @@
   transition: background-color .4s ease, color .4s ease, border-color .4s ease;
 }
 
-.acc-chip:hover { 
-    background: #aaaaaa; 
-}
-.acc-chip.is-selected, .acc-chip[aria-pressed="true"], .acc-chip[data-selected="true"] {
-  background: #111111; color: #ffffff;
+.acc-chip:hover { background: #aaaaaa; }
+.acc-chip.is-selected,
+.acc-chip[aria-pressed="true"],
+.acc-chip[data-selected="true"] {
+  background: #111111;
+  color: #ffffff;
 }
 
-/* 5) ACTIONS */
-.acc-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+
+
+/* ─────────────────────────────────────────────
+   8) ACTIONS (Reset / Save)
+   ───────────────────────────────────────────── */
+.acc-actions {
+  padding: 20px;
+  display: flex;
+  gap: 10px;
+  width: 80%;
+  margin-inline: auto;
+  justify-content: flex-end;
+  /* background-color: #981b1b; */
+}
+
 .acc-btn {
-  border: 1px solid #111111; border-radius: 10px; padding: 10px 14px;
-  background: #ffffff; color: #111111; cursor: pointer;
+  min-height: 20px;
+  border: 1px solid #111111;
+  border-radius: 6px;
+  padding: 5px 50px;             /* ปรับไซส์ปุ่มได้ที่นี่ */
+  background: #ffffff;
+  color: #111111;
+  cursor: pointer;
+  transition:
+    background-color .2s ease,
+    color .2s ease,
+    border-color .2s ease,
+    transform .15s ease,
+    box-shadow .15s ease,
+    opacity .2s ease;
 }
-.acc-btn:hover { background: #f5f5f5; }
-.acc-btnPrimary { background: #111111; color: #ffffff; }
-.acc-btnPrimary:hover { filter: brightness(0.92); }
 
-/* 6) FEEDBACK & GATE */
-.acc-msg { padding: 10px 12px; border-radius: 10px; font-size: 14px; }
+.acc-btn:hover {
+  background: #f5f5f5;
+  /* transform: translateY(-1px); */
+  box-shadow: 0 4px 14px rgba(0,0,0,.08);
+}
+
+.acc-btn:active {
+  /* transform: translateY(0); */
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+
+.acc-btn:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+/* ปุ่มหลัก */
+.acc-btnPrimary {
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
+}
+
+.acc-btnPrimary:hover {
+  background: #000000;
+  /* transform: translateY(-1px); */
+  box-shadow: 0 6px 16px rgba(0,0,0,.15);
+}
+
+.acc-btnPrimary:active {
+  /* transform: translateY(0); */
+  box-shadow: 0 3px 10px rgba(0,0,0,.12);
+}
+
+/* disabled */
+.acc-btn[disabled],
+.acc-btnPrimary[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+
+
+/* ─────────────────────────────────────────────
+   9) FEEDBACK & GATE
+   ───────────────────────────────────────────── */
+.acc-msg {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+}
 .acc-msg.ok  { background: #e9fbef; border: 1px solid #bce7cc; color: #145a22; }
 .acc-msg.err { background: #ffefef; border: 1px solid #ffd0d0; color: #981b1b; }
 
 .acc-gate {
-  border: 1px dashed #bfbfc6; background: #fafafa; color: #333333;
-  border-radius: 12px; padding: 16px; margin-bottom: 18px;
+  border: 1px dashed #bfbfc6;
+  background: #fafafa;
+  color: #333333;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 18px;
 }
 
-/* 7) Checkbox inline */
-.acc-check { display: flex; align-items: center; gap: 8px; padding-top: 8px; }
+
+
+
+/* ─────────────────────────────────────────────
+   10) CHECKBOX INLINE
+   ───────────────────────────────────────────── */
+.acc-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+}
 
 
 
 
 
-
-
-
-
-/* ===== Role cards (landing with images) ===== */
+/* ─────────────────────────────────────────────
+   11) Role cards (landing with images)
+   ───────────────────────────────────────────── */
 .acc-roleIntro { margin-bottom: 18px; }
 
 .acc-roleGrid {
@@ -234,7 +422,9 @@
   gap: 18px;
 }
 
-@media (max-width: 720px) { .acc-roleGrid { grid-template-columns: 1fr; } }
+@media (max-width: 720px) {
+  .acc-roleGrid { grid-template-columns: 1fr; }
+}
 
 .acc-roleCard {
   border: 1px solid #111;
@@ -269,15 +459,17 @@
 .acc-roleImg {
   width: 100%;
   height: 100%;
-  object-fit: cover;   /* หรือ "contain" ถ้าต้องการไม่ครอป */
+  object-fit: cover;      /* หรือ "contain" ถ้าต้องการไม่ครอป */
 }
 
 
 
-/* === OVERRIDES: layout ของส่วน Basic ให้คลีนขึ้นนิดหน่อย === */
-.acc-sectionTitle { letter-spacing: .5px; }
 
-/* ช่อง Username/Date เป็นสไตล์เส้นใต้ให้เข้ากัน */
+/* ─────────────────────────────────────────────
+   12) UNDERLINE INPUTS (class เฉพาะ: acc-inputUnderline)
+   - ใช้กับ Username/Date ที่มีคลาสนี้อยู่แล้ว
+   - ยังสอดคล้องกับ unified underline ด้านบน
+   ───────────────────────────────────────────── */
 .acc-page .acc-inputUnderline {
   border: none;
   border-bottom: 2px solid #11111133;
@@ -286,32 +478,150 @@
   background: transparent;
   transition: border-color .2s ease;
   box-shadow: none;
-  width: min(825px, 100%); 
+  width: min(825px, 100%);
 }
+
 .acc-page .acc-inputUnderline:focus,
 .acc-page .acc-inputUnderline:focus-visible {
   outline: none;
-  border-bottom-color: #000;   /* โฟกัสแล้วเป็นสีดำ */
+  border-bottom-color: #000;     /* โฟกัสแล้วเป็นสีดำ */
   box-shadow: none;
 }
 
 
-/* date input ให้หน้าตาเรียบ ๆ เหมือน Username */
-.acc-page .acc-inputDate {
-  appearance: none;
-  -webkit-appearance: none;
-  background-color: transparent;
-  color: #111;
-}
-/* ไอคอนปฏิทิน: ให้ดูคลิกได้ และโทนเข้มขึ้นนิด */
-.acc-page .acc-inputDate::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  filter: grayscale(1) brightness(0.2);
-  opacity: .8;
-}
-.acc-page .acc-inputDate:hover::-webkit-calendar-picker-indicator {
-  opacity: 1;
+
+/* === ทุกฟิลด์กรอก: ใช้เส้นใต้แบบเดียวกับ .acc-inputUnderline === */
+/* ครอบทั้ง Basic (.acc-basicFields) และ Artist (.acc-formGrid) */
+.acc-page :is(.acc-basicFields, .acc-formGrid)
+  :is(input, textarea, select, .form-control):not([type="checkbox"]):not([type="radio"]) {
+  border: none;
+  border-bottom: 2px solid #11111133;  /* เทาอ่อนแบบโปร่ง */
+  border-radius: 0;
+  padding: 10px 4px;
+  background: transparent;
+  transition: border-color .2s ease, border-bottom-color .2s ease;
+  box-shadow: none;
+  width: min(825px, 100%);
+  font-size: 16px;
+  line-height: 1.2;
+  outline: none;
 }
 
-/* ช่องว่างแนวยาวระหว่าง label/field ให้หายใจดีขึ้น */
-.acc-formGrid > div { min-width: 0; }
+/* hover → เข้มขึ้นเล็กน้อย */
+.acc-page :is(.acc-basicFields, .acc-formGrid)
+  :is(input, textarea, select, .form-control):not([type="checkbox"]):not([type="radio"]):hover {
+  border-bottom-color: #11111180;      /* เทาเข้มขึ้น */
+}
+
+/* focus/active → ดำทึบ */
+.acc-page :is(.acc-basicFields, .acc-formGrid)
+  :is(input, textarea, select, .form-control):not([type="checkbox"]):not([type="radio"]):focus,
+.acc-page :is(.acc-basicFields, .acc-formGrid)
+  :is(input, textarea, select, .form-control):not([type="checkbox"]):not([type="radio"]):focus-visible {
+  border-bottom-color: #000;
+  box-shadow: none;
+}
+
+/* placeholder ให้อ่อนตา */
+.acc-page :is(.acc-basicFields, .acc-formGrid)
+  :is(input, textarea)::placeholder {
+  color: #9a9a9a;
+}
+
+/* textarea ยืดได้ตามต้องการ */
+.acc-page :is(.acc-basicFields, .acc-formGrid) textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+/* select ให้ลุคเดียวกัน (ไม่โชว์กรอบ native เกินจำเป็น) */
+.acc-page :is(.acc-basicFields, .acc-formGrid) select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: 18px; /* เว้นขวาเผื่อไอคอนเบราว์เซอร์ */
+  background-image: none; /* กันบางธีมใส่ลูกศรให้เอง */
+}
+
+/* disabled/readOnly */
+.acc-page :is(.acc-basicFields, .acc-formGrid)
+  :is(input, textarea, select, .form-control):disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* ช่อง checkbox แถว .acc-check คงสไตล์เดิม */
+.acc-check { display: inline-flex; align-items: center; gap: 8px; }
+
+
+
+
+
+/* ========== 13) Collapsible groups (Streaming / Social) ========== */
+
+/* กล่องหลักใช้ details ให้กินเต็มคอลัมน์ */
+.acc-collapse {
+  border: none;
+  padding: 0;
+}
+
+/* แถบ summary: คลีน เรียบ คลิกได้ */
+.acc-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 0;
+  font-weight: 700;
+  color: #111;
+  border-bottom: 1px solid #11111122;  /* เส้นคั่นหัวข้อ */
+}
+
+/* ▼ ลูกศรหมุน */
+.acc-summaryArrow { transition: transform .45s cubic-bezier(.2,.8,.2,1); }
+.acc-collapse[open] .acc-summaryArrow { transform: rotate(180deg); }
+
+/* ▼ ตัวคอนเทนต์ของกรุ๊ป */
+.acc-collapseBody {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 16px;
+  padding-top: 10px;
+
+  overflow: hidden;
+  max-height: 0;             /* สถานะเริ่ม: ปิด */
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* มือถือ: 1 คอลัมน์ */
+@media (max-width: 720px) { .acc-collapseBody { grid-template-columns: 1fr; } }
+
+/* ▼ เปิด: เล่นแอนิเมชันเลื่อนลงทุกครั้ง */
+.acc-collapse[open] .acc-collapseBody {
+  animation: accDropOpen .55s cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+/* ▼ ปิด: เล่นแอนิเมชันเลื่อนขึ้นทุกครั้ง */
+.acc-collapse:not([open]) .acc-collapseBody {
+  animation: accDropClose .45s cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+/* ▼ Keyframes (ใช้ max-height ค่าคงที่ใหญ่พอครอบเนื้อหา) */
+@keyframes accDropOpen {
+  from { max-height: 0;      opacity: 0; transform: translateY(-6px); }
+  to   { max-height: 1400px; opacity: 1; transform: translateY(0); }
+}
+
+@keyframes accDropClose {
+  from { max-height: 1400px; opacity: 1; transform: translateY(0); }
+  to   { max-height: 0;      opacity: 0; transform: translateY(-6px); }
+}
+
+/* ลด motion ตามระบบผู้ใช้ */
+@media (prefers-reduced-motion: reduce) {
+  .acc-summaryArrow { transition: none !important; }
+  .acc-collapseBody { animation: none !important; max-height: none !important; opacity: 1 !important; transform: none !important; }
+}

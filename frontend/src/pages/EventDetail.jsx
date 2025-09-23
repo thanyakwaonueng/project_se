@@ -143,7 +143,7 @@ export default function EventDetail() {
           ไปหน้าเมื่อกี้
         </Link>
       ) : (
-        <Link to="/page_events" className="btn btn-secondary">
+        <Link to="/events" className="btn btn-secondary">
           กลับไปหน้า Events
         </Link>
       )}

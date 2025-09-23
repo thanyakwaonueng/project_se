@@ -7,7 +7,6 @@ const cookieParser = require('cookie-parser');
 const { PrismaClient } = require('./generated/prisma');
 const prisma = new PrismaClient();
 const nodemailer = require('nodemailer');
-const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(express.json());
@@ -314,6 +313,7 @@ app.post('/artists', authMiddleware, async (req, res) => {
       tiktokUrl: data.links.tiktok,
       facebookUrl: data.links.facebook,
       instagramUrl: data.links.instagram,
+      twitterUrl: data.links.twitter,
       lineUrl: data.links.line,
     };
 
@@ -372,6 +372,8 @@ app.get('/artists', async (req, res) => {
         performer: {
           include: {
             user: true,
+            // [LIKES] include ตัวนับไลก์ของ performer
+            _count: { select: { likedBy: true } },
           },
         },
         artistRecords: true,
@@ -415,35 +417,34 @@ app.get("/groups", async (req, res) => {
   try {
     let meId = null;
     try {
-      await authMiddleware(req, res, () => { });
+      await authMiddleware(req, res, () => {});
       meId = req.user?.id ?? null;
-    } catch { }
+    } catch {}
 
     const artists = await prisma.artist.findMany({
       include: {
         performer: {
           include: {
             user: true,
+            _count: { select: { likedBy: true } },
             likedBy: meId
               ? {
-                where: { userId: meId },
-                select: { userId: true },
-                take: 1,
-              }
+                  where: { userId: meId },
+                  select: { userId: true },
+                  take: 1,
+                }
               : false,
           },
         },
+        // ✅ ต้อง include artistRecords เพื่อดึงรูป/วิดีโอจากที่นี่
+        artistRecords: true,
         artistEvents: {
           include: {
             event: {
               include: {
                 venue: {
                   include: {
-                    performer: {
-                      include: {
-                        user: true,
-                      },
-                    },
+                    performer: { include: { user: true } },
                     location: true,
                   },
                 },
@@ -455,22 +456,41 @@ app.get("/groups", async (req, res) => {
     });
 
     const groups = artists.map((a) => {
+      // ---- เลือก ArtistRecord ล่าสุด (by date || createdAt) ----
+      const records = Array.isArray(a.artistRecords) ? a.artistRecords.slice() : [];
+      records.sort((r1, r2) => {
+        const d1 = r1.date ? new Date(r1.date).getTime() : 0;
+        const d2 = r2.date ? new Date(r2.date).getTime() : 0;
+        // ถ้าไม่มี date ให้ fallback createdAt
+        const c1 = new Date(r1.createdAt).getTime();
+        const c2 = new Date(r2.createdAt).getTime();
+        const t1 = Math.max(d1, c1);
+        const t2 = Math.max(d2, c2);
+        return t2 - t1; // ล่าสุดมาก่อน
+      });
+      const latest = records[0];
 
+      // hero photo/ video มาจาก ArtistRecord
+      const heroPhoto =
+        latest?.thumbnailUrl ||
+        (Array.isArray(latest?.photoUrls) && latest.photoUrls.length ? latest.photoUrls[0] : null);
+      const heroVideo =
+        Array.isArray(latest?.videoUrls) && latest.videoUrls.length ? latest.videoUrls[0] : null;
+
+      // ---- สร้าง schedule ----
       const schedule = (Array.isArray(a.artistEvents) ? a.artistEvents : [])
         .map((ae) => {
           const e = ae.event;
           if (!e) return null;
-
           const venue = e.venue;
-          const venueName =
-            venue?.performer?.user?.name ?? "Unknown Venue";
-
+          const venueName = venue?.performer?.user?.name ?? "Unknown Venue";
           return {
             id: e.id,
             dateISO: e.date.toISOString(),
             title: e.name,
             venue: venueName,
-            city: venue?.venueLocation?.locationUrl ? "" : "",
+            // schema จริงใช้ venue.location (ไม่ใช่ venue.venueLocation)
+            city: venue?.location?.locationUrl ? "" : "",
             ticketUrl: e.ticketLink ?? "#",
             performanceRole: ae.role ?? null,
             performanceOrder: ae.order ?? null,
@@ -478,46 +498,55 @@ app.get("/groups", async (req, res) => {
           };
         })
         .filter(Boolean)
-        .sort((a, b) => new Date(a.dateISO) - new Date(b.dateISO));
+        .sort((x, y) => new Date(x.dateISO) - new Date(y.dateISO));
 
       return {
         id: a.performerId,
         slug:
-          (a.performer?.user?.name ?? "unknown")
-            .toLowerCase()
-            .replace(/\s+/g, "-") || `artist-${a.performerId}`,
+          (a.performer?.user?.name ?? "unknown").toLowerCase().replace(/\s+/g, "-") ||
+          `artist-${a.performerId}`,
         name: a.performer?.user?.name ?? "Unnamed Artist",
+        // ถ้าไม่มีรูปใน ArtistRecord ให้ fallback ไปที่รูป user.profilePhotoUrl
         image:
-          a.performer?.user?.profilePhotoUrl ??
+          heroPhoto ||
+          a.performer?.user?.profilePhotoUrl ||
           "https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg",
+
+        // ✅ ส่งต่อ photo/video จาก ArtistRecord (ให้หน้า FE ใช้ได้เลย)
+        photoUrl: heroPhoto || null,
+        videoUrl: heroVideo || null,
+
         description: a.description ?? "",
         details: a.genre ?? "",
         stats: {
           members: a.memberCount ?? 1,
           debut: a.foundingYear ? String(a.foundingYear) : "N/A",
-          followers: "N/A",
+          followers: String(a.performer?._count?.likedBy ?? 0),
         },
-        followersCount: a._count?.performer?.likedBy ?? 0,
+        followersCount: a.performer?._count?.likedBy ?? 0,
         likedByMe: !!(a.performer.likedBy && a.performer.likedBy.length),
+
         socials: {
           instagram: a.performer.instagramUrl,
           youtube: a.performer.youtubeUrl,
           tiktok: a.performer.tiktokUrl,
           facebook: a.performer.facebookUrl,
+          twitter: a.performer.twitterUrl,
           spotify: a.spotifyUrl || null,
           line: a.performer.lineUrl,
         },
+
         schedule,
 
         techRider: {
           summary: "",
           items: [],
-          downloadUrl: a.riderUrl ?? ""
+          downloadUrl: a.riderUrl ?? "",
         },
 
         playlistEmbedUrl: a.spotifyUrl
           ? a.spotifyUrl.replace("open.spotify.com/artist", "open.spotify.com/embed/artist")
-          : null
+          : null,
       };
     });
 
@@ -988,63 +1017,111 @@ app.post('/role-requests/:id/approve', authMiddleware, requireAdmin, async (req,
     const { note } = req.body;
 
     const rr = await prisma.roleRequest.findUnique({ where: { id } });
-    if (!rr || rr.status !== 'PENDING') return res.status(404).json({ error: 'Request not found' });
+    if (!rr || rr.status !== 'PENDING') {
+      return res.status(404).json({ error: 'Request not found' });
+    }
 
     await prisma.$transaction(async (tx) => {
-      // ถ้าขอเป็น ARTIST และมี application -> สร้าง/อัปเดต ArtistProfile
       if (rr.requestedRole === 'ARTIST' && rr.application) {
-        const js = rr.application; // JSON from AccountSetup
+        const appData = rr.application; // JSON ที่แนบจาก AccountSetup
 
+        // ---- user (ตาราง User) ----
         const userData = {
-          name: js.name?.trim() || 'Untitled',
-          profilePhotoUrl: js.profilePhotoUrl || null,
-          id: rr.userId,
+          name: (appData.name || '').trim() || 'Untitled',
+          profilePhotoUrl: appData.profilePhotoUrl || null,
         };
 
+        // ---- performer ---- (ช่องทางติดต่อ + โซเชียล)
         const performerData = {
-          contactEmail: a.contactEmail || null,
-          contactPhone: a.contactPhone || null,
-          spotifyUrl: a.spotifyUrl || null,
-          youtubeUrl: a.youtubeUrl || null,
-          facebookUrl: a.facebookUrl || null,
-          instagramUrl: a.instagramUrl || null,
-          tiktokUrl: a.tiktokUrl || null,
-          twitterUrl: a.twitterUrl || null,
+          contactEmail: appData.contactEmail || null,
+          contactPhone: appData.contactPhone || null,
+          youtubeUrl: appData.youtubeUrl || null,
+          tiktokUrl: appData.tiktokUrl || null,
+          facebookUrl: appData.facebookUrl || null,
+          instagramUrl: appData.instagramUrl || null,
+          lineUrl: appData.lineUrl || null,
+          twitterUrl: appData.twitterUrl || null,
           userId: rr.userId,
         };
 
+        // ---- artist ---- (อย่าใส่ photo/video ที่นี่ตามที่ขอ)
         const artistData = {
-          description: a.description || null,
-          genre: a.genre || 'Pop',
-          subGenre: a.subGenre || null,
-          bookingType: a.bookingType || 'FULL_BAND',
-          foundingYear: a.foundingYear ?? null,
-          label: a.label || null,
-          isIndependent: a.isIndependent !== false,
-          memberCount: a.memberCount ?? null,
-          priceMin: a.priceMin ?? null,
-          priceMax: a.priceMax ?? null,
-          rateCardUrl: a.rateCardUrl || null,
-          epkUrl: a.epkUrl || null,
-          riderUrl: a.riderUrl || null,
-          spotifyUrl: a.spotifyUrl || null,
-          appleMusicUrl: a.appleMusicUrl || null,
-          soundcloudUrl: a.soundcloudUrl || null,
-          shazamUrl: a.shazamUrl || null,
-          bandcampUrl: a.bandcampUrl || null,
+          description: appData.description || null,
+          genre: appData.genre || 'Pop',
+          subGenre: appData.subGenre || null,
+          bookingType: appData.bookingType || 'FULL_BAND',
+          foundingYear: appData.foundingYear ?? null,
+          label: appData.label || null,
+          isIndependent: appData.isIndependent !== false,
+          memberCount: appData.memberCount ?? null,
+          priceMin: appData.priceMin ?? null,
+          priceMax: appData.priceMax ?? null,
+
+          rateCardUrl: appData.rateCardUrl || null,
+          epkUrl: appData.epkUrl || null,
+          riderUrl: appData.riderUrl || null,
+
+          spotifyUrl: appData.spotifyUrl || null,
+          appleMusicUrl: appData.appleMusicUrl || null,
+          soundcloudUrl: appData.soundcloudUrl || null,
+          shazamUrl: appData.shazamUrl || null,
+          bandcampUrl: appData.bandcampUrl || null,
+
           performerId: rr.userId,
         };
 
-        const exists = await tx.artistProfile.findUnique({ where: { performerId: rr.userId } });
+        // อัปเดต User ก่อน
+        await tx.user.update({
+          where: { id: rr.userId },
+          data: userData,
+        });
+
+        // upsert performer / artist
+        const exists = await tx.artist.findUnique({
+          where: { performerId: rr.userId },
+        });
+
         if (exists) {
-          await tx.user.update({ where: { performerId: rr.userId }, data: userData });
-          await tx.performer.update({ where: { performerId: rr.userId }, data: performerData });
-          await tx.artist.update({ where: { performerId: rr.userId }, data: artistData });
+          await tx.performer.update({
+            where: { userId: rr.userId },
+            data: performerData,
+          });
+          await tx.artist.update({
+            where: { performerId: rr.userId },
+            data: artistData,
+          });
         } else {
           await tx.performer.create({ data: performerData });
           await tx.artist.create({ data: artistData });
         }
+
+        // ✅ ถ้ามีสื่อจากใบสมัคร → สร้าง ArtistRecord (เก็บ photo/video ไว้ที่นี่)
+        const photos = [];
+        const videos = [];
+        if (appData.photoUrl) photos.push(appData.photoUrl);
+        if (appData.videoUrl) videos.push(appData.videoUrl);
+
+        // เผื่อในอนาคตส่งมาเป็นอาร์เรย์ก็รองรับ
+        if (Array.isArray(appData.photoUrls)) photos.push(...appData.photoUrls.filter(Boolean));
+        if (Array.isArray(appData.videoUrls)) videos.push(...appData.videoUrls.filter(Boolean));
+
+        if (photos.length || videos.length) {
+          await tx.artistRecord.create({
+            data: {
+              artistId: rr.userId,                 // อ้าง performerId
+              title: appData.name ? `${appData.name} - Media` : 'Application Media',
+              description: appData.description || null,
+              thumbnailUrl: photos[0] || null,
+              photoUrls: photos,
+              videoUrls: videos,
+              date: new Date(),                    // ตีตราเวลาที่อนุมัติ
+              source: 'application',
+            },
+          });
+        }
       }
+
+      // ปิดคำขอ + อัปเดต role เป็น ARTIST
       await tx.roleRequest.update({
         where: { id: rr.id },
         data: {
@@ -1055,7 +1132,10 @@ app.post('/role-requests/:id/approve', authMiddleware, requireAdmin, async (req,
         },
       });
 
-      await tx.user.update({ where: { id: rr.userId }, data: { role: rr.requestedRole } });
+      await tx.user.update({
+        where: { id: rr.userId },
+        data: { role: rr.requestedRole },
+      });
 
       await notify(
         tx,
@@ -1072,6 +1152,7 @@ app.post('/role-requests/:id/approve', authMiddleware, requireAdmin, async (req,
     res.status(400).json({ error: 'Approve failed' });
   }
 });
+
 
 
 app.post('/role-requests/:id/reject', authMiddleware, requireAdmin, async (req, res) => {
@@ -1314,15 +1395,18 @@ app.patch('/me/profile', authMiddleware, async (req, res) => {
 // ---------- LIKE / UNLIKE ARTIST ----------
 app.post('/artists/:id/like', authMiddleware, async (req, res) => {
   try {
-    const artistId = Number(req.params.id);
+    const artistId = Number(req.params.id); // performerId ของศิลปิน
     const userId = req.user.id;
 
     const exists = await prisma.artist.findUnique({ where: { performerId: artistId } });
     if (!exists) return res.status(404).json({ error: 'Artist not found' });
 
-    await prisma.likePerformer.create({
-      data: { userId, artistId },
-    }).catch(() => { });
+    // [LIKES] ใช้ upsert กับคีย์คอมโพสิต userId_performerId ให้ตรงสคีมา
+    await prisma.likePerformer.upsert({
+      where: { userId_performerId: { userId, performerId: artistId } },
+      create: { userId, performerId: artistId },
+      update: {},
+    });
 
     const count = await prisma.likePerformer.count({ where: { performerId: artistId } });
     res.json({ liked: true, count });
@@ -1334,14 +1418,15 @@ app.post('/artists/:id/like', authMiddleware, async (req, res) => {
 
 app.delete('/artists/:id/like', authMiddleware, async (req, res) => {
   try {
-    const artistId = Number(req.params.id);
+    const artistId = Number(req.params.id); // performerId ของศิลปิน
     const userId = req.user.id;
 
+    // [LIKES] ลบโดยใช้คีย์คอมโพสิตที่ถูกต้อง
     await prisma.likePerformer.delete({
-      where: { userId_artistId: { userId, artistId } },
-    }).catch(() => { });
+      where: { userId_performerId: { userId, performerId: artistId } },
+    }).catch(() => { /* ไม่มีอยู่ก็ไม่เป็นไร */ });
 
-    const count = await prisma.likePerformer.count({ where: {performerId: artistId } });
+    const count = await prisma.likePerformer.count({ where: { performerId: artistId } });
     res.json({ liked: false, count });
   } catch (e) {
     console.error('DELETE /artists/:id/like error', e);
