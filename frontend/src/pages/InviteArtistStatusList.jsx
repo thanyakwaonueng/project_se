@@ -163,4 +163,3 @@ export default function EventInvitesPage({ eventId: eventIdProp = null }) {
     </div>
   );
 }
-

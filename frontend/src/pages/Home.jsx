@@ -307,9 +307,3 @@ function EventCard({ image, title, date, desc, genre }) {
 
 //   );
 // }
-
-
-
-
-
-

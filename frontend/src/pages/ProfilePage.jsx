@@ -64,13 +64,14 @@ export default function ProfilePage() {
   if (!me) return null;
 
   // ---------- Derive data (ไม่ใช่ hooks) ----------
-  const up = me.profile || {};
-  const artist = me.artistProfile || null;
-  const venue  = me.venueProfile  || null;
+  const u = me || {};
+  const performer = u.performerInfo || null;
+  const artist = performer?.artistInfo || null;
+  const venue  = performer?.venueInfo  || null;
 
-  const displayName = up.displayName || me.email?.split("@")[0] || "User";
-  const avatar = up.profileImageUrl || "/img/default-avatar.png";
-  const favGenres = (up.favoriteGenres || []).slice(0, 5).join(" • ");
+  const displayName = u.name || me.email?.split("@")[0] || "User";
+  const avatar = u.profilePhotoUrl || "/img/default-avatar.png";
+  const favGenres = (u.favoriteGenres || []).slice(0, 5).join(" • ");
 
   return (
     <>
@@ -100,13 +101,13 @@ export default function ProfilePage() {
           <div className="info-grid">
             <InfoRow label="Role" value={me.role} icon="🧩" />
             {favGenres && <InfoRow label="Fav genres" value={favGenres} icon="🎵" />}
-            {up.birthday && (
-              <InfoRow label="Birthday" value={new Date(up.birthday).toLocaleDateString()} icon="🎂" />
+            {u.birthday && (
+              <InfoRow label="Birthday" value={new Date(u.birthday).toLocaleDateString()} icon="🎂" />
             )}
 
             {artist && (
               <>
-                <InfoRow label="Artist" value={artist.name} icon="🎤" />
+                <InfoRow label="Artist" value={displayName} icon="🎤" />
                 <InfoRow
                   label="Type"
                   value={
@@ -121,7 +122,7 @@ export default function ProfilePage() {
 
             {venue && (
               <>
-                <InfoRow label="Venue" value={venue.name} icon="🏟️" />
+                <InfoRow label="Venue" value={displayName} icon="🏟️" />
                 <InfoRow
                   label="Type"
                   value={
@@ -137,7 +138,7 @@ export default function ProfilePage() {
 
           <div className="profile-actions">
             <Link to="/account_setup" className="btn-primary">Edit profile</Link>
-            {artist && <Link to={`/page_artists/${slugify(artist.name)}`} className="btn-ghost">View public artist</Link>}
+            {artist && <Link to={`/page_artists/${slugify(u.name)}`} className="btn-ghost">View public artist</Link>}
             {venue && <Link to="/me/venue" className="btn-ghost">Manage venue</Link>}
           </div>
         </div>

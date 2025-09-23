@@ -3,7 +3,7 @@ import api, { extractErrorMessage } from "../lib/api";
 import "../css/AccountSetupPage.css";
 
 /* แนวเพลงตัวอย่าง */
-const PRESET_GENRES = ["Pop","Rock","Indie","Jazz","Blues","Hip-Hop","EDM","Folk","Metal","R&B"];
+const PRESET_GENRES = ["Pop", "Rock", "Indie", "Jazz", "Blues", "Hip-Hop", "EDM", "Folk", "Metal", "R&B"];
 
 /* ล้างค่าว่างออกก่อนส่ง */
 function cleanObject(obj) {
@@ -27,15 +27,15 @@ export default function AccountSetupPage() {
   const [role, setRole] = useState(""); // "", "AUDIENCE", "ARTIST"
 
   // 2) โปรไฟล์พื้นฐาน
-  const [displayName, setDisplayName] = useState("");
-  const [firstName, setFirstName]   = useState("");
-  const [lastName, setLastName]     = useState("");
-  const [bio, setBio]               = useState("");
+  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [bio, setBio] = useState("");
   const [favoriteGenres, setFavoriteGenres] = useState([]);
   const [birthDate, setBirthDate] = useState("");
 
   // ใช้คุม max ให้เลือกได้ไม่เกิน “วันนี้”
-  const todayStr = React.useMemo(() => new Date().toISOString().slice(0,10), []);
+  const todayStr = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   // 3) ฟอร์ม Artist (ครบทุกฟิลด์ตามที่ให้มา)
   const [artist, setArtist] = useState({
@@ -81,9 +81,9 @@ export default function AccountSetupPage() {
 
   // 4) UX
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving]   = useState(false);
-  const [ok, setOk]           = useState(false);
-  const [err, setErr]         = useState("");
+  const [saving, setSaving] = useState(false);
+  const [ok, setOk] = useState(false);
+  const [err, setErr] = useState("");
 
   // Prefill
   useEffect(() => {
@@ -96,11 +96,26 @@ export default function AccountSetupPage() {
         const { data } = await api.get("/api/auth/me", { withCredentials: true });
         if (!mounted || !data) return;
 
-        setDisplayName(data.displayName || "");
+        setName(data.name || "");
         setFirstName(data.firstName || "");
         setLastName(data.lastName || "");
         setBio(data.bio || "");
         setFavoriteGenres(Array.isArray(data.favoriteGenres) ? data.favoriteGenres : []);
+
+        const p = data.performerInfo
+        const a = p.artistInfo
+        setArtist({
+          name: data.name || "", profilePhotoUrl: data.profilePhotoUrl || "", 
+          description: a.description || "", genre: a.genre || "", subGenre: a.subGenre || "", 
+          bookingType: a.bookingType || "", foundingYear: a.foundingYear || "", label: a.label || "", 
+          isIndependent: a.isIndependent || false, memberCount: a.memberCount || "", priceMin: a.priceMin || "", 
+          priceMax: a.priceMax || "", contactEmail: p.contactEmail || "", contactPhone: p.contactPhone || "",
+          photoUrl: a.photoUrl || "", videoUrl: a.videoUrl || "", rateCardUrl: a.rateCardUrl || "", 
+          epkUrl: a.epkUrl || "", riderUrl: a.riderUrl || "", spotifyUrl: a.spotifyUrl || "", 
+          youtubeUrl: p.youtubeUrl || "", appleMusicUrl: a.appleMusicUrl || "", facebookUrl: p.facebookUrl || "", 
+          instagramUrl: p.instagramUrl || "", twitterUrl: p.twitterUrl || "", soundcloudUrl: a.soundcloudUrl || "", 
+          shazamUrl: a.shazamUrl || "", bandcampUrl: a.bandcampUrl || "", tiktokUrl: p.tiktokUrl || "",
+        });
       } catch (_e) {
         // ไม่ fatal
       } finally {
@@ -116,7 +131,7 @@ export default function AccountSetupPage() {
 
   const resetForm = () => {
     setRole("");
-    setDisplayName(""); setFirstName(""); setLastName(""); setBio(""); setFavoriteGenres([]);
+    setName(""); setFirstName(""); setLastName(""); setBio(""); setFavoriteGenres([]);
     setArtist({
       name: "", profilePhotoUrl: "", description: "",
       genre: "", subGenre: "", bookingType: "", foundingYear: "",
@@ -132,7 +147,7 @@ export default function AccountSetupPage() {
     setOk(false); setErr("");
   };
 
-  
+
 
   const handleSave = async () => {
     setSaving(true);
@@ -151,7 +166,7 @@ export default function AccountSetupPage() {
 
       // 1) บันทึกโปรไฟล์พื้นฐาน
       const setupPayload = {
-        displayName,
+        name,
         favoriteGenres,
         ...(avatarUrl ? { avatarUrl } : {}),        // ใส่เฉพาะเมื่อมี URL จริง
         ...(birthDate ? { birthDate } : {}),        // ใส่เมื่อผู้ใช้เลือกจริง
@@ -163,13 +178,13 @@ export default function AccountSetupPage() {
       // 2) ถ้า ARTIST -> ตรวจและส่งแบบฟอร์มครบทุกฟิลด์
       if (role === "ARTIST") {
         // validate ขั้นต่ำ
-        if (!artist.name.trim())  throw new Error("กรุณากรอก Name (Stage name)");
+        if (!artist.name.trim()) throw new Error("กรุณากรอก Name (Stage name)");
         if (!artist.genre.trim()) throw new Error("กรุณากรอก Genre");
         if (!artist.bookingType.trim()) throw new Error("กรุณาเลือก Booking type");
 
         const hasSample =
           [artist.spotifyUrl, artist.youtubeUrl, artist.appleMusicUrl, artist.soundcloudUrl,
-           artist.bandcampUrl, artist.tiktokUrl, artist.shazamUrl].some(v => v && v.trim() !== "");
+          artist.bandcampUrl, artist.tiktokUrl, artist.shazamUrl].some(v => v && v.trim() !== "");
         if (!hasSample) throw new Error("ใส่ลิงก์เพลง/ตัวอย่างผลงานอย่างน้อย 1 ช่อง");
 
         const hasContact =
@@ -179,9 +194,9 @@ export default function AccountSetupPage() {
 
         // แปลงตัวเลข
         const foundingYearNum = artist.foundingYear ? parseInt(artist.foundingYear, 10) : undefined;
-        const memberCountNum  = artist.memberCount  ? parseInt(artist.memberCount, 10)  : undefined;
-        const priceMinNum     = artist.priceMin     ? Number(artist.priceMin)           : undefined;
-        const priceMaxNum     = artist.priceMax     ? Number(artist.priceMax)           : undefined;
+        const memberCountNum = artist.memberCount ? parseInt(artist.memberCount, 10) : undefined;
+        const priceMinNum = artist.priceMin ? Number(artist.priceMin) : undefined;
+        const priceMaxNum = artist.priceMax ? Number(artist.priceMax) : undefined;
 
         const artistPayload = cleanObject({
           // mapping เข้ากับ backend (คงทั้งชื่อที่ตรง backend เดิม + ช่องใหม่)
@@ -292,7 +307,7 @@ export default function AccountSetupPage() {
         {/* เส้นคั่น */}
         <div className="a-line"></div>
 
-        {ok  && <div className="acc-msg ok">บันทึกโปรไฟล์เรียบร้อย!</div>}
+        {ok && <div className="acc-msg ok">บันทึกโปรไฟล์เรียบร้อย!</div>}
         {err && <div className="acc-msg err">{err}</div>}
 
         {/* ===== เลือก ROLE (แสดงเฉพาะยังไม่เลือก) ===== */}
@@ -337,88 +352,88 @@ export default function AccountSetupPage() {
         {/* ===== Basic profile ===== */}
         {role && (
           <div ref={formRef}>
-          <section className="acc-section" aria-busy={loading}>
-            <h2 className="acc-sectionTitle">Without music, life would be a mistake.</h2>
+            <section className="acc-section" aria-busy={loading}>
+              <h2 className="acc-sectionTitle">Without music, life would be a mistake.</h2>
 
-            <div className="acc-basicGrid">
-              {/* ซ้าย: อวาตาร์ (ของเดิม) */}
-              <div>
-                <div className="acc-avatarCard" onClick={handlePickAvatar} role="button" aria-label="Upload avatar">
-                  {avatarPreview ? (
-                    <>
-                      <img src={avatarPreview} alt="avatar preview" />
-                      <div className="acc-avatarEdit">เปลี่ยนรูป</div>
-                    </>
-                  ) : (
-                    <div className="acc-avatarHint">คลิกเพื่อเพิ่มรูป<br/>(สัดส่วน 1:1)</div>
-                  )}
+              <div className="acc-basicGrid">
+                {/* ซ้าย: อวาตาร์ (ของเดิม) */}
+                <div>
+                  <div className="acc-avatarCard" onClick={handlePickAvatar} role="button" aria-label="Upload avatar">
+                    {avatarPreview ? (
+                      <>
+                        <img src={avatarPreview} alt="avatar preview" />
+                        <div className="acc-avatarEdit">เปลี่ยนรูป</div>
+                      </>
+                    ) : (
+                      <div className="acc-avatarHint">คลิกเพื่อเพิ่มรูป<br />(สัดส่วน 1:1)</div>
+                    )}
+                  </div>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="acc-fileInput"
+                    onChange={handleAvatarChange}
+                  />
                 </div>
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="acc-fileInput"
-                  onChange={handleAvatarChange}
-                />
-              </div>
 
-              {/* ขวา: ฟิลด์ */}
-              <div>
-                <div className="acc-formGrid">
-                  {/* Username (เส้นใต้ + โฟกัสดำ) */}
-                  <div className="col-span-2">
-                    <label className="acc-label">Username</label>
-                    <input
-                      type="text"
-                      className="acc-inputUnderline"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="ตั้งชื่อผู้ใช้"
-                    />
-                  </div>
+                {/* ขวา: ฟิลด์ */}
+                <div>
+                  <div className="acc-formGrid">
+                    {/* Username (เส้นใต้ + โฟกัสดำ) */}
+                    <div className="col-span-2">
+                      <label className="acc-label">Username</label>
+                      <input
+                        type="text"
+                        className="acc-inputUnderline"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="ตั้งชื่อผู้ใช้"
+                      />
+                    </div>
 
-                  {/* วันเกิด */}
-                  <div className="col-span-2">
-                    <label className="acc-label">Birth date</label>
+                    {/* วันเกิด */}
+                    <div className="col-span-2">
+                      <label className="acc-label">Birth date</label>
 
-                    <input
-                      type="date"
-                      className="acc-inputUnderline acc-inputDate"
-                      value={birthDate}
-                      onChange={(e) => setBirthDate(e.target.value)}
-                      max={todayStr}
-                      inputMode="numeric"      // บนมือถือจะขึ้นแป้นตัวเลข
-                      // ✅ อนุญาตให้พิมพ์: ไม่ใส่ onKeyDown ป้องกันอีกต่อไป
-                      onFocus={(e) => e.target.showPicker?.()} // ยังเด้งปฏิทินได้
-                    />
-                  </div>
+                      <input
+                        type="date"
+                        className="acc-inputUnderline acc-inputDate"
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                        max={todayStr}
+                        inputMode="numeric"      // บนมือถือจะขึ้นแป้นตัวเลข
+                        // ✅ อนุญาตให้พิมพ์: ไม่ใส่ onKeyDown ป้องกันอีกต่อไป
+                        onFocus={(e) => e.target.showPicker?.()} // ยังเด้งปฏิทินได้
+                      />
+                    </div>
 
-                  
 
-                  {/* Favorite genres (เดิม) */}
-                  <div className="col-span-2">
-                    <label className="acc-label">Favorite genres</label>
-                    <div className="acc-chips">
-                      {PRESET_GENRES.map((g) => {
-                        const selected = favoriteGenres.includes(g);
-                        return (
-                          <button
-                            key={g}
-                            type="button"
-                            className={`acc-chip ${selected ? "is-selected" : ""}`}
-                            aria-pressed={selected}
-                            onClick={() => toggleGenre(g)}
-                          >
-                            {g}
-                          </button>
-                        );
-                      })}
+
+                    {/* Favorite genres (เดิม) */}
+                    <div className="col-span-2">
+                      <label className="acc-label">Favorite genres</label>
+                      <div className="acc-chips">
+                        {PRESET_GENRES.map((g) => {
+                          const selected = favoriteGenres.includes(g);
+                          return (
+                            <button
+                              key={g}
+                              type="button"
+                              className={`acc-chip ${selected ? "is-selected" : ""}`}
+                              aria-pressed={selected}
+                              onClick={() => toggleGenre(g)}
+                            >
+                              {g}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
           </div>
         )}
 
@@ -430,39 +445,39 @@ export default function AccountSetupPage() {
             <div>
               <label className="acc-label">Name *</label>
               <input className="form-control"
-                     value={artist.name}
-                     onChange={e=>setA("name", e.target.value)}
-                     required />
+                value={artist.name}
+                onChange={e => setA("name", e.target.value)}
+                required />
             </div>
             <div>
               <label className="acc-label">Profile Photo URL</label>
               <input value={artist.profilePhotoUrl}
-                     onChange={e=>setA("profilePhotoUrl", e.target.value)}
-                     placeholder="https://..." />
+                onChange={e => setA("profilePhotoUrl", e.target.value)}
+                placeholder="https://..." />
             </div>
 
             <div className="col-span-2">
               <label className="acc-label">Description</label>
               <textarea rows={3}
-                        value={artist.description}
-                        onChange={e=>setA("description", e.target.value)} />
+                value={artist.description}
+                onChange={e => setA("description", e.target.value)} />
             </div>
 
             <div>
               <label className="acc-label">Genre *</label>
               <input value={artist.genre}
-                     onChange={e=>setA("genre", e.target.value)}
-                     required />
+                onChange={e => setA("genre", e.target.value)}
+                required />
             </div>
             <div>
               <label className="acc-label">Sub-genre</label>
               <input value={artist.subGenre}
-                     onChange={e=>setA("subGenre", e.target.value)} />
+                onChange={e => setA("subGenre", e.target.value)} />
             </div>
             <div>
               <label className="acc-label">Booking type *</label>
               <select value={artist.bookingType}
-                      onChange={e=>setA("bookingType", e.target.value)}>
+                onChange={e => setA("bookingType", e.target.value)}>
                 <option value="">-- เลือกรูปแบบ --</option>
                 <option value="FULL_BAND">Full-band</option>
                 <option value="TRIO">Trio</option>
@@ -473,22 +488,22 @@ export default function AccountSetupPage() {
             <div>
               <label className="acc-label">Founding year</label>
               <input value={artist.foundingYear}
-                     onChange={e=>setA("foundingYear", e.target.value.replace(/[^\d]/g,""))}
-                     placeholder="YYYY" />
+                onChange={e => setA("foundingYear", e.target.value.replace(/[^\d]/g, ""))}
+                placeholder="YYYY" />
             </div>
 
             <div>
               <label className="acc-label">Label</label>
               <input value={artist.label}
-                     onChange={e=>setA("label", e.target.value)} />
+                onChange={e => setA("label", e.target.value)} />
             </div>
             <div>
               <label className="acc-label">Independent artist</label>
               <div className="acc-check">
                 <input id="isIndie"
-                       type="checkbox"
-                       checked={artist.isIndependent}
-                       onChange={(e)=>setA("isIndependent", e.target.checked)} />
+                  type="checkbox"
+                  checked={artist.isIndependent}
+                  onChange={(e) => setA("isIndependent", e.target.checked)} />
                 <label htmlFor="isIndie">Yes</label>
               </div>
             </div>
@@ -496,78 +511,78 @@ export default function AccountSetupPage() {
             <div>
               <label className="acc-label">Member count</label>
               <input value={artist.memberCount}
-                     onChange={e=>setA("memberCount", e.target.value.replace(/[^\d]/g,""))} />
+                onChange={e => setA("memberCount", e.target.value.replace(/[^\d]/g, ""))} />
             </div>
             <div>
               <label className="acc-label">Price min</label>
               <input value={artist.priceMin}
-                     onChange={e=>setA("priceMin", e.target.value.replace(/[^0-9.]/g,""))} />
+                onChange={e => setA("priceMin", e.target.value.replace(/[^0-9.]/g, ""))} />
             </div>
             <div>
               <label className="acc-label">Price max</label>
               <input value={artist.priceMax}
-                     onChange={e=>setA("priceMax", e.target.value.replace(/[^0-9.]/g,""))} />
+                onChange={e => setA("priceMax", e.target.value.replace(/[^0-9.]/g, ""))} />
             </div>
 
             <div>
               <label className="acc-label">Contact email</label>
               <input value={artist.contactEmail}
-                     onChange={e=>setA("contactEmail", e.target.value)}
-                     placeholder="example@mail.com" />
+                onChange={e => setA("contactEmail", e.target.value)}
+                placeholder="example@mail.com" />
             </div>
             <div>
               <label className="acc-label">Contact phone</label>
               <input value={artist.contactPhone}
-                     onChange={e=>setA("contactPhone", e.target.value)}
-                     placeholder="080-xxx-xxxx" />
+                onChange={e => setA("contactPhone", e.target.value)}
+                placeholder="080-xxx-xxxx" />
             </div>
 
             <div>
               <label className="acc-label">Photo URL</label>
               <input value={artist.photoUrl}
-                     onChange={e=>setA("photoUrl", e.target.value)}
-                     placeholder="https://..." />
+                onChange={e => setA("photoUrl", e.target.value)}
+                placeholder="https://..." />
             </div>
             <div>
               <label className="acc-label">Video URL</label>
               <input value={artist.videoUrl}
-                     onChange={e=>setA("videoUrl", e.target.value)}
-                     placeholder="https://..." />
+                onChange={e => setA("videoUrl", e.target.value)}
+                placeholder="https://..." />
             </div>
 
             <div>
               <label className="acc-label">Rate card URL</label>
               <input value={artist.rateCardUrl}
-                     onChange={e=>setA("rateCardUrl", e.target.value)} />
+                onChange={e => setA("rateCardUrl", e.target.value)} />
             </div>
             <div>
               <label className="acc-label">EPK URL</label>
               <input value={artist.epkUrl}
-                     onChange={e=>setA("epkUrl", e.target.value)} />
+                onChange={e => setA("epkUrl", e.target.value)} />
             </div>
             <div>
               <label className="acc-label">Rider URL</label>
               <input value={artist.riderUrl}
-                     onChange={e=>setA("riderUrl", e.target.value)} />
+                onChange={e => setA("riderUrl", e.target.value)} />
             </div>
 
             {[
-              ["spotifyUrl","Spotify"],
-              ["youtubeUrl","YouTube"],
-              ["appleMusicUrl","Apple Music"],
-              ["facebookUrl","Facebook"],
-              ["instagramUrl","Instagram"],
-              ["twitterUrl","X (Twitter)"],
-              ["soundcloudUrl","SoundCloud"],
-              ["shazamUrl","Shazam"],
-              ["bandcampUrl","Bandcamp"],
-              ["tiktokUrl","TikTok"],
-            ].map(([key,label]) => (
+              ["spotifyUrl", "Spotify"],
+              ["youtubeUrl", "YouTube"],
+              ["appleMusicUrl", "Apple Music"],
+              ["facebookUrl", "Facebook"],
+              ["instagramUrl", "Instagram"],
+              ["twitterUrl", "X (Twitter)"],
+              ["soundcloudUrl", "SoundCloud"],
+              ["shazamUrl", "Shazam"],
+              ["bandcampUrl", "Bandcamp"],
+              ["tiktokUrl", "TikTok"],
+            ].map(([key, label]) => (
               <div key={key}>
                 <label className="acc-label">{label} URL</label>
                 <input value={artist[key]}
-                       onChange={e=>setA(key, e.target.value)}
-                       placeholder="https://..." />
+                  onChange={e => setA(key, e.target.value)}
+                  placeholder="https://..." />
               </div>
             ))}
           </div>

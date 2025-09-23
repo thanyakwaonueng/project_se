@@ -239,11 +239,12 @@ async function main() {
   console.log('🌱 Seeding… (users, 50 artists, venues, events, likes, links)');
 
   // ---------- ล้างข้อมูลที่มีความสัมพันธ์ก่อน ----------
-  await prisma.artistLike.deleteMany();
-  await prisma.artistEvent.deleteMany();
+  await prisma.likeEvent.deleteMany();
+  await prisma.likePerformer.deleteMany();
   await prisma.event.deleteMany();
-  await prisma.venueProfile.deleteMany();
-  await prisma.artistProfile.deleteMany();
+  await prisma.artist.deleteMany();
+  await prisma.venue.deleteMany();
+  await prisma.performer.deleteMany();
   await prisma.user.deleteMany();
 
   // ---------- ผู้ใช้ระบบพื้นฐาน ----------
@@ -255,18 +256,17 @@ async function main() {
       isVerified: true
     }
   });
+
   await prisma.user.create({
     data: {
       email: 'fan@example.com',
       passwordHash: await bcrypt.hash('password123', 10),
       role: 'AUDIENCE',
-      isVerified: true
     }
   });
 
   /* ---------- Artists: 50 คน ---------- */
   const artistUsers = [];
-
   // 1) กลุ่ม official (~10 คน)
   for (const a of OFFICIAL_ARTISTS) {
     const user = await prisma.user.create({
@@ -274,13 +274,28 @@ async function main() {
         email: a.email,
         passwordHash: await bcrypt.hash('password123', 10),
         role: 'ARTIST',
-        isVerified: true
+        name: a.name || null,
+        profilePhotoUrl: a.profilePhotoUrl || null,
+        birthday: a.birthday || null,
+        isVerified: true,
       },
     });
-
-    const artist = await prisma.artistProfile.create({
+    const performer = await prisma.performer.create({
       data: {
-        name: a.name,
+        instagramUrl: a.instagramUrl || null,
+        facebookUrl: a.facebookUrl || null,
+        tiktokUrl: a.tiktokUrl || null,
+        lineUrl: a.lineUrl || null,
+        twitterUrl: a.twitterUrl || null,
+        youtubeUrl: a.youtubeUrl || null,
+        contactEmail: a.contactEmail || null,
+        contactPhone: a.contactPhone || null,
+        
+        user: { connect: { id: user.id } },
+      },
+    });
+    const artist = await prisma.artist.create({
+      data: {
         description: a.description ?? null,
         genre: a.genre,
         subGenre: a.subGenre ?? null,
@@ -289,36 +304,24 @@ async function main() {
         label: a.label ?? null,
         isIndependent: typeof a.isIndependent === 'boolean' ? a.isIndependent : true,
         memberCount: a.memberCount ?? null,
-        contactEmail: a.contactEmail ?? null,
-        contactPhone: a.contactPhone ?? null,
         priceMin: a.priceMin != null ? Number(a.priceMin) : null,
         priceMax: a.priceMax != null ? Number(a.priceMax) : null,
-
-        photoUrl: a.photoUrl ?? null,
-        videoUrl: a.videoUrl ?? null,
-        profilePhotoUrl: a.profilePhotoUrl ?? null,
         rateCardUrl: a.rateCardUrl ?? null,
         epkUrl: a.epkUrl ?? null,
         riderUrl: a.riderUrl ?? null,
-
-        spotifyUrl: a.spotifyUrl ?? null,
-        youtubeUrl: a.youtubeUrl ?? null,
         appleMusicUrl: a.appleMusicUrl ?? null,
-        facebookUrl: a.facebookUrl ?? null,
-        instagramUrl: a.instagramUrl ?? null,
         soundcloudUrl: a.soundcloudUrl ?? null,
         shazamUrl: a.shazamUrl ?? null,
         bandcampUrl: a.bandcampUrl ?? null,
-        tiktokUrl: a.tiktokUrl ?? null,
-        twitterUrl: a.twitterUrl ?? null,
+        spotifyUrl: a.spotifyUrl || null,
 
-        user: { connect: { id: user.id } },
+        performer: { connect: { userId: performer.userId } },
       },
     });
     artistUsers.push({ user, artist });
   }
 
-  // 2) กลุ่มสมมติ 40 คน (ใช้ลิงก์ค้นหาที่กดได้จริงทุกโดเมน)
+    // 2) กลุ่มสมมติ 40 คน (ใช้ลิงก์ค้นหาที่กดได้จริงทุกโดเมน)
   for (let i = 0; i < FAKE_NAMES.length; i++) {
     const name = FAKE_NAMES[i];
     const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g,'_')}@example.com`;
@@ -329,13 +332,29 @@ async function main() {
         email,
         passwordHash: await bcrypt.hash('password123', 10),
         role: 'ARTIST',
+        name: name,
+        profilePhotoUrl: `https://picsum.photos/seed/${encodeURIComponent(name)}/640/400`,
         isVerified: true
       }
     });
 
-    const artist = await prisma.artistProfile.create({
+    const performer = await prisma.performer.create({
       data: {
-        name,
+        facebookUrl:  Math.random() < 0.5  ? links.facebookUrl  : null,
+        instagramUrl: Math.random() < 0.9  ? links.instagramUrl : null,
+        tiktokUrl:    Math.random() < 0.6  ? links.tiktokUrl    : null,
+        twitterUrl:   Math.random() < 0.7  ? links.twitterUrl   : null,
+        lineUrl: links.lineUrl || null,
+        youtubeUrl:   Math.random() < 0.9  ? links.youtubeUrl   : null,
+        contactEmail: `booking+${user.id}@${name.replace(/\s+/g,'').toLowerCase()}.example`,
+        contactPhone: Math.random() < 0.4 ? `+66-8${randInt(10,99)}-${randInt(100,999)}-${randInt(1000,9999)}` : null,
+        
+        user: { connect: { id: user.id } },
+      },
+    });
+
+    const artist = await prisma.artist.create({
+      data: {
         description: `${name} live act from Chiang Mai with intimate shows and unique vibe.`,
         genre: rand(GENRES),
         subGenre: Math.random() < 0.5 ? rand(GENRES) : null,
@@ -344,27 +363,19 @@ async function main() {
         label: Math.random() < 0.3 ? 'Independent' : (Math.random()<0.5?'Local Circle':'-'),
         isIndependent: Math.random() < 0.6,
         memberCount: randInt(1, 7),
-        contactEmail: `booking+${user.id}@${name.replace(/\s+/g,'').toLowerCase()}.example`,
-        contactPhone: Math.random() < 0.4 ? `+66-8${randInt(10,99)}-${randInt(100,999)}-${randInt(1000,9999)}` : null,
         priceMin: Math.random() < 0.7 ? randInt(3000, 15000) : null,
         priceMax: Math.random() < 0.7 ? randInt(15000, 60000) : null,
-
-        profilePhotoUrl: `https://picsum.photos/seed/${encodeURIComponent(name)}/640/400`,
-
-        // ให้บางช่องเว้นว่างเพื่อความสมจริง (มีครบ/ขาดบ้าง)
+        rateCardUrl: links.rateCardUrl ?? null,
+        epkUrl: links.epkUrl ?? null,
+        riderUrl: links.riderUrl ?? null,
         spotifyUrl:   Math.random() < 0.85 ? links.spotifyUrl   : null,
-        youtubeUrl:   Math.random() < 0.9  ? links.youtubeUrl   : null,
         appleMusicUrl:Math.random() < 0.6  ? links.appleMusicUrl: null,
-        facebookUrl:  Math.random() < 0.5  ? links.facebookUrl  : null,
-        instagramUrl: Math.random() < 0.9  ? links.instagramUrl : null,
         soundcloudUrl:Math.random() < 0.4  ? links.soundcloudUrl: null,
         shazamUrl:    Math.random() < 0.3  ? links.shazamUrl    : null,
         bandcampUrl:  Math.random() < 0.3  ? links.bandcampUrl  : null,
-        tiktokUrl:    Math.random() < 0.6  ? links.tiktokUrl    : null,
-        twitterUrl:   Math.random() < 0.7  ? links.twitterUrl   : null,
 
-        user: { connect: { id: user.id } },
-      }
+        performer: { connect: { userId: performer.userId } },
+      },
     });
 
     artistUsers.push({ user, artist });
@@ -391,14 +402,13 @@ async function main() {
     const likeCountTarget = randInt(5, 90);
     const shuffled = likerUsers.slice().sort(() => Math.random() - 0.5);
     for (let i = 0; i < likeCountTarget; i++) {
-      await prisma.artistLike.create({
-        data: { userId: shuffled[i].id, artistId: artist.id }
+      await prisma.likePerformer.create({
+        data: { userId: shuffled[i].id, artistId: artist.performerId }
       }).catch(()=>{});
     }
   }
   console.log('👍 Random likes generated');
-
-  /* ---------- Venues (เชียงใหม่) ---------- */
+  // ---------- Venues (เชียงใหม่) ----------
   const venueDefs = [
     { email: 'nimman.studio@venue.example',   name: 'Nimman Studio',        lat: 18.79650, lng: 98.97890, genre: 'Indie/Alt' },
     { email: 'oldcity.arena@venue.example',   name: 'Old City Arena',       lat: 18.79410, lng: 98.98870, genre: 'Pop/Rock' },
@@ -412,33 +422,55 @@ async function main() {
 
   const venueProfiles = [];
   for (const v of venueDefs) {
+    const photos = pickVenuePhotos(4);
     const u = await prisma.user.create({
       data: {
         email: v.email,
         passwordHash: await bcrypt.hash('password123', 10),
         role: 'ORGANIZE',
-        isVerified: true
+        name: v.name,
+        profilePhotoUrl: photos[0],
+        isVerified: true,
       }
     });
-    const photos = pickVenuePhotos(4);
-    const vp = await prisma.venueProfile.create({
+    const performer = await prisma.performer.create({
       data: {
+        instagramUrl: v.instagramUrl || null,
+        facebookUrl: v.facebookUrl || null,
+        tiktokUrl: v.tiktokUrl || null,
+        lineUrl: v.lineUrl || null,
+        youtubeUrl: v.youtubeUrl || null,
+        contactEmail: v.contactEmail || null,
+        contactPhone: v.contactPhone || null,
         userId: u.id,
-        name: v.name,
-        locationUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.name+' Chiang Mai')}`,
+      },
+    });
+    const vp = await prisma.venue.create({
+      data: {
+        performerId: performer.userId,
         genre: v.genre,
         alcoholPolicy: 'SERVE',
-        latitude: v.lat,
-        longitude: v.lng,
-        profilePhotoUrl: photos[0],
         photoUrls: photos,
       }
     });
-    venueProfiles.push(vp);
+    const vl = await prisma.venueLocation.create({
+      data: {
+        venueId: vp.performerId,
+        locationUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v.name+' Chiang Mai')}`,
+        latitude: v.lat || null,
+        longitude: v.lng || null,
+      }
+    });
+
+    venueProfiles.push({
+      id: vp.performerId,       
+      name: u.name,      
+    });
   }
   const venueByName = Object.fromEntries(venueProfiles.map(v => [v.name, v.id]));
   console.log(`🏟️ Venues created: ${venueProfiles.length}`);
 
+  // ---------- Events ----------
   /* ---------- Events (16 งานในเดือนนี้) ---------- */
   const eventsPlan = [
     { name: 'Nimman Indie Night',       venue: 'Nimman Studio',        date: dInThisMonth(3, 20, 0),  type: 'INDOOR',  ticketing: 'FREE',           genre: 'Indie',     door: '19:00', end: '22:30' },
@@ -476,6 +508,7 @@ async function main() {
         genre: plan.genre,
         venueId: venueByName[plan.venue],
         posterUrl: EVENT_POSTERS[i % EVENT_POSTERS.length],
+        posterUrl: EVENT_POSTERS[i % EVENT_POSTERS.length],
       }
     });
     createdEvents.push(ev);
@@ -490,7 +523,7 @@ async function main() {
       const a = shuffledArtists[i].artist;
       await prisma.artistEvent.create({
         data: {
-          artistId: a.id,
+          artistId: a.performerId,
           eventId: ev.id,
           status: 'PENDING',
         }
@@ -499,21 +532,31 @@ async function main() {
   }
 
   // ---------- เชิญศิลปิน id ต่ำสุดเข้าทุกงาน (เดโม) ----------
-  const artistOne = await prisma.artistProfile.findFirst({ orderBy: { id: 'asc' } });
+  const artistOne = await prisma.artist.findFirst({ 
+    orderBy: { performerId: 'asc' }, 
+    include: {
+      performer: {
+        include: {
+          user: true
+        }
+      }
+    }
+  });
   if (artistOne) {
     for (const ev of createdEvents) {
       const exists = await prisma.artistEvent.findUnique({
-        where: { artistId_eventId: { artistId: artistOne.id, eventId: ev.id } },
+        where: { artistId_eventId: { artistId: artistOne.performerId, eventId: ev.id } },
       });
       if (!exists) {
         await prisma.artistEvent.create({
-          data: { artistId: artistOne.id, eventId: ev.id, status: 'PENDING' }
+          data: { artistId: artistOne.performerId, eventId: ev.id, status: 'PENDING' }
         });
       }
     }
-    console.log(`✅ Invited artist id=${artistOne.id} (${artistOne.name}) to all events.`);
-  }
+    console.log(`✅ Invited artist id=${artistOne.performerId} (${artistOne.performer.user.name}) to all events.`);
+  } 
 
+  console.log('✅ Done! 50 artists, venues, events, likes & links seeded.');
   console.log('✅ Done! 50 artists, venues, events, likes & links seeded.');
 }
 

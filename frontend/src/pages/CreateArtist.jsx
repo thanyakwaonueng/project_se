@@ -28,24 +28,26 @@ export default function CreateArtist() {
   useEffect(() => {
     axios.get('/api/auth/me', { withCredentials: true })
       .then(res => {
-        const profile = res.data.artistProfile;
-        if (profile) {
+        const u = res.data;
+        if (u) {
+          const p = u.performerInfo;
+          const a = p.artistInfo;
           setHasProfile(true);
-          setName(profile.name || '');
-          setGenre(profile.genre || '');
-          setBookingType(profile.bookingType || 'SOLO');
-          setDescription(profile.description || '');
-          setFoundingYear(profile.foundingYear || '');
-          setIsIndependent(profile.isIndependent ?? true);
-          setMemberCount(profile.memberCount || '');
-          setContactEmail(profile.contactEmail || '');
-          setContactPhone(profile.contactPhone || '');
-          setPriceMin(profile.priceMin || '');
-          setPriceMax(profile.priceMax || '');
-          setProfilePhotoUrl(profile.profilePhotoUrl || '');
-          setSpotifyUrl(profile.spotifyUrl || '');
-          setYoutubeUrl(profile.youtubeUrl || '');
-          setInstagramUrl(profile.instagramUrl || '');
+          setName(u.name || '');
+          setGenre(a.genre || '');
+          setBookingType(a.bookingType || 'SOLO');
+          setDescription(a.description || '');
+          setFoundingYear(a.foundingYear || '');
+          setIsIndependent(a.isIndependent ?? true);
+          setMemberCount(a.memberCount || '');
+          setContactEmail(p.contactEmail || '');
+          setContactPhone(p.contactPhone || '');
+          setPriceMin(a.priceMin || '');
+          setPriceMax(a.priceMax || '');
+          setProfilePhotoUrl(u.profilePhotoUrl || '');
+          setSpotifyUrl(a.spotifyUrl || '');
+          setYoutubeUrl(p.youtubeUrl || '');
+          setInstagramUrl(p.instagramUrl || '');
         }
       })
       .catch(err => console.error(err));

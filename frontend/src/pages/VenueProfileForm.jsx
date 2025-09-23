@@ -23,7 +23,7 @@ export default function VenueProfileForm() {
     longitude: '',
   });
 
-  const isEdit = useMemo(() => !!user?.venueProfile?.id, [user]);
+  const isEdit = useMemo(() => !!user?.performerInfo?.venueInfo?.performerId, [user]);
 
   useEffect(() => {
     let alive = true;
@@ -62,20 +62,20 @@ export default function VenueProfileForm() {
       }
 
       try {
-        if (user.venueProfile?.id) {
-          const { data } = await api.get(`/venues/${user.venueProfile.id}`);
+        if (user.performerInfo.venueInfo.performerId) {
+          const { data } = await api.get(`/venues/${user.performerInfo.venueInfo.performerId}`);
           if (!alive) return;
           setForm({
-            name: data?.name || '',
-            locationUrl: data?.locationUrl || '',
+            name: data?.performer.user.name || '',
+            locationUrl: data?.location.locationUrl || '',
             genre: data?.genre || '',
             alcoholPolicy: data?.alcoholPolicy || meta?.alcoholPolicies?.[0] || '',
             description: data?.description || '',
-            contactEmail: data?.contactEmail || '',
-            contactPhone: data?.contactPhone || '',
+            contactEmail: data?.performer.contactEmail || '',
+            contactPhone: data?.performer.contactPhone || '',
             capacity: typeof data?.capacity === 'number' ? String(data.capacity) : '',
-            latitude: typeof data?.latitude === 'number' ? String(data.latitude) : '',
-            longitude: typeof data?.longitude === 'number' ? String(data.longitude) : '',
+            latitude: typeof data?.location.latitude === 'number' ? String(data.location.latitude) : '',
+            longitude: typeof data?.location.longitude === 'number' ? String(data.location.longitude) : '',
           });
         }
       } catch (e) {
@@ -87,7 +87,7 @@ export default function VenueProfileForm() {
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, user?.venueProfile?.id]);
+  }, [loading, user?.performerInfo?.venueInfo?.performerId]);
 
   const canSubmit =
     form.name && form.locationUrl && form.genre && form.alcoholPolicy;
@@ -134,7 +134,7 @@ export default function VenueProfileForm() {
       if (lng !== undefined) payload.longitude = lng;
 
       if (isEdit) {
-        await api.put(`/venues/${user.venueProfile.id}`, payload);
+        await api.put(`/venues/${user.performerInfo.venueInfo.performerId}`, payload);
       } else {
         await api.post('/venues', { userId: user.id, ...payload });
       }

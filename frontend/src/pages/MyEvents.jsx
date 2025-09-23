@@ -17,19 +17,19 @@ export default function MyEvents() {
         const meRes = await axios.get("/api/auth/me", { withCredentials: true });
         const me = meRes.data;
 
-        if (!me.venueProfile) {
+        if (!me.performerInfo.venueInfo) {
           setError("You must create a venue profile before managing events.");
           setLoading(false);
           return;
         }
 
-        setVenueId(me.venueProfile.id);
+        setVenueId(me.performerInfo.venueInfo.performerId);
 
         // ✅ Get all events, then filter for this venue
         const evRes = await axios.get("/api/events", { withCredentials: true });
         const allEvents = evRes.data;
 
-        const myEvents = allEvents.filter(ev => ev.venueId === me.venueProfile.id)
+        const myEvents = allEvents.filter(ev => ev.venueId === me.performerInfo.venueInfo.performerId)
         .sort((a, b) => new Date(a.date) - new Date(b.date));
         setEvents(myEvents);
         setLoading(false);

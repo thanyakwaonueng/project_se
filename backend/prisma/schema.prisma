@@ -16,40 +16,22 @@ model User {
   isVerified   Boolean  @default(false)
   otpHash      String? 
   otpExpiredAt DateTime? 
+  profilePhotoUrl String?
+  name    String?
+  birthday       DateTime?
+  favoriteGenres String[]  // text[] (Postgres)
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  artistProfile ArtistProfile?
-  venueProfile  VenueProfile?
+  performerInfo    Performer?
 
-  profile         UserProfile?
-
-
-
-  // back-relations ใหม่
   roleRequests     RoleRequest[]  @relation("RoleRequestUser") // ผู้ใช้คนนี้เป็นเจ้าของคำขอ
   reviewedRequests RoleRequest[]  @relation("RoleRequestReviewedBy") // ผู้ใช้คนนี้ (แอดมิน) เป็นผู้รีวิว
   notifications    Notification[] @relation("UserNotifications") // การแจ้งเตือนของผู้ใช้
-  artistLikes      ArtistLike[]   @relation("ArtistLikeUser")
+  likePerformers   LikePerformer[] @relation("UserLikePerformer")
+  likeEvents       LikeEvent[]    @relation("UserLikeEvent")
 }
-
-
-model UserProfile {
-  id             Int       @id @default(autoincrement())
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         Int       @unique
-
-  displayName    String?
-  favoriteGenres String[]  // text[] (Postgres)
-
-  profileImageUrl String?
-  birthday       DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  @@index([userId])
-}
-
 
 
 enum UserRole {
@@ -59,11 +41,33 @@ enum UserRole {
   ADMIN
   }
 
+// this table involves artist and organizer contact info
+model Performer {
+  // primary and foreign key linking to a user
+  userId          Int       @id @unique
+  contactEmail    String?
+  contactPhone    String?
+
+  // common contacts for artists and organiser
+  youtubeUrl    String?
+  tiktokUrl     String?
+  facebookUrl   String?
+  instagramUrl  String?
+  twitterUrl    String?
+  lineUrl       String?
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artistInfo Artist?
+  venueInfo Venue?
+
+  likedBy LikePerformer[] @relation("LikedPerformer")
 
 
-model ArtistProfile {
-  id              Int         @id @default(autoincrement())
-  name            String
+  @@index([userId])
+}
+
+
+model Artist {
   description     String?
   genre           String
   subGenre        String?
@@ -72,44 +76,51 @@ model ArtistProfile {
   label           String?
   isIndependent   Boolean     @default(true)
   memberCount     Int?
-  contactEmail    String?
-  contactPhone    String?
   priceMin        Float?
   priceMax        Float?
-  photoUrl        String?
-  videoUrl        String?
-  profilePhotoUrl String?
+
+  spotifyUrl      String?
+  appleMusicUrl   String?
+  soundcloudUrl   String?
+  shazamUrl       String?
+  bandcampUrl     String?
   rateCardUrl     String?
   epkUrl          String?
   riderUrl        String?
 
-  spotifyUrl    String?
-  youtubeUrl    String?
-  appleMusicUrl String?
-  facebookUrl   String?
-  instagramUrl  String?
-  soundcloudUrl String?
-  shazamUrl     String?
-  bandcampUrl   String?
-  tiktokUrl     String?
-  twitterUrl    String?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId Int  @unique
+  performer   Performer @relation(fields: [performerId], references: [userId], onDelete: Cascade)
+  performerId Int  @id @unique // foreign and private key at the same time
 
   // new explicit relation
   artistEvents ArtistEvent[]
+  artistRecords ArtistRecord[]
 
-  likes       ArtistLike[]   @relation("ArtistLikeArtist")
+  @@index([performerId])
 }
 
-model VenueProfile {
-  id              Int           @id @default(autoincrement())
-  name            String
-  locationUrl     String
+model ArtistRecord {
+  id           Int      @id @default(autoincrement())
+  artistId     Int
+  title        String
+  description  String?
+  thumbnailUrl String?
+  photoUrls    String[]
+  videoUrls    String[]
+  date         DateTime?
+  source       String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  artist       Artist    @relation(fields: [artistId], references: [performerId], onDelete: Cascade)
+
+  @@index([artistId])
+}
+
+
+model Venue {
   genre           String
   description     String?
   capacity        Int?
@@ -120,32 +131,31 @@ model VenueProfile {
   timeClose       String?
   alcoholPolicy   AlcoholPolicy
   ageRestriction  AgeRestriction @default(ALL)
-  profilePhotoUrl String?
   photoUrls       String[]
-  contactEmail    String?
-  contactPhone    String?
-  facebookUrl     String?
-  instagramUrl    String?
-  lineUrl         String?
-  tiktokUrl       String?
   websiteUrl      String?
-  
-  //  พิกัดสำหรับแผนที่
-  latitude  Float?
-  longitude Float?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId Int  @unique
+  location VenueLocation?
 
-  events Event[] @relation("VenueEvents")
+  performer   Performer @relation(fields: [performerId], references: [userId], onDelete: Cascade)
+  performerId Int  @id @unique // foreign and private key at the same time
 
-  @@index([latitude, longitude])
+  events Event[] @relation("venueEvents")
 }
 
 
+model VenueLocation {
+  latitude  Float?
+  longitude Float?
+  locationUrl String?
+
+  venue   Venue @relation(fields: [venueId], references: [performerId], onDelete: Cascade)
+  venueId Int  @id @unique
+  
+  @@index([latitude, longitude])
+}
 
 
 enum AgeRestriction {
@@ -153,8 +163,6 @@ enum AgeRestriction {
   E18  // 18+
   E20  // 20+
 }
-
-
 
 
 enum BookingType {
@@ -178,6 +186,7 @@ enum AlcoholPolicy {
   BYOB
 }
 
+
 model Event {
   id             Int           @id @default(autoincrement())
   name           String
@@ -197,14 +206,17 @@ model Event {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  venue   VenueProfile @relation("VenueEvents", fields: [venueId], references: [id], onDelete: Cascade)
+  venue   Venue @relation("venueEvents", fields: [venueId], references: [performerId], onDelete: Cascade)
   venueId Int
 
   // new explicit relation
   artistEvents ArtistEvent[]
+
+  likedBy  LikeEvent [] @relation("LikedEvent")
 }
 
-// new join model that get from a fucking GPT
+// new join model that get from a fucking GPT 
+// (ใจเย็นๆโยม)
 model ArtistEvent {
   artistId Int
   eventId  Int
@@ -216,7 +228,7 @@ model ArtistEvent {
   updatedAt DateTime @updatedAt
 
   // relations
-  artist ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artist Artist @relation(fields: [artistId], references: [performerId], onDelete: Cascade)
   event  Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@id([artistId, eventId]) // composite PK prevents duplicate pair
@@ -243,12 +255,6 @@ enum TicketingType {
   DIRECT_CONTACT
   ONSITE_SALES
 }
-
-
-
-
-
-
 
 
 //สถานะคำขอ
@@ -281,14 +287,7 @@ model RoleRequest {
 }
 
 
-
-
-
-
-
-
 //ตารางnoti
-
 model Notification {
   id        Int      @id @default(autoincrement())
   user      User     @relation("UserNotifications", fields: [userId], references: [id]) // ⬅️ ตั้งชื่อ relation
@@ -304,15 +303,44 @@ model Notification {
 }
 
 
-model ArtistLike {
+
+/*model ArtistLike {
   userId    Int
   artistId  Int
   createdAt DateTime @default(now())
 
   // relations
   user   User          @relation("ArtistLikeUser",   fields: [userId],   references: [id], onDelete: Cascade)
-  artist ArtistProfile @relation("ArtistLikeArtist", fields: [artistId], references: [id], onDelete: Cascade)
+  artist Artist @relation("ArtistLikeArtist", fields: [artistId], references: [performerId], onDelete: Cascade)
 
   @@id([userId, artistId])   // ป้องกัน like ซ้ำ
   @@index([artistId])
+}*/
+
+model LikePerformer {
+  userId    Int
+  performerId  Int
+  createdAt DateTime @default(now())
+
+  // relations
+  user   User       @relation("UserLikePerformer",   fields: [userId],   references: [id], onDelete: Cascade)
+  performer Performer     @relation("LikedPerformer", fields: [performerId], references: [userId], onDelete: Cascade)
+
+  @@id([userId, performerId])   // ป้องกัน like ซ้ำ
+  @@index([userId])
+  @@index([performerId])
+}
+
+model LikeEvent {
+  userId    Int
+  eventId  Int
+  createdAt DateTime @default(now())
+
+  // relations
+  user   User       @relation("UserLikeEvent",   fields: [userId],   references: [id], onDelete: Cascade)
+  event  Event      @relation("LikedEvent", fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([userId, eventId])   // ป้องกัน like ซ้ำ
+  @@index([userId])
+  @@index([eventId])
 }
