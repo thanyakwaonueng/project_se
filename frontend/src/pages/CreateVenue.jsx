@@ -145,7 +145,7 @@ export default function CreateVenue() {
 
       setLoading(false);
       // ไปหน้า list ของสถานที่ (ไม่เข้า /api/venues/:id เพราะเป็น endpoint API)
-      navigate('/page_venues');
+      navigate('/venues');
     } catch (err) {
       setLoading(false);
       setError(err.response?.data?.error || 'Failed to save venue');
@@ -323,7 +323,7 @@ export default function CreateVenue() {
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? (hasProfile ? 'Updating…' : 'Creating…') : (hasProfile ? 'Update Venue' : 'Create Venue')}
           </button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate('/page_venues')}>
+          <button type="button" className="btn btn-secondary" onClick={() => navigate('/venues')}>
             Cancel
           </button>
         </div>

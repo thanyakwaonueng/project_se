@@ -1,20 +1,12 @@
-import { useEffect, useState, useMemo } from "react"; 
+import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
 export default function ProfilePage() {
-  // ---------- Inline CSS ----------
   const styles = `
-  :root{
-    --card-bg:#fff; --muted:#6b7280; --line:#eef0f2; --chip:#eef6ff;
-    --chip-text:#2b6cb0; --primary:#1a73e8; --shadow:0 12px 30px rgba(0,0,0,.08);
-    --radius:18px;
-  }
-  /* พื้นหลังหน้า + คอนเทนเนอร์กลาง */
+  :root{ --card-bg:#fff; --muted:#6b7280; --line:#eef0f2; --chip:#eef6ff; --chip-text:#2b6cb0; --primary:#1a73e8; --shadow:0 12px 30px rgba(0,0,0,.08); --radius:18px; }
   .profile-page-wrap{display:block;padding:48px 16px 72px;background:#f7f8fa;}
   .stack{max-width:960px;margin:0 auto;display:grid;gap:18px;}
-
-  /* การ์ดโปรไฟล์ */
   .profile-card{width:100%;max-width:720px;margin:0 auto;background:var(--card-bg);border-radius:var(--radius);box-shadow:var(--shadow);position:relative;overflow:hidden;}
   .profile-cover{height:96px;background:linear-gradient(180deg,#fff4e6,#fff);}
   .profile-avatar-wrap{display:flex;justify-content:center;margin-top:-40px;}
@@ -38,8 +30,6 @@ export default function ProfilePage() {
   .btn-ghost{background:#f0f3f6;color:#0f172a;}
   .btn-ghost:hover{filter:brightness(.97);}
   @media (max-width:480px){ .info-row{grid-template-columns:120px 1fr;} }
-
-  /* การ์ด “กำลังติดตาม” — prefix pf- ป้องกันชน */
   .following-card{width:100%;max-width:720px;margin:0 auto;background:var(--card-bg);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
   .following-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);}
   .following-title{font-weight:700;font-size:16px;}
@@ -47,8 +37,6 @@ export default function ProfilePage() {
   .tab-btn{height:34px;padding:0 12px;border-radius:999px;background:#f0f3f6;color:#0f172a;font-weight:600;border:0;cursor:pointer}
   .tab-btn.active{background:var(--primary);color:#fff;}
   .following-body{padding:12px 12px 8px;}
-
-  /* list แนวนอนแบบบรรทัดยาว (ไม่ตัดชื่อ) */
   .pf-list{display:grid;grid-template-columns:1fr;gap:12px;}
   .pf-card{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;width:100%;}
   .pf-thumb{width:64px;height:64px;border-radius:12px;object-fit:cover;background:#fff;border:1px solid #eee;}
@@ -56,41 +44,35 @@ export default function ProfilePage() {
   .pf-name{font-weight:800;font-size:14px;line-height:1.25;margin:0 0 2px 0;white-space:normal;word-break:break-word;}
   .pf-sub{font-size:12px;color:var(--muted);white-space:normal;word-break:break-word;}
   .pf-actions{display:flex;gap:8px;align-self:flex-start;}
-
-  /* ปุ่ม Follow / Following */
-  .btn-follow{
-    height:32px;padding:0 14px;border-radius:10px;border:0;cursor:pointer;
-    font-weight:800;transition:all .18s ease;background:var(--primary);color:#fff;
-  }
+  .btn-follow{height:32px;padding:0 14px;border-radius:10px;border:0;cursor:pointer;font-weight:800;transition:all .18s ease;background:var(--primary);color:#fff;}
   .btn-follow:hover{filter:brightness(.95);}
-  .btn-follow.is-following{
-    background:#f3f4f6;color:#111;border:1px solid #d1d5db;
-  }
-  .btn-follow.is-following:hover{
-    background:#ffe4ea;color:#ef4664;border-color:#ef4664;
-  }
-
-  /* pagination */
+  .btn-follow.is-following{background:#f3f4f6;color:#111;border:1px solid #d1d5db;}
+  .btn-follow.is-following:hover{background:#ffe4ea;color:#ef4664;border-color:#ef4664;}
   .pf-pager{display:flex;justify-content:center;gap:8px;padding:14px 8px 16px;border-top:1px solid var(--line);}
   .pf-page-btn{min-width:34px;height:34px;padding:0 10px;border-radius:10px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-weight:700}
   .pf-page-btn[disabled]{opacity:.5;cursor:not-allowed}
   .pf-page-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
   `;
 
-  // ---------- Hooks ----------
   const [me, setMe] = useState(null);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // following data
-  const [tab, setTab] = useState("artists"); // 'artists' | 'events'
-  const [allGroups, setAllGroups] = useState([]); // from /api/groups
-  const [mutatingIds, setMutatingIds] = useState(new Set()); // ใช้ทั้ง follow/unfollow
+  const [tab, setTab] = useState("artists");
 
-  // pagination (artists)
+  // Artists
+  const [allGroups, setAllGroups] = useState([]);
+  const [mutatingArtistIds, setMutatingArtistIds] = useState(new Set());
+
+  // Events
+  const [allEvents, setAllEvents] = useState([]);
+  const [mutatingEventIds, setMutatingEventIds] = useState(new Set());
+
+  // paging (artists)
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 8;
 
+  /* me */
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -107,7 +89,7 @@ export default function ProfilePage() {
     return () => { alive = false; };
   }, []);
 
-  // fetch groups (for likedByMe) once after me loaded
+  /* groups (artists) */
   useEffect(() => {
     if (!me) return;
     let alive = true;
@@ -122,10 +104,24 @@ export default function ProfilePage() {
     return () => { alive = false; };
   }, [me]);
 
-  // ---------- Derive data & hooks-dependent values (ประกาศก่อน return เสมอ) ----------
+  /* events */
+  useEffect(() => {
+    if (!me) return;
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await axios.get("/api/events", { withCredentials: true });
+        if (alive) setAllEvents(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error("GET /api/events error:", e);
+      }
+    })();
+    return () => { alive = false; };
+  }, [me]);
+
   const u = me || {};
   const performer = u.performerInfo || null;
-  const artist = performer?.artistInfo || null;
+  const artistInfo = performer?.artistInfo || null;
   const venue  = performer?.venueInfo  || null;
 
   const displayName = u.name || (me?.email ? me.email.split("@")[0] : "User");
@@ -133,24 +129,23 @@ export default function ProfilePage() {
   const favGenres = (u.favoriteGenres || []).slice(0, 5).join(" • ");
   const myArtistId = me?.id;
 
-  // artists I'm following (จาก likedByMe)
+  const isArtistApproved = me?.role === "ARTIST";
+
+  // ===== Artists following =====
   const followingArtists = useMemo(
     () => (allGroups || []).filter(g => g.likedByMe),
     [allGroups]
   );
   const artistsCount = followingArtists.length;
 
-  // pagination slice
   const totalPages = Math.max(1, Math.ceil(artistsCount / PAGE_SIZE));
   const start = (page - 1) * PAGE_SIZE;
   const pageItems = followingArtists.slice(start, start + PAGE_SIZE);
-  useEffect(() => { setPage(1); }, [artistsCount]); // reset เมื่อจำนวนเปลี่ยน
+  useEffect(() => { setPage(1); }, [artistsCount]);
 
-  // follow / unfollow (artists only)
   async function followArtist(artistId) {
-    if (!artistId) return;
-    if (mutatingIds.has(artistId)) return;
-    setMutatingIds(prev => new Set(prev).add(artistId));
+    if (!artistId || mutatingArtistIds.has(artistId)) return;
+    setMutatingArtistIds(prev => new Set(prev).add(artistId));
     try {
       await axios.post(`/api/artists/${artistId}/like`, {}, { withCredentials: true });
       setAllGroups(prev => prev.map(g => g.id === artistId
@@ -160,14 +155,12 @@ export default function ProfilePage() {
     } catch (e) {
       console.error("followArtist error:", e);
     } finally {
-      setMutatingIds(prev => { const n = new Set(prev); n.delete(artistId); return n; });
+      setMutatingArtistIds(prev => { const n = new Set(prev); n.delete(artistId); return n; });
     }
   }
-
   async function unfollowArtist(artistId) {
-    if (!artistId) return;
-    if (mutatingIds.has(artistId)) return;
-    setMutatingIds(prev => new Set(prev).add(artistId));
+    if (!artistId || mutatingArtistIds.has(artistId)) return;
+    setMutatingArtistIds(prev => new Set(prev).add(artistId));
     try {
       await axios.delete(`/api/artists/${artistId}/like`, { withCredentials: true });
       setAllGroups(prev => prev.map(g => g.id === artistId
@@ -177,31 +170,58 @@ export default function ProfilePage() {
     } catch (e) {
       console.error("unfollowArtist error:", e);
     } finally {
-      setMutatingIds(prev => { const n = new Set(prev); n.delete(artistId); return n; });
+      setMutatingArtistIds(prev => { const n = new Set(prev); n.delete(artistId); return n; });
     }
   }
 
-  // ---------- Guards after all hooks ----------
-  if (loading) return (
-    <>
-      <style>{styles}</style>
-      <div className="stack">Loading…</div>
-    </>
-  );
-  if (err) return (
-    <>
-      <style>{styles}</style>
-      <div className="stack alert alert-danger">{err}</div>
-    </>
-  );
-  if (!me) return (
-    <>
-      <style>{styles}</style>
-      <div className="stack">No profile.</div>
-    </>
+  // ===== Events following =====
+  const followingEvents = useMemo(
+    () => (allEvents || []).filter(ev => ev.likedByMe),
+    [allEvents]
   );
 
-  // pager render
+  async function followEvent(eventId) {
+    if (!eventId || mutatingEventIds.has(eventId)) return;
+    setMutatingEventIds(prev => new Set(prev).add(eventId));
+    try {
+      await axios.post(`/api/events/${eventId}/like`, {}, { withCredentials: true });
+      setAllEvents(prev => prev.map(e => e.id === eventId
+        ? { ...e, likedByMe: true, followersCount: (e.followersCount || 0) + 1 }
+        : e
+      ));
+    } catch (e) {
+      console.error("followEvent error:", e);
+    } finally {
+      setMutatingEventIds(prev => { const n = new Set(prev); n.delete(eventId); return n; });
+    }
+  }
+  async function unfollowEvent(eventId) {
+    if (!eventId || mutatingEventIds.has(eventId)) return;
+    setMutatingEventIds(prev => new Set(prev).add(eventId));
+    try {
+      await axios.delete(`/api/events/${eventId}/like`, { withCredentials: true });
+      setAllEvents(prev => prev.map(e => e.id === eventId
+        ? { ...e, likedByMe: false, followersCount: Math.max(0, (e.followersCount || 0) - 1) }
+        : e
+      ));
+    } catch (e) {
+      console.error("unfollowEvent error:", e);
+    } finally {
+      setMutatingEventIds(prev => { const n = new Set(prev); n.delete(eventId); return n; });
+    }
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleDateString();
+    } catch { return iso; }
+  }
+
+  if (loading) return (<><style>{styles}</style><div className="stack">Loading…</div></>);
+  if (err)      return (<><style>{styles}</style><div className="stack alert alert-danger">{err}</div></>);
+  if (!me)      return (<><style>{styles}</style><div className="stack">No profile.</div></>);
+
   const Pager = () => (
     <div className="pf-pager">
       <button className="pf-page-btn" onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}>← Prev</button>
@@ -222,22 +242,17 @@ export default function ProfilePage() {
       <style>{styles}</style>
       <div className="profile-page-wrap">
         <div className="stack">
-          {/* การ์ดโปรไฟล์ */}
+          {/* Profile card */}
           <div className="profile-card">
             <div className="profile-cover" aria-hidden />
             <div className="profile-avatar-wrap">
-              <img
-                className="profile-avatar"
-                src={avatar}
-                alt={displayName}
-                onError={(e)=>{e.currentTarget.src="/img/default-avatar.png";}}
-              />
+              <img className="profile-avatar" src={avatar} alt={displayName} onError={(e)=>{e.currentTarget.src="/img/default-avatar.png";}} />
             </div>
 
             <div className="profile-head">
               <div className="profile-name">
                 {displayName}
-                {me.role === "ARTIST" && <span className="badge-verified" title="Verified artist">✔</span>}
+                {isArtistApproved && <span className="badge-verified" title="Verified artist">✔</span>}
               </div>
               <div className="profile-email">{me.email}</div>
             </div>
@@ -247,19 +262,17 @@ export default function ProfilePage() {
             <div className="info-grid">
               <InfoRow label="Role" value={me.role} icon="🧩" />
               {favGenres && <InfoRow label="Fav genres" value={favGenres} icon="🎵" />}
-              {u.birthday && (
-                <InfoRow label="Birthday" value={new Date(u.birthday).toLocaleDateString()} icon="🎂" />
-              )}
+              {u.birthday && (<InfoRow label="Birthday" value={new Date(u.birthday).toLocaleDateString()} icon="🎂" />)}
 
-              {artist && (
+              {isArtistApproved && artistInfo && (
                 <>
                   <InfoRow label="Artist" value={displayName} icon="🎤" />
                   <InfoRow
                     label="Type"
                     value={
                       <>
-                        <span className="chip chip-active">{artist.bookingType}</span>
-                        {artist.genre && <span className="chip">{artist.genre}</span>}
+                        <span className="chip chip-active">{artistInfo.bookingType}</span>
+                        {artistInfo.genre && <span className="chip">{artistInfo.genre}</span>}
                       </>
                     }
                   />
@@ -284,12 +297,12 @@ export default function ProfilePage() {
 
             <div className="profile-actions">
               <Link to="/accountsetup?edit=1" className="btn-primary">Edit profile</Link>
-              {artist && <Link to={`/artists/${myArtistId}`} className="btn-ghost">View public artist</Link>}
+              {isArtistApproved && artistInfo && <Link to={`/artists/${myArtistId}`} className="btn-ghost">View public artist</Link>}
               {venue && <Link to="/me/venue" className="btn-ghost">Manage venue</Link>}
             </div>
           </div>
 
-          {/* การ์ด “กำลังติดตาม” */}
+          {/* Following */}
           <div className="following-card">
             <div className="following-head">
               <div className="following-title">กำลังติดตาม (Following)</div>
@@ -298,7 +311,7 @@ export default function ProfilePage() {
                   Artists {artistsCount ? `(${artistsCount})` : ''}
                 </button>
                 <button className={`tab-btn ${tab==='events'?'active':''}`} onClick={()=>setTab('events')} role="tab" aria-selected={tab==='events'}>
-                  Events
+                  Events {followingEvents.length ? `(${followingEvents.length})` : ''}
                 </button>
               </div>
             </div>
@@ -312,18 +325,14 @@ export default function ProfilePage() {
                         <div key={a.id} className="pf-card">
                           <img className="pf-thumb" src={a.image} alt={a.name} onError={(e)=>{e.currentTarget.src="/img/fallback.jpg";}} />
                           <div className="pf-main">
-                            <div className="pf-name">
-                              <Link to={`/artists/${a.id}`}>{a.name}</Link>
-                            </div>
-                            <div className="pf-sub">
-                              {(a.details || a.description || '—')} • {Number(a.followersCount||0).toLocaleString()} followers
-                            </div>
+                            <div className="pf-name"><Link to={`/artists/${a.id}`}>{a.name}</Link></div>
+                            <div className="pf-sub">{(a.details || a.description || '—')} • {Number(a.followersCount||0).toLocaleString()} followers</div>
                           </div>
                           <div className="pf-actions">
                             <button
                               className={`btn-follow ${a.likedByMe ? 'is-following' : ''}`}
                               onClick={()=> a.likedByMe ? unfollowArtist(a.id) : followArtist(a.id)}
-                              disabled={mutatingIds.has(a.id)}
+                              disabled={mutatingArtistIds.has(a.id)}
                               title={a.likedByMe ? "Following" : "Follow"}
                             >
                               {a.likedByMe ? "Unfollow" : "Follow"}
@@ -338,7 +347,41 @@ export default function ProfilePage() {
                   <div className="empty">ยังไม่ได้ติดตามศิลปินใด ๆ</div>
                 )
               ) : (
-                <div className="empty">ยังไม่เปิดใช้งานการติดตาม Event (จะมาเร็ว ๆ นี้)</div>
+                /* EVENTS TAB */
+                followingEvents.length ? (
+                  <div className="pf-list">
+                    {followingEvents.map(ev => (
+                      <div key={ev.id} className="pf-card">
+                        <img
+                          className="pf-thumb"
+                          src={ev.posterUrl || ev.coverImage || ev.bannerUrl || "/img/fallback.jpg"}
+                          alt={ev.name || ev.title}
+                          onError={(e)=>{e.currentTarget.src="/img/fallback.jpg";}}
+                        />
+                        <div className="pf-main">
+                          <div className="pf-name">
+                            <Link to={`/events/${ev.id}`}>{ev.name || ev.title || `Event #${ev.id}`}</Link>
+                          </div>
+                          <div className="pf-sub">
+                            {fmtDate(ev.date)}{ev.venue?.name ? ` • ${ev.venue.name}` : ""} • {Number(ev.followersCount||0).toLocaleString()} likes
+                          </div>
+                        </div>
+                        <div className="pf-actions">
+                          <button
+                            className={`btn-follow ${ev.likedByMe ? 'is-following' : ''}`}
+                            onClick={()=> ev.likedByMe ? unfollowEvent(ev.id) : followEvent(ev.id)}
+                            disabled={mutatingEventIds.has(ev.id)}
+                            title={ev.likedByMe ? "Following" : "Follow"}
+                          >
+                            {ev.likedByMe ? "Unfollow" : "Follow"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty">ยังไม่ได้ติดตามอีเวนต์</div>
+                )
               )}
             </div>
           </div>

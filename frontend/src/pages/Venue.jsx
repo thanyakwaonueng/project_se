@@ -27,7 +27,7 @@ const fmtThaiDMY_BE = (v) => {
   if (!v) return "—";
   const d = new Date(v);
   if (isNaN(d)) return "—";
-  const day = d.getDate();               // ไม่ใส่ leading zero ตามตัวอย่าง
+  const day = d.getDate();
   const month = d.getMonth() + 1;
   const yearBE = d.getFullYear() + 543;
   return `${day}/${month}/${yearBE}`;
@@ -38,6 +38,9 @@ export default function Venue() {
   const [venue, setVenue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+
+  // ป้องกันกดรัวตอน like/unlike อีเวนต์
+  const [likingEventIds, setLikingEventIds] = useState(new Set());
 
   useEffect(() => {
     let alive = true;
@@ -78,10 +81,12 @@ export default function Venue() {
   }, [venue]);
 
   const mapPoint = useMemo(() => {
-    return parseLatLng(venue?.location.locationUrl || venue?.googleMapUrl, 
-      venue?.location.latitude, venue?.location.longitude);
+    return parseLatLng(
+      venue?.location.locationUrl || venue?.googleMapUrl,
+      venue?.location.latitude,
+      venue?.location.longitude
+    );
   }, [venue]);
-
 
   const fmtEnLong = (v) => {
     const d = v instanceof Date ? v : new Date(v);
@@ -95,12 +100,50 @@ export default function Venue() {
   const eventsUpcoming = useMemo(() => {
     const list = Array.isArray(venue?.events) ? venue.events : [];
     const today = new Date();
-    // ตัดเวลาออกจากวันนี้เพื่อกันกรณีเวลาเลื่อนเขต
     const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     return list
       .filter(ev => ev?.date && !isNaN(new Date(ev.date)) && new Date(ev.date) >= todayMid)
       .sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [venue]);
+
+  /** ===== like/unlike event (เหมือนศิลปิน) ===== */
+  async function toggleLikeEvent(ev) {
+    if (!ev?.id) return;
+    if (likingEventIds.has(ev.id)) return;
+    setLikingEventIds(s => new Set(s).add(ev.id));
+    try {
+      if (ev.likedByMe) {
+        const { data } = await api.delete(`/events/${ev.id}/like`, { withCredentials: true });
+        setVenue(prev => ({
+          ...prev,
+          events: (prev.events || []).map(x =>
+            x.id === ev.id
+              ? { ...x, likedByMe: false, followersCount: data?.count ?? Math.max(0, (x.followersCount || 0) - 1) }
+              : x
+          )
+        }));
+      } else {
+        const { data } = await api.post(`/events/${ev.id}/like`, {}, { withCredentials: true });
+        setVenue(prev => ({
+          ...prev,
+          events: (prev.events || []).map(x =>
+            x.id === ev.id
+              ? { ...x, likedByMe: true, followersCount: data?.count ?? ((x.followersCount || 0) + 1) }
+              : x
+          )
+        }));
+      }
+    } catch (e) {
+      // ถ้าไม่ได้ล็อกอิน ให้เด้งไปหน้า login ตาม flow ของโปรเจ็กต์
+      if (e?.response?.status === 401 || e?.response?.status === 403) {
+        window.location.assign("/login");
+      } else {
+        console.error("toggleLikeEvent error:", e);
+      }
+    } finally {
+      setLikingEventIds(s => { const n = new Set(s); n.delete(ev.id); return n; });
+    }
+  }
 
   if (loading) return <div className="vn-page"><div className="vn-loading">กำลังโหลด…</div></div>;
   if (err) return (
@@ -113,7 +156,6 @@ export default function Venue() {
   );
   if (!venue) return null;
 
-  // เตรียมแกลเลอรี (string comma -> string[])
   const gallery = (venue.photoUrls || venue.photos || "")
     .toString()
     .split(",")
@@ -229,47 +271,54 @@ export default function Venue() {
         </section>
       )}
 
-      {/* ===== UPCOMING (ใหม่: ใช้หน้าตาเดียวกับ Schedule ของ Artist) ===== */}
-      {true && (
-        <section className="vn-section">
-          <h2 className="a-section-title">Upcoming</h2>
-          <div className="a-panel">
-            <ul className="a-schedule-list">
-              {eventsUpcoming.map(ev => (
-                <li key={ev.id || ev.slug || ev.title} className="a-schedule-item">
-                  <div className="a-date">{fmtEnLong(ev.date || ev.dateISO)}</div>
-                  <div className="a-event">
-                    <div className="a-event-title">{ev.title || ev.name}</div>
-                    <div className="a-event-sub">
-                      {(ev.venue || venue.performer.user.name) || ""}
-                      {ev.city ? ` • ${ev.city}` : ""}
-                      {ev.price ? ` • ${ev.price}` : ""}
-                    </div>
+      {/* ===== UPCOMING (ใช้สไตล์ schedule ของ Artist) ===== */}
+      <section className="vn-section">
+        <h2 className="a-section-title">Upcoming</h2>
+        <div className="a-panel">
+          <ul className="a-schedule-list">
+            {eventsUpcoming.map(ev => (
+              <li key={ev.id || ev.slug || ev.title} className="a-schedule-item">
+                <div className="a-date">{fmtEnLong(ev.date || ev.dateISO)}</div>
+                <div className="a-event">
+                  <div className="a-event-title">{ev.title || ev.name}</div>
+                  <div className="a-event-sub">
+                    {(ev.venue || venue.performer.user.name) || ""}
+                    {ev.city ? ` • ${ev.city}` : ""}
+                    {ev.price ? ` • ${ev.price}` : ""}
                   </div>
+                </div>
+
+                {/* ปุ่มหัวใจ + ยอดผู้ติดตาม */}
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <button
+                    className={`like-button ${ev.likedByMe ? 'liked' : ''}`}
+                    onClick={(e)=>{ e.preventDefault(); toggleLikeEvent(ev); }}
+                    aria-label={ev.likedByMe ? 'Unfollow event' : 'Follow event'}
+                    disabled={likingEventIds.has(ev.id)}
+                    title={ev.likedByMe ? 'Unfollow' : 'Follow'}
+                  />
+                  {typeof ev.followersCount === 'number' && (
+                    <span style={{fontSize:13,opacity:.85}}>👥 {ev.followersCount}</span>
+                  )}
                   {(ev.id || ev.url || ev.ticketLink) && (
                     ev.id ? (
-                      <Link className="a-link" to={`/events/${ev.id}`}>Detail</Link>
+                      <Link className="a-link" style={{marginLeft:8}} to={`/events/${ev.id}`}>Detail</Link>
                     ) : ev.url ? (
-                      <a className="a-link" href={ev.url} target="_blank" rel="noreferrer">Detail</a>
+                      <a className="a-link" style={{marginLeft:8}} href={ev.url} target="_blank" rel="noreferrer">Detail</a>
                     ) : (
-                      <a className="a-link" href={ev.ticketLink} target="_blank" rel="noreferrer">Detail</a>
+                      <a className="a-link" style={{marginLeft:8}} href={ev.ticketLink} target="_blank" rel="noreferrer">Detail</a>
                     )
                   )}
-                </li>
-              ))}
+                </div>
+              </li>
+            ))}
 
-              {eventsUpcoming.length === 0 && (
-                <li className="a-empty">ยังไม่มีกิจกรรมที่จะเกิดขึ้น</li>
-              )}
-            </ul>
-          </div>
-        </section>
-      )}
-
-      {/* ปุ่มกลับ */}
-      {/* <section className="vn-section" style={{ display: "flex", gap: 8 }}>
-        <Link to="/venues" className="vn-btn-ghost">← กลับแผนที่</Link>
-      </section> */}
+            {eventsUpcoming.length === 0 && (
+              <li className="a-empty">ยังไม่มีกิจกรรมที่จะเกิดขึ้น</li>
+            )}
+          </ul>
+        </div>
+      </section>
     </div>
   );
 }

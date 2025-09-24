@@ -1,3 +1,4 @@
+// frontend/src/pages/eventdetail.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api, { extractErrorMessage } from '../lib/api';
@@ -21,13 +22,14 @@ export default function EventDetail() {
   const [ev, setEv] = useState(null);
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         setErr('');
-        const { data } = await api.get(`/events/${id}`);
+        const { data } = await api.get(`/events/${id}`, { withCredentials: true });
         if (!alive) return;
         setEv(data);
       } catch (e) {
@@ -39,6 +41,28 @@ export default function EventDetail() {
     })();
     return () => { alive = false; };
   }, [id]);
+
+  const toggleFollow = async () => {
+    if (!ev?.id || busy) return;
+    setBusy(true);
+    try {
+      if (ev.likedByMe) {
+        const { data } = await api.delete(`/events/${ev.id}/like`, { withCredentials: true });
+        setEv(prev => ({ ...prev, likedByMe: false, followersCount: data?.count ?? Math.max(0, (prev.followersCount || 0) - 1) }));
+      } else {
+        const { data } = await api.post(`/events/${ev.id}/like`, {}, { withCredentials: true });
+        setEv(prev => ({ ...prev, likedByMe: true, followersCount: data?.count ?? (prev.followersCount || 0) + 1 }));
+      }
+    } catch (e) {
+      if (e?.response?.status === 401 || e?.response?.status === 403) {
+        navigate('/login');
+      } else {
+        console.error('toggleFollow error:', e);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (loading) return <div style={{ padding: 16 }}>กำลังโหลด…</div>;
 
@@ -65,23 +89,43 @@ export default function EventDetail() {
   return (
     <div style={{ padding: 16, maxWidth: 960, margin: '0 auto' }}>
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        {ev.posterUrl ? (
-          <img
-            src={ev.posterUrl}
-            alt={ev.name || `Event #${ev.id}`}
-            style={{ width: 280, maxWidth: '100%', borderRadius: 10, border: '1px solid #eee' }}
-          />
-        ) : (
-          <div style={{
-            width: 280, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            borderRadius: 10, border: '1px dashed #ccc', color: '#888'
-          }}>
-            ไม่มีโปสเตอร์
-          </div>
-        )}
+        <div style={{ position: 'relative' }}>
+          {/* ปุ่มหัวใจซ้อนบนโปสเตอร์ */}
+          {ev.id && (
+            <button
+              className={`like-button ${ev.likedByMe ? 'liked' : ''}`}
+              title={ev.likedByMe ? 'Unfollow' : 'Follow'}
+              aria-label={ev.likedByMe ? 'Unfollow' : 'Follow'}
+              disabled={busy}
+              onClick={toggleFollow}
+              style={{ position: 'absolute', right: 8, top: 8, zIndex: 2 }}
+            />
+          )}
+
+          {ev.posterUrl ? (
+            <img
+              src={ev.posterUrl}
+              alt={ev.name || `Event #${ev.id}`}
+              style={{ width: 280, maxWidth: '100%', borderRadius: 10, border: '1px solid #eee' }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          ) : (
+            <div style={{
+              width: 280, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 10, border: '1px dashed #ccc', color: '#888'
+            }}>
+              ไม่มีโปสเตอร์
+            </div>
+          )}
+        </div>
 
         <div style={{ flex: 1, minWidth: 280 }}>
           <h2 style={{ margin: 0 }}>{ev.name || `Event #${ev.id}`}</h2>
+
+          {/* แสดงจำนวนผู้ติดตาม */}
+          <div style={{ margin: '6px 0 12px', fontSize: 14, opacity: .9 }}>
+            👥 {typeof ev.followersCount === 'number' ? ev.followersCount : 0} followers
+          </div>
 
           <div style={{ marginTop: 8, display: 'grid', gap: 6, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
             <div><strong>วันเวลา:</strong> {formatDT(ev.date)}</div>
@@ -138,15 +182,11 @@ export default function EventDetail() {
       </div>
 
       <div style={{ marginTop: 20, display: 'flex', gap: 8 }}>
-      {location.pathname.startsWith("/my_events") ? (
-        <Link to="/my_events" className="btn btn-secondary">
-          ไปหน้าเมื่อกี้
-        </Link>
-      ) : (
-        <Link to="/events" className="btn btn-secondary">
-          กลับไปหน้า Events
-        </Link>
-      )}
+        {location.pathname.startsWith("/my_events") ? (
+          <Link to="/my_events" className="btn btn-secondary">ไปหน้าเมื่อกี้</Link>
+        ) : (
+          <Link to="/events" className="btn btn-secondary">กลับไปหน้า Events</Link>
+        )}
       </div>
     </div>
   );

@@ -91,7 +91,7 @@ export default function CreateEvent() {
 
       setLoading(false);
       // ✅ กลับไปหน้า UI ของงานนั้น
-      navigate(`/page_events/${res.data.id}`);
+      navigate(`/events/${res.data.id}`);
     } catch (err) {
       setLoading(false);
       setError(err.response?.data?.error || err.message || 'Failed to save event');

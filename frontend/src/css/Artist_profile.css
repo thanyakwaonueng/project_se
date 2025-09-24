@@ -379,3 +379,22 @@
 }
 
 
+/* === Follow heart on hero photo === */
+.a-hero-photo { 
+  position: relative;           /* ให้วาง absolute ข้างในได้ */
+}
+
+.a-hero-likebtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  /* แต่งเพิ่มนิดหน่อยให้เด่นและคลิกง่าย */
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0,0,0,.18);
+}
+
+.a-hero-likebtn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}

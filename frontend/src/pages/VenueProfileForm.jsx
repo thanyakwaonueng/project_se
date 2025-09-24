@@ -138,7 +138,7 @@ export default function VenueProfileForm() {
       } else {
         await api.post('/venues', { userId: user.id, ...payload });
       }
-      navigate('/page_venues');
+      navigate('/venues');
     } catch (e2) {
       setErr(extractErrorMessage(e2, 'บันทึกไม่สำเร็จ'));
     }
@@ -216,7 +216,7 @@ export default function VenueProfileForm() {
           <button className="btn btn-primary" type="submit" disabled={!canSubmit}>
             {isEdit ? 'Save Changes' : 'Create Profile'}
           </button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate('/page_venues')}>
+          <button type="button" className="btn btn-secondary" onClick={() => navigate('/venues')}>
             Cancel
           </button>
         </div>

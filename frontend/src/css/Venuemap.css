@@ -2,11 +2,16 @@
    VENUE MAP — BASE
    ========================================================= */
 .vmap-page {
-  padding: 16px;
-  font-family: 'Poppins', sans-serif;
+  display: flex;
+  flex-direction: column; 
+  align-items: center;    
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 30px;
+  width: 100%;
 }
 
-/* Alerts (เดิม) */
+
 .vmap-alert {
   background: #ffeef0;
   color: #86181d;
@@ -14,60 +19,252 @@
   border-radius: 8px;
 }
 
+
+/* =========================================================
+   LAYOUT — MAP (LEFT) + LIST (RIGHT)
+   NOTE:
+   - เดิมคุณใช้ .vmap-grid สำหรับ layout (2fr/1fr)
+   - JSX ใหม่ใช้ .vmap-section แทน เพื่อลดชนกับ .vmap-grid (การ์ด)
+   ========================================================= */
+
+
+.vmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px; 
+}
+
+
+.vmap-section {
+  display: flex;
+  flex-direction: column; 
+  gap: 20px;              /* ระยะห่างระหว่าง row */
+  width: 85%;
+  margin: 0 auto;
+}
+
+
+
+/* =========================================================
+   MAP CONTAINER
+   ========================================================= */
+
+/* เดิม */
+/* .vmap-mapPane {
+  height: 70vh; min-height: 420px;
+  border-radius: 8px; overflow: hidden;
+  border: 3px solid #555;
+} */
+
+
+.vmap-mapCol {
+  grid-row: 2;
+  flex: 1 1 300px; /* ขยายเต็ม แต่ขั้นต่ำ 400px */
+  min-height: 300px;
+}
+
+.vmap-mapBox {
+  height: 100%;  
+  border: 1px solid #4a4a4a;   
+  overflow: hidden;
+}
+
+/* Popup (เดิม) */
+.leaflet-container .vmap-popup { 
+  min-width: 220px; 
+}
+.vmap-popup .vmap-popup-title { 
+  font-weight: 600; 
+  margin-bottom: 2px; 
+}
+.vmap-popup .vmap-popup-meta { 
+  font-size: 12px; 
+  color: #555; 
+  margin-bottom: 6px; 
+}
+.vmap-popup .vmap-popup-distance { 
+  font-size: 12px; 
+  color: #333; 
+  margin-bottom: 6px; 
+}
+.vmap-popup .vmap-popup-actions { 
+  display: flex; 
+  gap: 6px; 
+  flex-wrap: wrap; 
+}
+
+
 /* =========================================================
    CONTROLS BAR (FILTERS / SEARCH / SELECT / GHOST BTNS)
    ========================================================= */
+   
+.vmap-controls-box {
+  grid-row: 1;
+  display: flex;
+  align-items: flex-start;
+}
+
 .vmap-controls {
   display: flex;
-  gap: 8px;
   align-items: center;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-/* ของเดิมที่อิง bootstrap ก็ยังอยู่ได้ */
-.vmap-controls .form-control { min-width: 220px; flex: 1 1 220px; }
-.vmap-controls .form-select  { min-width: 150px; }
+  justify-content: space-between;
+  width: 100%;
 
-/* Filter mode buttons (เดิม) */
-.vmap-filterBtns { display: inline-flex; gap: 8px; }
-.vmap-filterBtn {
-  appearance: none;
-  border: 1px solid #ccc;
-  background: transparent;
+  gap: 12px;
+}
+
+.vmap-controls .form-control { 
+  min-width: 220px; 
+  flex: 1 1 220px; 
+}
+
+.vmap-controls .form-select  { 
+  min-width: 150px; 
+}
+
+.vmap-modeBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 10%; /* push to rightmost */
+}
+
+.vmap-modeTitle {
+  font-weight: bold;
+  font-size: 50px;
   color: #000;
-  padding: 9px 50px;
-  font: inherit;
-  line-height: 1;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background .6s ease, color .6s ease, border-color .6s ease, box-shadow .6s ease;
+  text-align: center;
+  margin-right: 10px;
 }
-.vmap-filterBtn:hover,
-.vmap-filterBtn:focus-visible { background: #f5f5f5; outline: none; }
-.vmap-filterBtn.is-active { background: #000; color: #fff; border-color: #000; }
-.vmap-filterBtn.is-active:hover,
-.vmap-filterBtn.is-active:focus-visible { background: #111; }
 
-/* Search box (เดิม) */
+.vmap-arrowBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.vmap-arrowBtn.is-active {
+  color: #111;
+  outline: none;
+}
+
+.vmap-arrowBtn:hover {
+  transform: scale(1.1);
+  outline: none;
+}
+
+/* Search box */
 .vmap-searchBox {
   position: relative;
   display: flex;
   align-items: center;
-  border: 1px solid #ccc;
+  border: 1px solid #4a4a4a;
   border-radius: 20px;
-  padding: 6px 12px;
+  padding: 8px 12px;
   background: transparent;
-  min-width: 400px;
+  width: 50%;
+  /* min-width: 400px; */
 }
 .vmap-searchInput {
-  flex: 1; border: none; outline: none;
-  font-size: 14px; background: transparent; color: #333;
+  flex: 1; 
+  border: none; 
+  outline: none;
+  font-size: 14px; 
+  background: transparent; 
+  color: #333;
 }
-.vmap-searchInput::placeholder { color: #999; }
+.vmap-searchInput::placeholder { 
+  color: #999; 
+}
 .vmap-searchIcon {
-  display:flex; align-items:center; justify-content:center;
-  color:#666; margin-left:6px; pointer-events:none;
+  display:flex; 
+  align-items:center; 
+  justify-content:center;
+  color:#666; 
+  margin-left:6px; 
+  pointer-events:none;
 }
+
+.vmap-filterBtns {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.vmap-filterBtn {
+  padding: 8px 12px;
+  font-size: 14px;
+  background-color: #292929;
+  color: #d2d2d2;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  text-transform: uppercase;
+}
+
+.vmap-filterBtn:hover,
+.vmap-filterBtn:focus-visible {
+  background-color: #a9deff;
+  color: #292929;
+  outline: none;
+}
+
+.vmap-filterBtn.is-active {
+  background-color: #a9deff;
+  color: #000000;
+}
+
+.vmap-ghostLink {
+  gap: 6px;
+  min-width: 10%;
+}
+.vmap-ghostLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.vmap-ghostLink[disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+
+.vmap-ghostBtn {
+  font-size: 14px;
+  border: 1px solid #ccc; 
+  background: transparent; 
+  color: #333;
+  border-radius: 20px; 
+  padding: 8px 12px;
+  cursor: pointer; 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 6px;
+  min-width: 10%;
+  transition: box-shadow .15s ease border-color .15s ease;
+}
+.vmap-ghostBtn:hover,
+.vmap-ghostBtn:focus-visible {
+  border-color: #111; 
+  box-shadow: 0 0 0 3px rgba(0,0,0,.08); 
+  outline: none;
+}
+.vmap-ghostBtn svg {
+  margin-left: 6px;
+  opacity: 0.6;
+}
+
 
 /* Unified select (รวมกฎซ้ำให้เหลือบล็อกเดียว) */
 .vmap-selectWrap {
@@ -75,9 +272,9 @@
   min-width: 150px;
   display: inline-flex;
   align-items: center;
-  border: 1px solid #ccc;
+  border: 1px solid #4a4a4a;
   border-radius: 20px;
-  padding: 8px 12px;     /* ใช้ค่าบล็อกที่สองของเดิม */
+  padding: 8px 12px;   
   background: transparent;
 }
 .vmap-select {
@@ -93,144 +290,176 @@
   display: inline-flex; align-items: center; justify-content: center;
   color: #666;
 }
-/* ความกว้างเฉพาะแนวเพลง / รัศมี */
-.vmap-genreBox { width: 308px; flex: 0 0 auto; }
-.vmap-radiusSelectWrap { min-width: 140px; }
-.vmap-radiusSelect { width: 130px; }
 
-/* Ghost button (เดิม) */
-.vmap-ghostBtn {
-  border: 1px solid #ccc; background: transparent; color: #333;
-  border-radius: 20px; padding: 8px 14px; font: inherit; line-height: 1.2;
-  cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
-  transition: box-shadow .15s ease, border-color .15s ease;
+.vmap-genreBox { 
+  min-width: 20%; 
+  padding: 8px 12px;
 }
-.vmap-ghostBtn:hover,
-.vmap-ghostBtn:focus-visible {
-  border-color: #111; box-shadow: 0 0 0 3px rgba(0,0,0,.08); outline: none;
+.vmap-radiusSelectWrap { 
+  min-width: 140px; 
+}
+.vmap-radiusSelect { 
+  width: 130px; 
 }
 
 
-
-/* =========================================================
-   LAYOUT — MAP (LEFT) + LIST (RIGHT)
-   NOTE:
-   - เดิมคุณใช้ .vmap-grid สำหรับ layout (2fr/1fr)
-   - JSX ใหม่ใช้ .vmap-twoCol แทน เพื่อลดชนกับ .vmap-grid (การ์ด)
-   ========================================================= */
-
-/* (LEGACY) ถ้าโค้ดเก่ายังอ้าง .vmap-grid เป็น layout จะยังทำงานได้
-   แต่ JSX ล่าสุดไม่ใช้บล็อกนี้แล้ว */
-.vmap-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr; /* map left, list right */
-  gap: 12px;
-}
-.vmap-grid--map-right { grid-template-columns: 1fr 2fr; }
-.vmap-grid--map-right .vmap-mapPane { order: 2; }
-
-/* Layout ใหม่ที่ JSX ใช้จริง */
-.vmap-twoCol {
-  display: grid;
-  grid-template-columns: 55% 1fr;  /* ซ้าย map / ขวา list */
-  gap: 12px;
-  align-items: start;
-}
-@media (max-width: 1100px) { .vmap-twoCol { grid-template-columns: 1fr; } }
-
-/* =========================================================
-   MAP CONTAINER
-   ========================================================= */
-
-/* เดิม */
-/* .vmap-mapPane {
-  height: 70vh; min-height: 420px;
-  border-radius: 8px; overflow: hidden;
-  border: 3px solid #555;
-} */
-
-/* กล่อง map ใหม่ที่ JSX ใช้ (.vmap-mapBox อยู่ด้านในคอลัมน์ซ้าย)
-   — ปรับความสูงตรงนี้ให้ “เตี้ยลง” ได้ */
-.vmap-mapBox {
-  height: 81vh;         /* ชอบเตี้ย/สูง ปรับได้ 56–70vh */
-  min-height: 420px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 2px solid #ccc;
-}
-
-/* Popup (เดิม) */
-.leaflet-container .vmap-popup { min-width: 220px; }
-.vmap-popup .vmap-popup-title { font-weight: 600; margin-bottom: 2px; }
-.vmap-popup .vmap-popup-meta { font-size: 12px; color: #555; margin-bottom: 6px; }
-.vmap-popup .vmap-popup-distance { font-size: 12px; color: #333; margin-bottom: 6px; }
-.vmap-popup .vmap-popup-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* =========================================================
    SIDE LIST + CARDS (ใช้กับ JSX ใหม่)
    ========================================================= */
-.vmap-listPane {
-  background: #fff;
-  border: 2px solid #ccc;
-  border-radius: 8px;
-  padding: 10px;
-  max-height: calc(100vh - 140px);
+
+.vmap-listBox {
   overflow: auto;
+  grid-row: 3;
+  margin-top: 10px;
 }
+
 .vmap-listHeader {
-  font-weight: 600; color: #231f20;
-  padding: 6px 8px 10px;
+  padding: 10px;
   border-bottom: 1px dashed #ccc;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
+  /* background-color: #0b57d0; */
 }
 
 /* ทำให้ .vmap-grid ภายใน list เป็น "การ์ดกริด" (override ตัว legacy ด้านบน) */
-.vmap-listPane .vmap-grid {
+.vmap-listBox .vmap-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  gap: 20px;
 }
 
-/* Card */
+/* ========= Card ========= */
 .vmap-card {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
   border: 1px solid #eee;
-  border-radius: 8px;
+  border-radius: 4px;
   background: #fff;
   overflow: hidden;
   transition: transform .4s ease, box-shadow .4s ease, border-color .4s ease;
 }
+
 .vmap-card:hover {
   /* transform: translateY(-2px); */
   border-color: #ccc;
   box-shadow: 0 8px 20px rgba(0,0,0,.08);
 }
-.vmap-cardImg { position: relative; aspect-ratio: 4/3; background: #f3f3f3; overflow: hidden; }
-.vmap-cardImg img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.vmap-cardBody { padding: 10px 12px 12px; }
-.vmap-cardTitle { font-weight: 600; color: #111; font-size: 16px; line-height: 1.25; margin-bottom: 6px; }
-.vmap-cardSub, .vmap-sub { color: #444; font-size: 13px; }
-.vmap-cardSub { margin-bottom: 6px; }
+
+.vmap-cardImg { 
+  position: relative; 
+  aspect-ratio: 4/3; 
+  background: #f3f3f3; 
+  overflow: hidden; 
+}
+
+.vmap-cardImg img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+  display: block; 
+}
+
+.vmap-cardBody { 
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px 12px; 
+}
+
+.vmap-cardTitle {  
+  color: #111; 
+  font-size: 16px; 
+  line-height: 1.25; 
+  margin-bottom: 6px; 
+}
+
+.vmap-cardSub, .vmap-sub { 
+  color: #444; 
+  font-size: 13px; 
+}
+
+.vmap-cardSub { 
+  margin-bottom: 6px; 
+}
+
 .vmap-cardLink {
-  display: inline-block; font-size: 13px; color: #0b57d0;
-  text-decoration: underline; margin-bottom: 8px; word-break: break-word;
+  display: inline-block; 
+  font-size: 13px; 
+  color: #0b57d0;
+  text-decoration: underline; 
+  margin-bottom: 8px; 
+  word-break: break-word;
 }
-.vmap-cardMeta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-.vmap-badge {
-  font-size: 12px; color: #333; background: #f2f2f2;
-  border: 1px solid #e9e9e9; border-radius: 999px; padding: 2px 8px; white-space: nowrap;
+.vmap-cardMeta { 
+  display: flex; 
+  gap: 6px; 
+  flex-wrap: wrap; 
+  margin-bottom: 10px; 
 }
-.vmap-cardActions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.vmap-genreTag {
+  font-size: 12px; 
+  background-color: #292929;
+  color: #d2d2d2;
+  border: 1px solid #e9e9e9; 
+  border-radius: 999px; 
+  padding: 2px 8px; 
+  white-space: nowrap;
+}
+
+.vmap-eventTypeTag {
+  font-size: 12px; 
+
+  color: #292929;
+  border: 1px solid #292929; 
+  border-radius: 999px; 
+  padding: 2px 8px; 
+  white-space: nowrap;
+}
+
+.vmap-cardActions { 
+  display: flex; 
+  gap: 8px; 
+  flex-wrap: wrap; 
+}
+
 .vmap-btn, .vmap-btnGhost {
-  font-size: 13px; padding: 6px 10px; border-radius: 999px;
-  border: 1px solid #222; text-decoration: none;
-  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; 
+  padding: 6px 10px; 
+  border-radius: 999px;
+  border: 1px solid #222; 
+  text-decoration: none;
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center;
   transition: background .12s ease, color .12s ease;
 }
-.vmap-btn { background: #111; color: #fff; }
-.vmap-btn:hover { background: #000; color: #fff; }
-.vmap-btnGhost { background: #fff; color: #111; }
-.vmap-btnGhost:hover { background: #111; color: #fff; }
-.vmap-empty { padding: 16px; color: #777; text-align: center; }
+
+.vmap-btn { 
+  background: #111; 
+  color: #fff; 
+}
+
+.vmap-btn:hover { 
+  background: #000; 
+  color: #fff; 
+}
+
+.vmap-btnGhost { 
+  background: #fff; 
+  color: #111; 
+}
+
+.vmap-btnGhost:hover { 
+  background: #111; 
+  color: #fff; 
+}
+
+.vmap-empty { 
+  padding: 16px; 
+  color: #777; 
+  text-align: center; 
+}
 
 /* =========================================================
    LEAFLET PIN (DIVICON) — ใช้คงสไตล์เดิมที่ให้มา
@@ -240,7 +469,7 @@
 .leaflet-marker-icon.vmap-imgPin {
   transform-origin: center bottom;     /* ขยายจากฐานหมุด จะไม่ลอยพิกัด */
   transition: transform .14s ease, filter .18s ease;
-  filter: drop-shadow(0 2px 8px rgba(0,0,0,.35));
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2));
 }
 
 /* ขยาย “นิดหน่อย” + เงาเข้มขึ้น */
@@ -306,8 +535,14 @@
 .vmap-popupSub { margin-top: 2px; font-size: 12px; color: #555; }
 
 /* ===== ลิงก์หัวการ์ดในลิสต์ ===== */
-.vmap-cardTitleLink { color:#111; text-decoration:none; font-weight:600; }
-.vmap-cardTitleLink:hover { text-decoration:underline; }
+.vmap-cardTitleLink { 
+  color:#111; 
+  text-decoration:none; 
+}
+
+.vmap-cardTitleLink:hover { 
+  text-decoration:underline; 
+}
 
 /* บรรทัดย่อยใต้ชื่อในการ์ด */
 .vmap-cardSub { margin-top:2px; color:#555; font-size:13px; }
@@ -315,13 +550,81 @@
 
 
 
+
 /* =========================================================
    RESPONSIVE
    ========================================================= */
+   
+/* ===== Mobile Layout ===== */
+@media (max-width: 768px) {
+  .vmap-section {
+    flex-direction: column;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .vmap-mapCol, .vmap-listBox {
+    min-width: 100%;
+    width: 100%;
+    min-height: 50vh;
+
+  }
+
+  .vmap-mapBox {
+    height: 50vh;
+  }
+
+  .vmap-listBox {
+    max-height: none;
+  }
+
+  .vmap-card {
+    font-size: 0.9rem;
+  }
+
+  .vmap-cardTitleLink {
+    font-size: 0.95rem;
+  }
+
+  .vmap-controls {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .vmap-searchBox {
+    width: 100%;
+  }
+
+  .vmap-modeBox {
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}
+
+/* ===== Small Mobile (Optional) ===== */
+@media (max-width: 480px) {
+  .vmap-card {
+    font-size: 0.85rem;
+  }
+
+  .vmap-cardTitleLink {
+    font-size: 0.9rem;
+  }
+
+  .vmap-cardSub {
+    font-size: 12px;
+  }
+
+  .vmap-btn, .vmap-btnGhost {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}
+
 @media (max-width: 1100px) {
-  .vmap-twoCol { grid-template-columns: 1fr; }
+  .vmap-section { grid-template-columns: 1fr; }
 }
 @media (max-width: 900px) {
-  .vmap-listPane { max-height: none; }
+  .vmap-listBox { max-height: none; }
   .vmap-mapBox  { height: 55vh; }
 }

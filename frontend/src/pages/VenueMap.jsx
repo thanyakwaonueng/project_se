@@ -19,47 +19,13 @@ L.Icon.Default.mergeOptions({
 
 const CNX = { lat: 18.7883, lng: 98.9853 }; // Chiang Mai
 
-// // ===== สร้าง SVG pin เป็น data URL =====
-// const pinSvg = (stroke = '#111') => `
-// <svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'
-//      fill='none' stroke='${stroke}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
-//   <path d='M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0'/>
-//   <circle cx='12' cy='10' r='3'/>
-// </svg>`;
-// const toDataUrl = s => `data:image/svg+xml;utf8,${encodeURIComponent(s)}`;
-
-// // ===== divIcon พร้อมพื้นหลัง + hover =====
-// function makePinDivIcon({ stroke = '#111', size = 28, extraClass = '' }) {
-//   const box = size + 8;     // กล่องพื้นหลัง (ใหญ่กว่า SVG นิดหน่อย)
-//   const height = box + 12;  // เผื่อส่วนปลายหมุด
-//   const html = `
-//     <div class="vmap-pin-wrap ${extraClass}" style="width:${box}px;height:${box}px;">
-//       <img class="vmap-pin-svg" alt="pin" src="${toDataUrl(pinSvg(stroke))}"
-//            style="width:${size}px;height:${size}px"/>
-//     </div>
-//   `;
-//   return L.divIcon({
-//     className: 'vmap-pin',
-//     html,
-//     iconSize: [box, height],
-//     iconAnchor: [box / 2, height],
-//     popupAnchor: [0, -height],
-//   });
-// }
-
-// // Venue = ดำ, Event = ดำ (ให้โทนเดียวกัน)
-// const ICON_VENUE = makePinDivIcon({ stroke: '#111', size: 28, extraClass: 'venue-pin' });
-// const ICON_EVENT = makePinDivIcon({ stroke: '#000', size: 28, extraClass: 'event-pin' });
-
 // ===== ใช้รูปภาพ pin.png เป็นไอคอนแทน =====
-// วาง pin.png ไว้ที่ public/img/pin.png
 const PIN_URL = '/img/pin.png';
-const PIN_SIZE = 34; // ปรับได้ 28–40 ตามขนาดรูปจริง
+const PIN_SIZE = 25;
 
-// กำหนด anchor ให้ปลายไอคอนอยู่ชี้ที่พิกัดพอดี (กึ่งกลางล่าง)
 const ICON_VENUE = L.icon({
   iconUrl: PIN_URL,
-  iconRetinaUrl: PIN_URL,     // ใช้ไฟล์เดียวกันไปก่อน
+  iconRetinaUrl: PIN_URL,
   iconSize: [PIN_SIZE, PIN_SIZE],
   iconAnchor: [PIN_SIZE / 2, PIN_SIZE],
   popupAnchor: [0, -PIN_SIZE + 4],
@@ -120,11 +86,11 @@ function formatDT(iso) {
 // ===== path helpers =====
 const toEventDetailPath = (ev) => {
   const key = ev?.id ?? ev?._id ?? ev?.slug;
-  return key ? `/events/${encodeURIComponent(key)}` : (ev?.url || "#");
+  return key ? `/page_events/${encodeURIComponent(key)}` : (ev?.url || "#");
 };
 const toVenueDetailPath = (v) => {
-  const key = v?.performerId ?? v?._id ?? v?.slug ?? v?.slugOrId;
-  return key ? `/venues/${encodeURIComponent(key)}` : "#";
+  const key = v?.id ?? v?._id ?? v?.slug ?? v?.slugOrId ?? v?.performerId;
+  return key ? `/page_venues/${encodeURIComponent(key)}` : "#";
 };
 
 // ===== เวลาเปิด–ปิด (รองรับหลายคีย์) =====
@@ -206,17 +172,20 @@ export default function VenueMap() {
   // ===== กรอง VENUES =====
   const visibleVenuesBase = useMemo(() => {
     return venues.filter(v => {
-      if (v.location.latitude == null || v.location.longitude == null) return false;
+      const lat = v?.location?.latitude;
+      const lng = v?.location?.longitude;
+      if (lat == null || lng == null) return false;
+
       if (bounds) {
-        const inLat = v.location.latitude <= bounds.north && v.location.latitude >= bounds.south;
+        const inLat = lat <= bounds.north && lat >= bounds.south;
         const inLng = bounds.west <= bounds.east
-          ? (v.location.longitude >= bounds.west && v.location.longitude <= bounds.east)
-          : (v.location.longitude >= bounds.west || v.location.longitude <= bounds.east);
+          ? (lng >= bounds.west && lng <= bounds.east)
+          : (lng >= bounds.west || lng <= bounds.east);
         if (!(inLat && inLng)) return false;
       }
       if (q.trim()) {
-        const hit = (v.performer.user.name || '').toLowerCase().includes(q.trim().toLowerCase());
-        if (!hit) return false;
+        const name = (v?.performer?.user?.name || v?.name || '').toLowerCase();
+        if (!name.includes(q.trim().toLowerCase())) return false;
       }
       if (genre !== 'ALL' && v.genre !== genre) return false;
       return true;
@@ -239,18 +208,20 @@ export default function VenueMap() {
     const until = new Date(now.getFullYear(), now.getMonth(), now.getDate() + maxDays);
 
     let filtered = events.filter(ev => {
-      const v = ev.venue;
-      if (!v || v.location.latitude == null || v.location.longitude == null) return false;
+      const v = ev?.venue;
+      const lat = v?.location?.latitude;
+      const lng = v?.location?.longitude;
+      if (!v || lat == null || lng == null) return false;
 
       const dt = ev?.date ? new Date(ev.date) : null;
       if (!dt) return false;
       if (dt < now || dt > until) return false;
 
       if (bounds) {
-        const inLat = v.location.latitude <= bounds.north && v.location.latitude >= bounds.south;
+        const inLat = lat <= bounds.north && lat >= bounds.south;
         const inLng = bounds.west <= bounds.east
-          ? (v.location.longitude >= bounds.west && v.location.longitude <= bounds.east)
-          : (v.location.longitude >= bounds.west || v.location.longitude <= bounds.east);
+          ? (lng >= bounds.west && lng <= bounds.east)
+          : (lng >= bounds.west || lng <= bounds.east);
         if (!(inLat && inLng)) return false;
       }
 
@@ -277,7 +248,8 @@ export default function VenueMap() {
   }, [events, bounds, q, eventType, daysForward, myLoc, radiusKm]);
 
   const totalVenuesWithCoords = useMemo(
-    () => venues.filter(v => v.location.latitude != null && v.location.longitude != null).length,
+    () =>
+      venues.filter(v => v?.location?.latitude != null && v?.location?.longitude != null).length,
     [venues]
   );
 
@@ -320,134 +292,8 @@ export default function VenueMap() {
 
   return (
     <div className="vmap-page">
-      {/* Header / Controls */}
-      <div className="vmap-controls">
-        <div className="vmap-filterBtns" role="group" aria-label="mode">
-          <button
-            type="button"
-            className={`vmap-filterBtn ${mode === 'VENUES' ? 'is-active' : ''}`}
-            onClick={() => setMode('VENUES')}
-          >
-            Venues
-          </button>
-          <button
-            type="button"
-            className={`vmap-filterBtn ${mode === 'EVENTS' ? 'is-active' : ''}`}
-            onClick={() => setMode('EVENTS')}
-          >
-            Events
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="vmap-searchBox">
-          <input
-            className="vmap-searchInput"
-            placeholder={mode === 'VENUES' ? 'ค้นหาชื่อสถานที่…' : 'ค้นหาชื่ออีเวนต์…'}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <span className="vmap-searchIcon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-              strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-              <circle cx="11" cy="11" r="7"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-          </span>
-        </div>
-
-        {mode === 'VENUES' ? (
-          <div className="vmap-selectWrap vmap-genreBox" title="แนวเพลง">
-            <select
-              className="vmap-select"
-              value={genre}
-              onChange={(e) => setGenre(e.target.value)}
-            >
-              <option value="ALL">ทุกแนว</option>
-              {genres.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
-            <span className="vmap-selectCaret" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-          </div>
-        ) : (
-          <>
-            <div className="vmap-selectWrap" title="ประเภทอีเวนต์">
-              <select className="vmap-select" value={eventType} onChange={(e) => setEventType(e.target.value)}>
-                <option value="ALL">ทุกประเภท</option>
-                <option value="OUTDOOR">OUTDOOR</option>
-                <option value="INDOOR">INDOOR</option>
-                <option value="HYBRID">HYBRID</option>
-              </select>
-              <span className="vmap-selectCaret" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </span>
-            </div>
-
-            <div className="vmap-selectWrap" title="ช่วงเวลา">
-              <select className="vmap-select" value={daysForward} onChange={(e) => setDaysForward(e.target.value)}>
-                <option value="7">7 วันข้างหน้า</option>
-                <option value="30">30 วันข้างหน้า</option>
-                <option value="60">60 วันข้างหน้า</option>
-                <option value="90">90 วันข้างหน้า</option>
-              </select>
-              <span className="vmap-selectCaret" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </span>
-            </div>
-          </>
-        )}
-
-        {/* GPS + Radius */}
-        <button className="vmap-ghostBtn" onClick={requestMyLocation}>
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 22s7-4.5 7-11a7 7 0 0 0-14 0c0 6.5 7 11 7 11z"></path>
-            <circle cx="12" cy="11" r="3"></circle>
-          </svg>
-          ตำแหน่งของฉัน
-        </button>
-        <div className="vmap-selectWrap vmap-radiusSelectWrap" title="รัศมี">
-          <select
-            className="vmap-select"
-            value={radiusKm}
-            onChange={(e) => setRadiusKm(e.target.value)}
-          >
-            <option value="ALL">ทุกรัศมี</option>
-            <option value="1">≤ 1 km</option>
-            <option value="3">≤ 3 km</option>
-            <option value="5">≤ 5 km</option>
-            <option value="10">≤ 10 km</option>
-          </select>
-          <span className="vmap-selectCaret" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </span>
-        </div>
-
-        <button
-          className="vmap-ghostBtn"
-          onClick={flyToNearestVenue}
-          disabled={!nearestVenue}
-          title={nearestVenue ? `ใกล้สุด ≈ ${nearestVenue.distanceKm.toFixed(2)} km` : 'ยังไม่มีตำแหน่งฉัน'}
-        >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="7"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          ใกล้ฉัน
-        </button>
-
-        {(err || geoErr) && (
-          <div className="vmap-alert">
-            {err || geoErr}
-          </div>
-        )}
-      </div>
-
-      {/* ====== Layout 2 คอลัมน์: ซ้าย (Map) / ขวา (List) ====== */}
-      <div className="vmap-twoCol">
-        {/* ซ้าย: แผนที่ */}
+      <div className="vmap-section">
+        {/* MAP CONTENT */}
         <div className="vmap-mapCol">
           <div className="vmap-mapBox">
             <MapContainer
@@ -464,10 +310,10 @@ export default function VenueMap() {
               scrollWheelZoom={true}
               style={{ height: '100%', width: '100%' }}
             >
-<TileLayer
-  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-  url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
-/>
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+                url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
+              />
 
               {/* อัปเดตขอบเขตแผนที่เข้ากับ state */}
               <BoundsTracker onChange={setBounds} />
@@ -493,7 +339,7 @@ export default function VenueMap() {
                       <Popup>
                         <div className="vmap-popupTitle">
                           <Link to={toVenueDetailPath(v)} className="vmap-popupTitleLink">
-                            {v.performer.user.name || 'Unnamed Venue'}
+                            {v?.performer?.user?.name || v?.name || 'Unnamed Venue'}
                           </Link>
                         </div>
                         {(() => {
@@ -524,12 +370,127 @@ export default function VenueMap() {
           </div>
         </div>
 
-        {/* ขวา: ลิสต์แบบการ์ด */}
-        <aside className="vmap-listPane">
+        {/* CONTROLS BOX */}
+        <div className="vmap-controls-box">
+          <div className="vmap-controls">
+            {/* Mode Title text */}
+            <div className="vmap-modeTitle">
+              {mode === 'VENUES' ? 'VENUES' : 'EVENTS'}
+            </div>
+
+            {/* Search */}
+            <div className="vmap-searchBox">
+              <input
+                className="vmap-searchInput"
+                placeholder={mode === 'VENUES' ? 'Search for a venue' : 'Search for an event'}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+              <span className="vmap-searchIcon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                  strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+                  <circle cx="11" cy="11" r="7"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </span>
+            </div>
+
+            {/* Filters */}
+            {mode === 'VENUES' ? (
+              <div className="vmap-selectWrap vmap-genreBox" title="แนวเพลง">
+                <select className="vmap-select" value={genre} onChange={(e) => setGenre(e.target.value)}>
+                  <option value="ALL">All genres</option>
+                  {genres.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+                <span className="vmap-selectCaret" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="vmap-selectWrap" title="ประเภทอีเวนต์">
+                  <select className="vmap-select" value={eventType} onChange={(e) => setEventType(e.target.value)}>
+                    <option value="ALL">All type</option>
+                    <option value="OUTDOOR">Outdoor</option>
+                    <option value="INDOOR">Indoor</option>
+                    <option value="HYBRID">Hybrid</option>
+                  </select>
+                  <span className="vmap-selectCaret" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </span>
+                </div>
+                <div className="vmap-selectWrap" title="ช่วงเวลา">
+                  <select className="vmap-select" value={daysForward} onChange={(e) => setDaysForward(e.target.value)}>
+                    <option value="7">Next 7 days</option>
+                    <option value="30">Next 30 days</option>
+                    <option value="60">Next 60 days</option>
+                  </select>
+                  <span className="vmap-selectCaret" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </span>
+                </div>
+              </>
+            )}
+
+            {/* Near me */}
+            <span
+              className="vmap-ghostLink"
+              onClick={flyToNearestVenue}
+              title={nearestVenue ? `ใกล้สุด ≈ ${nearestVenue.distanceKm.toFixed(2)} km` : 'ยังไม่มีตำแหน่งฉัน'}
+              style={{ cursor: nearestVenue ? 'pointer' : 'not-allowed', textDecoration: 'underline', color: '#111', display: 'inline-flex', alignItems: 'center', gap: '4px', opacity: nearestVenue ? 1 : 0.5 }}
+            >
+              Near me
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                <circle cx="12" cy="9" r="2.5" />
+              </svg>
+            </span>
+
+            {/* Info + Arrow switch */}
+            <div className="vmap-modeBox">
+              {/* Left arrow = Venues */}
+              <button
+                type="button"
+                className={`vmap-arrowBtn ${mode === 'VENUES' ? 'is-active' : ''}`}
+                onClick={() => setMode('VENUES')}
+                aria-label="Show venues"
+              >
+                <svg viewBox="0 0 24 24" width="50" height="50" stroke="currentColor" fill="none" strokeWidth="1.5">
+                  <line x1="19" y1="12" x2="5" y2="12" />
+                  <polyline points="12 5 5 12 12 19" />
+                </svg>
+              </button>
+
+              {/* Right arrow = Events */}
+              <button
+                type="button"
+                className={`vmap-arrowBtn ${mode === 'EVENTS' ? 'is-active' : ''}`}
+                onClick={() => setMode('EVENTS')}
+                aria-label="Show events"
+              >
+                <svg viewBox="0 0 24 24" width="50" height="50" stroke="currentColor" fill="none" strokeWidth="1.5">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </button>
+            </div>
+
+            {(err || geoErr) && (
+              <div className="vmap-alert">
+                {err || geoErr}
+              </div>
+            )}
+          </div>
+        </div>
+
+                {/* LIST CARD CONTENT */}
+        <div className="vmap-listBox">
           <div className="vmap-listHeader">
             {mode === 'VENUES'
-              ? <>แสดง {visibleVenues.length} / ทั้งหมด {totalVenuesWithCoords} สถานที่ที่มีพิกัด</>
-              : <>แสดง {visibleEvents.length} อีเวนต์ (ภายใน {daysForward} วันข้างหน้า)</>
+              ? <>Showing {visibleVenues.length} of {totalVenuesWithCoords} venues with coordinates</>
+              : <>Showing {visibleEvents.length} events (within the next {daysForward} days)</>
             }
           </div>
 
@@ -541,10 +502,10 @@ export default function VenueMap() {
                 {visibleVenues.map(v => {
                   const img = v.bannerUrl
                     || v.coverImage
-                    || v.performer.user.profilePhotoUrl
+                    || v.profilePhotoUrl
                     || (Array.isArray(v.photoUrls) && v.photoUrls[0])
                     || '/img/fallback.jpg';
-                  const hasLoc = v.location.latitude != null && v.location.longitude != null;
+                  const hasLoc = v.latitude != null && v.longitude != null;
 
                   // สตริงบรรทัดย่อย (เวลาเปิด–ปิด ถ้าไม่มีใช้ address)
                   const oc = getOpenCloseText(v);
@@ -552,28 +513,31 @@ export default function VenueMap() {
 
                   // คำนวณระยะทาง (แสดงใน badge)
                   const distKm = myLoc
-                    ? haversineKm(myLoc, { lat: v.location.latitude, lng: v.location.longitude })
+                    ? haversineKm(myLoc, { lat: v.latitude, lng: v.longitude })
                     : null;
 
                   return (
-                    <div key={v.performerId || v.slug} className="vmap-card">
+                    <div key={v.id || v.slug} 
+                         className="vmap-card"
+                         onClick={() => window.location.href = toVenueDetailPath(v)}
+                         style={{ cursor: 'pointer' }}
+                    >
                       <div className="vmap-cardImg">
                         <img
                           src={img}
-                          alt={v.performer.user.name}
+                          alt={v.name}
                           loading="lazy"
                           onError={(e)=>{e.currentTarget.src='/img/fallback.jpg';}}
                         />
                       </div>
 
                       <div className="vmap-cardBody">
-                        {/* ชื่อร้าน (ลิงก์หัวการ์ด) */}
                         <div className="vmap-cardTitle">
                           <Link
                             to={toVenueDetailPath(v)}
                             className="vmap-cardTitleLink"
                           >
-                            {v.performer.user.name || 'Unnamed Venue'}
+                            {v.name || 'Unnamed Venue'}
                           </Link>
                         </div>
 
@@ -601,14 +565,10 @@ export default function VenueMap() {
                               Visit Website ↗
                             </a>
                           )}
-                          {hasLoc && (
-                            <a
-                              className="vmap-btn vmap-btnGhost"
-                              href={`https://www.google.com/maps?q=${v.location.latitude},${v.location.longitude}`}
-                              target="_blank" rel="noreferrer"
-                            >
-                              เปิดแผนที่
-                            </a>
+                          {v.genre && (
+                            <span className="vmap-genreTag">
+                              {v.genre}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -676,14 +636,15 @@ export default function VenueMap() {
                           {ev.url && (
                             <a className="vmap-btn" href={ev.url} target="_blank" rel="noreferrer">Visit Website ↗</a>
                           )}
-                          {hasLoc && (
-                            <a
-                              className="vmap-btn vmap-btnGhost"
-                              href={`https://www.google.com/maps?q=${ev.venue.location.latitude},${ev.venue.location.longitude}`}
-                              target="_blank" rel="noreferrer"
-                            >
-                              เปิดแผนที่
-                            </a>
+                          {ev.eventType && (
+                            <span className="vmap-eventTypeTag">
+                              {ev.eventType}
+                            </span>
+                          )}
+                          {ev.genre && (
+                            <span className="vmap-genreTag">
+                              {ev.genre}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -693,7 +654,7 @@ export default function VenueMap() {
               </div>
             )
           )}
-        </aside>
+        </div>
       </div>
     </div>
   );

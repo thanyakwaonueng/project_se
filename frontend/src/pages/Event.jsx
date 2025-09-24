@@ -1,13 +1,19 @@
 // frontend/src/pages/Event.jsx
 import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from "react-router-dom";
 import api from '../lib/api';
 import '../css/Event.css';
-import { Link } from "react-router-dom";
 
 /* ---------- เดดโค้ดเดิม (คงไว้) ---------- */
 const allEvents = [
-  { day: '01', month: 'September', year: '2025', genre: 'Pop', title: 'ผลัดกันเล่น ผลัดการฟัง',
-    desc: 'ผลัดกันเล่น ผลัดการฟังม่วน ๆ เน้อ', image: '/img/at cnxog.jpg',
+  {
+    day: '01',
+    month: 'September',
+    year: '2025',
+    genre: 'Pop',
+    title: 'ผลัดกันเล่น ผลัดการฟัง',
+    desc: 'ผลัดกันเล่น ผลัดการฟังม่วน ๆ เน้อ',
+    image: '/img/at cnxog.jpg',
     condition: `วันที่ : 18 กุมภาพันธ์ 2568 | ประตูเปิด 19:00 น.\nสถานที่ : Chiang Mai OriginaLive\nEarly Bird 450 THB | Regular 550 THB\nสามารถทัก inbox : Chiangmai originaLive เพื่อสำรองบัตรได้เลยแล้วมาเจอกันนะ !!\n** อีเว้นท์นี้ไม่จำกัดอายุผู้เข้าชม กรุณาพกบัตรประชาชนมาลงทะเบียนเพื่อรับริสแบนด์ ทางร้านขอสงวนสิทธิ์ไม่จำหน่ายเครื่องดื่มแอลกอฮอล์ให้ผู้ที่มีอายุต่ำกว่า 20 ปี**`,
     eventType: 'ในร่ม',
     ticketing: 'จำหน่ายผ่าน ticket melon',
@@ -16,9 +22,14 @@ const allEvents = [
     ageRestriction: 'อนุญาติทุกช่วงอายุ',
     date: '2025-07-01',
     doorOpenTime: '19:00',
-    endEventTime: '23:00', },
-  { day: '01', month: 'September', year: '2025', genre: 'Hip hop', title: 'Tipsy & Tired', desc: 'Additional talk', image: '/img/tipyandtired.jpg' },
-  { day: '05', month: 'September', year: '2025', genre: 'Country', title: 'SRWKS.', desc: 'Photography', image: '/img/srwkslive.jpg' },
+    endEventTime: '23:00',
+    // สำหรับ UI หัวใจ (เดดโค้ด)
+    id: 10001,
+    likedByMe: false,
+    followersCount: 0,
+  },
+  { day: '01', month: 'September', year: '2025', genre: 'Hip hop', title: 'Tipsy & Tired', desc: 'Additional talk', image: '/img/tipyandtired.jpg', id: 10002, likedByMe: false, followersCount: 0 },
+  { day: '05', month: 'September', year: '2025', genre: 'Country', title: 'SRWKS.', desc: 'Photography', image: '/img/srwkslive.jpg', id: 10003, likedByMe: false, followersCount: 0 },
 ];
 
 /* ---------- ตัวช่วยสำหรับปฏิทิน (เหมือนเดิม) ---------- */
@@ -37,8 +48,7 @@ const indexToMonthName = Object.keys(monthNameToIndex).reduce((acc, k) => {
 function getStartDayIndex(monthName, year) {
   const monthIndex = monthNameToIndex[monthName];
   const d = new Date(year, monthIndex, 1);
-  // ให้จันทร์เป็น 0
-  return (d.getDay() + 6) % 7;
+  return (d.getDay() + 6) % 7; // ให้จันทร์เป็น 0
 }
 function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -47,13 +57,13 @@ function normalizeEvent(ev) {
   const dt = ev?.date ? new Date(ev.date) : null;
   const month = dt ? indexToMonthName[dt.getMonth()] : null;
   const day = dt ? pad2(dt.getDate()) : null;
-  const year = dt ? dt.getFullYear() : null;  // <- เพิ่มปี
+  const year = dt ? dt.getFullYear() : null;
 
   return {
-    id: ev?.id ?? null,
+    id: ev?.id ?? ev?._id ?? null,
     day,
     month,
-    year,   // <- เพิ่มปี
+    year,
     genre: ev?.genre || ev?.venue?.genre || 'N/A',
     title: ev?.name ?? `Event #${ev?.id ?? ''}`,
     desc: ev?.description || '',
@@ -66,22 +76,24 @@ function normalizeEvent(ev) {
     ageRestriction: ev?.ageRestriction || 'N/A',
     date: ev?.date || 'N/A',
     doorOpenTime: ev?.doorOpenTime || 'N/A',
-    endEventTime: ev?.endTime || 'N/A', // map -> endEventTime
+    endEventTime: ev?.endTime || 'N/A',
     venueName: ev?.venue?.name || '',
+    // สำหรับติดตามอีเวนต์
+    likedByMe: !!ev?.likedByMe,
+    followersCount: ev?.followersCount ?? ev?.likesCount ?? 0,
   };
 }
 
 /* ---------- อันนี้เป็นส่วนของ select month ---------- */
 function MonthPicker({ year, month, setYear, setMonth }) {
   const [open, setOpen] = useState(false);
-
   const months = Object.keys(daysInMonthMap);
 
   return (
     <div className="month-picker-container">
       <div className="month-picker-input" onClick={() => setOpen(!open)}>
         {year}, {month}
-        <img src="/img/calendar.png" className="calendar-icon"/>
+        <img src="/img/calendar.png" className="calendar-icon" />
       </div>
 
       {open && (
@@ -112,31 +124,29 @@ function MonthPicker({ year, month, setYear, setMonth }) {
   );
 }
 
-
-
 export default function Event() {
+  const navigate = useNavigate();
   const now = new Date();
-  const [year, setYear] = useState(now.getFullYear()); // now editable (year)
+  const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(indexToMonthName[now.getMonth()]);
 
-  // เริ่มต้นด้วย "เดดโค้ด" ก่อน แล้วค่อยผสานข้อมูลจริงที่ดึงมา
+  // เริ่มด้วยเดดโค้ด แล้วค่อยผสานข้อมูลจริง
   const [events, setEvents] = useState(allEvents);
 
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showGenrePopup, setShowGenrePopup] = useState(false);
-  const [selectedGenre, setSelectedGenre] = useState([]); // <- multi genre
-  // const [selectedGenre, setSelectedGenre] = useState(null);
+  const [selectedGenre, setSelectedGenre] = useState([]);
+  const [busyIds, setBusyIds] = useState(new Set()); // กำลังสลับ follow
 
-  /* ---------- ดึงข้อมูลจริงแล้ว "ผสาน" กับเดดโค้ด ---------- */
+  /* ---------- ดึงข้อมูลจริงแล้ว "ผสาน" ---------- */
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await api.get('/events'); // แนะนำให้ฝั่ง backend include: { venue: true }
+        const res = await api.get('/events', { withCredentials: true });
         const arr = Array.isArray(res.data) ? res.data : [];
         const mapped = arr.map(normalizeEvent).filter(e => e.month && e.day);
 
-        // รวมเดดโค้ด + ของจริง แล้ว de-dup ด้วย key (เดือน|วัน|ชื่อ)
         const merged = [...allEvents, ...mapped];
         const seen = new Set();
         const deduped = merged.filter(e => {
@@ -148,14 +158,45 @@ export default function Event() {
 
         if (!cancelled) setEvents(deduped);
       } catch (err) {
-        // เงียบ ๆ ไว้เพื่อให้ UI เดิมไม่เปลี่ยน (ยังแสดงเดดโค้ดได้)
         console.warn('Load /events failed:', err);
       }
     })();
     return () => { cancelled = true; };
   }, []);
 
-  /* ---------- genres สำหรับ popup filter (จากชุดรวม) ---------- */
+  /* ---------- follow/unfollow event ---------- */
+  const patchEventLocal = (id, patch) =>
+    setEvents(prev => prev.map(e => (e.id === id ? { ...e, ...patch } : e)));
+
+  const toggleFollowEvent = async (ev) => {
+    if (!ev?.id) return;
+    if (busyIds.has(ev.id)) return;
+
+    setBusyIds(s => new Set(s).add(ev.id));
+    try {
+      if (ev.likedByMe) {
+        const { data } = await api.delete(`/events/${ev.id}/like`, { withCredentials: true });
+        const nextCount = data?.count ?? Math.max(0, (ev.followersCount || 0) - 1);
+        patchEventLocal(ev.id, { likedByMe: false, followersCount: nextCount });
+        setSelectedEvent(list => list?.map(x => x.id === ev.id ? { ...x, likedByMe: false, followersCount: nextCount } : x));
+      } else {
+        const { data } = await api.post(`/events/${ev.id}/like`, {}, { withCredentials: true });
+        const nextCount = data?.count ?? (ev.followersCount || 0) + 1;
+        patchEventLocal(ev.id, { likedByMe: true, followersCount: nextCount });
+        setSelectedEvent(list => list?.map(x => x.id === ev.id ? { ...x, likedByMe: true, followersCount: nextCount } : x));
+      }
+    } catch (err) {
+      if (err?.response?.status === 401 || err?.response?.status === 403) {
+        navigate('/login');
+      } else {
+        console.error('toggleFollowEvent error:', err);
+      }
+    } finally {
+      setBusyIds(s => { const n = new Set(s); n.delete(ev.id); return n; });
+    }
+  };
+
+  /* ---------- genres สำหรับ popup filter ---------- */
   const genres = useMemo(() => {
     const s = new Set();
     events.forEach(e => e.genre && e.genre !== 'N/A' && s.add(e.genre));
@@ -165,11 +206,11 @@ export default function Event() {
   /* ---------- กรองตามเดือน + แนว ---------- */
   const filteredEvents = useMemo(() => {
     return events.filter(e =>
-      e.month === month && 
-      String(e.year) === String(year) && // ตรวจสอบปีตรงนี้ใช้เป็น str ไปก่อนนะ ถ้าอยากเปลี่ยนก็เปลี่ยนได้เลย
-    (selectedGenre.length === 0 || selectedGenre.includes(e.genre)) // <- multi genre
+      e.month === month &&
+      String(e.year) === String(year) &&
+      (selectedGenre.length === 0 || selectedGenre.includes(e.genre))
     );
-  }, [events, month, year, selectedGenre]); // <- เพิ่มปี
+  }, [events, month, year, selectedGenre]);
 
   /* ---------- group เป็นรายวัน ---------- */
   const eventsByDay = useMemo(() => {
@@ -188,41 +229,29 @@ export default function Event() {
     <div className="eventpage-content">
       <h1 className="sound-agenda">SOUND AGENDA</h1>
 
-        <div className="event-picture-box">
-          <img src="https://images.pexels.com/photos/3807093/pexels-photo-3807093.jpeg" className="event-picture"/>
-        </div>
+      <div className="event-picture-box">
+        <img src="https://images.pexels.com/photos/3807093/pexels-photo-3807093.jpeg" className="event-picture" />
+      </div>
 
-        <div className="text-section-right">
-          <h1 className="subtitle-sound-agenda">Mark the dates</h1>
-          <h1 className="subtitle-sound-agenda">feel the beats</h1>
-          {/* <div className="star-container">
-            <img src="img/set-hand-painted-stars-3.png" className="star"/>
-            <img src="img/set-hand-painted-stars-1.png" className="star"/>
-          </div> */}
-
-        </div>
+      <div className="text-section-right">
+        <h1 className="subtitle-sound-agenda">Mark the dates</h1>
+        <h1 className="subtitle-sound-agenda">feel the beats</h1>
+      </div>
 
       <div className="calendar-content">
         <div className="month-select">
           <MonthPicker year={year} month={month} setYear={setYear} setMonth={setMonth} />
 
-        <button 
-          className="select-genre" 
-          onClick={() => setShowGenrePopup(true)} 
-          style={{ marginLeft: '10px', cursor: 'pointer' }}>
-          Select Genre
-        </button>
-
+          <button
+            className="select-genre"
+            onClick={() => setShowGenrePopup(true)}
+            style={{ marginLeft: '10px', cursor: 'pointer' }}>
+            Select Genre
+          </button>
         </div>
 
         <div className="calendar-header">
-          <div>Mon</div>
-          <div>Tue</div>
-          <div>Wed</div>
-          <div>Thu</div>
-          <div>Fri</div>
-          <div>Sat</div>
-          <div>Sun</div>
+          <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
         </div>
 
         <div className="calendar-grid">
@@ -233,7 +262,6 @@ export default function Event() {
           {Array.from({ length: days }, (_, i) => {
             const dayStr = pad2(i + 1);
             const dayEvents = eventsByDay.get(dayStr) || [];
-
             return (
               <div
                 key={dayStr}
@@ -241,7 +269,9 @@ export default function Event() {
                 onClick={() => dayEvents.length && setSelectedEvent(dayEvents)}
                 style={{ cursor: dayEvents.length ? 'pointer' : 'default' }}
               >
-                <div className="date">{dayStr} {dayEvents.length > 0 && <span className="event-dot"></span>}</div>
+                <div className="date">
+                  {dayStr} {dayEvents.length > 0 && <span className="event-dot"></span>}
+                </div>
                 {dayEvents.length > 0 && (
                   <div className="event-summaries">
                     {dayEvents.map((ev) => (
@@ -256,7 +286,7 @@ export default function Event() {
           })}
         </div>
 
-        {/* Popup event detail (เหมือนเดิม) */}
+        {/* Popup event detail */}
         {selectedEvent && (
           <div className="popup-event-overlay" onClick={() => setSelectedEvent(null)}>
             <div className="popup-event-content" onClick={e => e.stopPropagation()}>
@@ -266,25 +296,43 @@ export default function Event() {
               <hr className="popup-divider" />
 
               {selectedEvent.map((ev, index) => (
-                <div key={`${ev.id || ev.title}-${ev.day}-detail`} className="popup-event">
+                <div key={`${ev.id || ev.title}-${ev.day}-detail`} className="popup-event" style={{ position: 'relative' }}>
+                  {/* หัวใจซ้อนบนรูป */}
+                  {ev.id && (
+                    <button
+                      className={`like-button ${ev.likedByMe ? 'liked' : ''}`}
+                      title={ev.likedByMe ? 'Unfollow' : 'Follow'}
+                      aria-label={ev.likedByMe ? 'Unfollow' : 'Follow'}
+                      disabled={busyIds.has(ev.id)}
+                      onClick={(e) => { e.stopPropagation(); toggleFollowEvent(ev); }}
+                      style={{ position: 'absolute', right: 8, top: 8, zIndex: 2 }}
+                    />
+                  )}
+
                   <img
                     src={ev.image}
                     className="popup-image"
                     onError={(e) => { e.currentTarget.src = '/img/graphic-3.png'; }}
                   />
-                  
+
                   <div className="popup-event-section">
-                    <h3 className="popup-event-title">{ev.title}</h3>
+                    <h3 className="popup-event-title" style={{ marginBottom: 6 }}>{ev.title}</h3>
+
+                    {/* แสดงยอดผู้ติดตาม */}
+                    {typeof ev.followersCount === 'number' && (
+                      <div style={{ fontSize: 13, opacity: .85, marginBottom: 8 }}>
+                        👥 {ev.followersCount} followers
+                      </div>
+                    )}
+
                     <Link to={`/myevents/${ev.id}`} className="btn-event-detail">
                       View Event
                     </Link>
                   </div>
 
-                  {/* แสดง divider ถ้าไม่ใช่ item สุดท้าย */}
                   {index < selectedEvent.length - 1 && <hr className="popup-divider" />}
                 </div>
               ))}
-
             </div>
           </div>
         )}
@@ -293,24 +341,18 @@ export default function Event() {
         {showGenrePopup && (
           <div className="popup-overlay" onClick={() => setShowGenrePopup(false)}>
             <div className="popup-content" onClick={e => e.stopPropagation()}>
-              {/* แก้ตรงนี้ */}
-              <button className="close-btn" onClick={(e) => {
-                  e.stopPropagation();   // กันไม่ให้ overlay จับก่อน
-                  setShowGenrePopup(false);
-                }} aria-label="Close"> × </button>
-
+              <button
+                className="close-btn"
+                onClick={(e) => { e.stopPropagation(); setShowGenrePopup(false); }}
+                aria-label="Close"> ×
+              </button>
 
               <h2>Select Genre</h2>
               <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
-                {/* All genres */}
                 <li
                   key="all"
                   onClick={() => { setSelectedGenre([]); setShowGenrePopup(false); }}
-                  style={{
-                    cursor: 'pointer',
-                    padding: '8px',
-                    fontWeight: selectedGenre.length === 0 ? 'bold' : 'normal'
-                  }}
+                  style={{ cursor: 'pointer', padding: '8px', fontWeight: selectedGenre.length === 0 ? 'bold' : 'normal' }}
                 >
                   All genres
                 </li>
@@ -320,24 +362,17 @@ export default function Event() {
                     key={g}
                     onClick={() => {
                       if (selectedGenre.includes(g)) {
-                        // ถ้าเลือกแล้ว → ลบออก
                         setSelectedGenre(selectedGenre.filter(x => x !== g));
                       } else {
-                        // เพิ่มเข้า array
                         setSelectedGenre([...selectedGenre, g]);
                       }
                     }}
-                    style={{
-                      cursor: 'pointer',
-                      padding: '8px',
-                      fontWeight: selectedGenre.includes(g) ? 'bold' : 'normal'
-                    }}
+                    style={{ cursor: 'pointer', padding: '8px', fontWeight: selectedGenre.includes(g) ? 'bold' : 'normal' }}
                   >
                     {g}
                   </li>
                 ))}
               </ul>
-
             </div>
           </div>
         )}

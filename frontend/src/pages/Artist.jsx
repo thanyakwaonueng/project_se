@@ -320,8 +320,20 @@ export default function Artist() {
         <div className="group-detail-view a-fullwide">
           <div className="a-hero-grid">
             <div className="a-hero-photo a-hero-emph a-shadow-sm">
-              <img src={selectedGroup.image} alt={selectedGroup.name} onError={(e) => (e.currentTarget.src = "/img/fallback.jpg")} />
-            </div>
+  {/* ❤️ follow button on top-right over the image */}
+  <button
+    className={`like-button a-hero-likebtn ${selectedGroup.likedByMe ? "liked" : ""}`}
+    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFollow(selectedGroup); }}
+    aria-label={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
+    disabled={followingIds.has(selectedGroup.id)}
+    title={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
+  />
+  <img
+    src={selectedGroup.image}
+    alt={selectedGroup.name}
+    onError={(e) => (e.currentTarget.src = "/img/fallback.jpg")}
+  />
+</div>
             <div className="a-hero-name">{selectedGroup.name || "Artist"}</div>
             <div className="a-hero-detail">{selectedGroup.details || selectedGroup.description || "No description."}</div>
 

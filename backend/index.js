@@ -792,33 +792,42 @@ app.post('/events', authMiddleware, async (req, res) => {
 
 app.get('/events', async (_req, res) => {
   try {
+    let meId = null;
+    try { await authMiddleware(_req, res, () => {}); meId = _req.user?.id ?? null; } catch {}
+
     const events = await prisma.event.findMany({
       include: {
         venue: {
           include: {
-            performer: {
-              include: { user: true }
-            },
+            performer: { include: { user: true } },
             location: true,
-          }
+          },
         },
         artistEvents: {
           include: {
             artist: {
               include: {
-                performer: {
-                  include: { user: true }
-                },
+                performer: { include: { user: true } },
                 artistEvents: true,
                 artistRecords: true,
               }
-
             }
           },
         },
+        // NEW: like info
+        _count: { select: { likedBy: true } },           // ต้องมี relation likedBy ใน Event -> LikeEvent[]
+        likedBy: meId ? { where: { userId: meId }, select: { userId: true }, take: 1 } : false,
       },
     });
-    res.json(events);
+
+    // เติม field เพิ่มให้อ่านง่าย
+    const mapped = events.map(e => ({
+      ...e,
+      followersCount: e._count?.likedBy ?? 0,
+      likedByMe: !!(Array.isArray(e.likedBy) && e.likedBy.length),
+    }));
+
+    res.json(mapped);
   } catch (err) {
     console.error('GET /events error:', err);
     res.status(500).json({ error: 'Could not fetch events' });
@@ -1493,6 +1502,74 @@ app.delete('/artists/:id/like', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Unlike failed' });
   }
 });
+
+
+// ---------- LIKE / UNLIKE EVENT ----------
+app.post('/events/:id/like', authMiddleware, async (req, res) => {
+  try {
+    const eventId = Number(req.params.id);
+    const userId = req.user.id;
+
+    const exists = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!exists) return res.status(404).json({ error: 'Event not found' });
+
+    await prisma.likeEvent.upsert({
+      where: { userId_eventId: { userId, eventId } },
+      create: { userId, eventId },
+      update: {},
+    });
+
+    const count = await prisma.likeEvent.count({ where: { eventId } });
+    res.json({ liked: true, count });
+  } catch (e) {
+    console.error('POST /events/:id/like error', e);
+    res.status(500).json({ error: 'Like event failed' });
+  }
+});
+
+app.delete('/events/:id/like', authMiddleware, async (req, res) => {
+  try {
+    const eventId = Number(req.params.id);
+    const userId = req.user.id;
+
+    await prisma.likeEvent.delete({
+      where: { userId_eventId: { userId, eventId } },
+    }).catch(() => {});
+
+    const count = await prisma.likeEvent.count({ where: { eventId } });
+    res.json({ liked: false, count });
+  } catch (e) {
+    console.error('DELETE /events/:id/like error', e);
+    res.status(500).json({ error: 'Unlike event failed' });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* ───────────────────────────── HEALTH ───────────────────────────── */
 app.get('/', (_req, res) => res.send('🎵 API is up!'));
