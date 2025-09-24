@@ -696,6 +696,36 @@ app.post('/venues', authMiddleware, async (req, res) => {
 });
 
 
+
+
+
+// // GET /me/venue — ดึง venue ของผู้ใช้ปัจจุบัน
+// app.get('/me/venue', authMiddleware, async (req, res) => {
+//   try {
+//     const venue = await prisma.venue.findUnique({
+//       where: { performerId: req.user.id },
+//       include: {
+//         performer: { include: { user: true } },
+//         location: true,
+//         events: true,
+//       },
+//     });
+//     if (!venue) return res.status(404).json({ error: 'No venue for this user' });
+//     res.json(venue);
+//   } catch (err) {
+//     console.error('GET /me/venue error:', err);
+//     res.status(500).json({ error: 'Could not fetch my venue' });
+//   }
+// });
+
+
+
+
+
+
+
+
+
 app.get('/venues', async (_req, res) => {
   const venues = await prisma.venue.findMany({
     include: {
@@ -711,21 +741,137 @@ app.get('/venues', async (_req, res) => {
   res.json(venues);
 });
 
+// ✅ GET /venues/:id — ใช้ id อย่างเดียว (ไม่ใช้ slug) และส่งค่า number จริงให้ Prisma
 app.get('/venues/:id', async (req, res) => {
-  const id = +req.params.id;
-  const venue = await prisma.venue.findUnique({
-    where: { performerId: id },
-    include: {
-      performer: {
-        include: {
-          user: true,
-        },
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ error: 'Invalid id' });
+    }
+
+    const venue = await prisma.venue.findUnique({
+      // ❌ ห้ามเขียน performerId: Int
+      // ✅ ต้องส่งค่า id จริง
+      where: { performerId: id },
+      include: {
+        performer: { include: { user: true } },
+        location: true,
+        events: true,
       },
-      location: true,
-      events: true
-    },
-  });
-  venue ? res.json(venue) : res.status(404).send('Venue not found');
+    });
+
+    if (!venue) return res.status(404).send('Venue not found');
+    res.json(venue);
+  } catch (err) {
+    console.error('GET /venues/:id error:', err);
+    res.status(500).json({ error: 'Could not fetch venue' });
+  }
+});
+
+/* ───────── PUT /venues/:id (id = performerId) ───────── */
+app.put('/venues/:id', authMiddleware, async (req, res) => {
+  try {
+    const id = Number(req.params.id);            // <- performerId / owner userId
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+
+    // สิทธิ์: ADMIN ได้หมด / ORGANIZE ต้องแก้เฉพาะของตัวเอง
+    if (!(req.user.role === 'ADMIN' || (req.user.role === 'ORGANIZE' && req.user.id === id))) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const body = req.body || {};
+
+    // เตรียมข้อมูล (แปลงค่าสำคัญเป็น number ถ้าจำเป็น)
+    const toInt = (v) => (v === '' || v == null ? null : (Number.isFinite(+v) ? Math.trunc(+v) : null));
+    const toFloat = (v) => (v === '' || v == null ? null : (Number.isFinite(+v) ? +v : null));
+
+    const userData = {
+      // ชื่อ venue เก็บที่ user.name ของเจ้าของ (ตามสคีมาเดิม)
+      name: (body.name ?? '').trim() || null,
+    };
+
+    const performerData = {
+      contactEmail: body.contactEmail ?? null,
+      contactPhone: body.contactPhone ?? null,
+      youtubeUrl: body.youtubeUrl ?? null,
+      tiktokUrl: body.tiktokUrl ?? null,
+      facebookUrl: body.facebookUrl ?? null,
+      instagramUrl: body.instagramUrl ?? null,
+      lineUrl: body.lineUrl ?? null,
+      twitterUrl: body.twitterUrl ?? null,
+    };
+
+    const venueData = {
+      description: body.description ?? null,
+      genre: body.genre ?? null,
+      capacity: toInt(body.capacity),
+      dateOpen: body.dateOpen ? new Date(body.dateOpen) : null,
+      dateClose: body.dateClose ? new Date(body.dateClose) : null,
+      priceRate: body.priceRate ?? null,
+      timeOpen: body.timeOpen ?? null,
+      timeClose: body.timeClose ?? null,
+      alcoholPolicy: body.alcoholPolicy ?? null,
+      ageRestriction: toInt(body.ageRestriction),
+      websiteUrl: body.websiteUrl ?? null,
+      photoUrls: Array.isArray(body.photoUrls)
+        ? body.photoUrls
+        : (typeof body.photoUrls === 'string'
+            ? body.photoUrls.split(',').map(s => s.trim()).filter(Boolean)
+            : []),
+    };
+
+    const locationData = {
+      latitude: toFloat(body.latitude),
+      longitude: toFloat(body.longitude),
+      locationUrl: body.locationUrl ?? null,
+    };
+
+    // ตรวจว่ามี venue นี้อยู่จริงก่อน
+    const exists = await prisma.venue.findUnique({ where: { performerId: id } });
+    if (!exists) return res.status(404).json({ error: 'Venue not found' });
+
+    const updated = await prisma.$transaction(async (tx) => {
+      // 1) อัปเดตชื่อบน user
+      await tx.user.update({
+        where: { id },
+        data: userData,
+      });
+
+      // 2) performer (ช่องทางติดต่อ/โซเชียล)
+      await tx.performer.update({
+        where: { userId: id },
+        data: performerData,
+      });
+
+      // 3) venue หลัก (***อย่าใส่ 173 อีกแล้ว***)
+      await tx.venue.update({
+        where: { performerId: id },
+        data: venueData,
+      });
+
+      // 4) location: upsert โดยใช้ venueId = performerId
+      await tx.venueLocation.upsert({
+        where: { venueId: id },
+        update: locationData,
+        create: { venueId: id, ...locationData },
+      });
+
+      // ส่งข้อมูลล่าสุดกลับ
+      return tx.venue.findUnique({
+        where: { performerId: id },
+        include: {
+          performer: { include: { user: true } },
+          location: true,
+          events: true,
+        },
+      });
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error('PUT /venues/:id error', err);
+    res.status(500).json({ error: 'Could not update venue' });
+  }
 });
 
 
@@ -1330,7 +1476,7 @@ app.post('/notifications/:id/read', authMiddleware, async (req, res) => {
 
 
 /* ───────────── ONBOARDING / EDIT PROFILE ───────────── */
-/* ✅ รับ artistApplication + desiredRole และเก็บลง RoleRequest.application */
+/*  รับ artistApplication + desiredRole และเก็บลง RoleRequest.application */
 // ---------- REPLACE: /me/setup ----------
 app.post('/me/setup', authMiddleware, async (req, res) => {
   try {

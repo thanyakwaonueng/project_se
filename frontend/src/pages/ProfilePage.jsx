@@ -1,3 +1,4 @@
+// src/pages/ProfilePage.jsx
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -130,6 +131,13 @@ export default function ProfilePage() {
   const myArtistId = me?.id;
 
   const isArtistApproved = me?.role === "ARTIST";
+
+  // ✅ followers ของศิลปิน (นับเฉพาะตอนเราเป็น ARTIST)
+  const myFollowersCount = useMemo(() => {
+    if (!isArtistApproved) return 0;
+    const rows = performer?.likedBy;
+    return Array.isArray(rows) ? rows.length : 0;
+  }, [isArtistApproved, performer?.likedBy]);
 
   // ===== Artists following =====
   const followingArtists = useMemo(
@@ -275,6 +283,12 @@ export default function ProfilePage() {
                         {artistInfo.genre && <span className="chip">{artistInfo.genre}</span>}
                       </>
                     }
+                  />
+                  {/* ✅ แสดงจำนวนผู้ติดตามของศิลปิน */}
+                  <InfoRow
+                    label="Followers"
+                    value={`${Number(myFollowersCount || 0).toLocaleString()} followers`}
+                    icon="⭐"
                   />
                 </>
               )}

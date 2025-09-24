@@ -86,11 +86,11 @@ function formatDT(iso) {
 // ===== path helpers =====
 const toEventDetailPath = (ev) => {
   const key = ev?.id ?? ev?._id ?? ev?.slug;
-  return key ? `/page_events/${encodeURIComponent(key)}` : (ev?.url || "#");
+  return key ? `/events/${encodeURIComponent(key)}` : (ev?.url || "#");
 };
 const toVenueDetailPath = (v) => {
-  const key = v?.id ?? v?._id ?? v?.slug ?? v?.slugOrId ?? v?.performerId;
-  return key ? `/page_venues/${encodeURIComponent(key)}` : "#";
+  const id = v?.performerId ?? v?.id ?? v?._id;
+  return id ? `/venues/${encodeURIComponent(id)}` : "#";
 };
 
 // ===== เวลาเปิด–ปิด (รองรับหลายคีย์) =====
@@ -331,7 +331,7 @@ export default function VenueMap() {
               {mode === 'VENUES'
                 ? visibleVenues.map(v => (
                     <Marker
-                      key={`v-${v.performerId || v.slug}`}
+                      key={`v-${v.performerId}`}
                       position={[v.location.latitude, v.location.longitude]}
                       icon={ICON_VENUE}
                     >
@@ -448,9 +448,8 @@ export default function VenueMap() {
               </svg>
             </span>
 
-            {/* Info + Arrow switch */}
+            {/* Switch (VENUES / EVENTS) */}
             <div className="vmap-modeBox">
-              {/* Left arrow = Venues */}
               <button
                 type="button"
                 className={`vmap-arrowBtn ${mode === 'VENUES' ? 'is-active' : ''}`}
@@ -462,8 +461,6 @@ export default function VenueMap() {
                   <polyline points="12 5 5 12 12 19" />
                 </svg>
               </button>
-
-              {/* Right arrow = Events */}
               <button
                 type="button"
                 className={`vmap-arrowBtn ${mode === 'EVENTS' ? 'is-active' : ''}`}
@@ -485,7 +482,7 @@ export default function VenueMap() {
           </div>
         </div>
 
-                {/* LIST CARD CONTENT */}
+        {/* LIST CARD CONTENT */}
         <div className="vmap-listBox">
           <div className="vmap-listHeader">
             {mode === 'VENUES'
@@ -500,32 +497,34 @@ export default function VenueMap() {
             ) : (
               <div className="vmap-grid">
                 {visibleVenues.map(v => {
-                  const img = v.bannerUrl
-                    || v.coverImage
-                    || v.profilePhotoUrl
-                    || (Array.isArray(v.photoUrls) && v.photoUrls[0])
-                    || '/img/fallback.jpg';
-                  const hasLoc = v.latitude != null && v.longitude != null;
+                  const img =
+                    v?.performer?.user?.profilePhotoUrl ||
+                    v.bannerUrl ||
+                    v.coverImage ||
+                    (Array.isArray(v.photoUrls) && v.photoUrls[0]) ||
+                    '/img/fallback.jpg';
 
-                  // สตริงบรรทัดย่อย (เวลาเปิด–ปิด ถ้าไม่มีใช้ address)
+                  const lat = v?.location?.latitude;
+                  const lng = v?.location?.longitude;
+
                   const oc = getOpenCloseText(v);
                   const subline = oc || v.address || '';
 
-                  // คำนวณระยะทาง (แสดงใน badge)
-                  const distKm = myLoc
-                    ? haversineKm(myLoc, { lat: v.latitude, lng: v.longitude })
+                  const distKm = (myLoc && lat != null && lng != null)
+                    ? haversineKm(myLoc, { lat, lng })
                     : null;
 
                   return (
-                    <div key={v.id || v.slug} 
-                         className="vmap-card"
-                         onClick={() => window.location.href = toVenueDetailPath(v)}
-                         style={{ cursor: 'pointer' }}
+                    <div
+                      key={v.performerId}
+                      className="vmap-card"
+                      onClick={() => window.location.href = toVenueDetailPath(v)}
+                      style={{ cursor: 'pointer' }}
                     >
                       <div className="vmap-cardImg">
                         <img
                           src={img}
-                          alt={v.name}
+                          alt={v?.performer?.user?.name || 'Venue'}
                           loading="lazy"
                           onError={(e)=>{e.currentTarget.src='/img/fallback.jpg';}}
                         />
@@ -533,22 +532,17 @@ export default function VenueMap() {
 
                       <div className="vmap-cardBody">
                         <div className="vmap-cardTitle">
-                          <Link
-                            to={toVenueDetailPath(v)}
-                            className="vmap-cardTitleLink"
-                          >
-                            {v.name || 'Unnamed Venue'}
+                          <Link to={toVenueDetailPath(v)} className="vmap-cardTitleLink">
+                            {v?.performer?.user?.name || 'Unnamed Venue'}
                           </Link>
                         </div>
 
-                        {/* บรรทัดย่อยใต้ชื่อ */}
                         {subline && (
                           <div className="vmap-cardSub">
                             <span className="vmap-sub">{subline}</span>
                           </div>
                         )}
 
-                        {/* meta ด้านขวา */}
                         <div className="vmap-cardMeta">
                           {typeof v.rating === 'number' && (
                             <span className="vmap-badge">★ {v.rating.toFixed(1)}</span>
@@ -558,17 +552,14 @@ export default function VenueMap() {
                           )}
                         </div>
 
-                        {/* ปุ่มแอ็กชัน */}
                         <div className="vmap-cardActions">
-                          {v.website && (
-                            <a className="vmap-btn" href={v.website} target="_blank" rel="noreferrer">
+                          {v.websiteUrl && (
+                            <a className="vmap-btn" href={v.websiteUrl} target="_blank" rel="noreferrer">
                               Visit Website ↗
                             </a>
                           )}
                           {v.genre && (
-                            <span className="vmap-genreTag">
-                              {v.genre}
-                            </span>
+                            <span className="vmap-genreTag">{v.genre}</span>
                           )}
                         </div>
                       </div>
@@ -593,7 +584,7 @@ export default function VenueMap() {
                     || ev.venue?.profilePhotoUrl
                     || (Array.isArray(ev.venue?.photoUrls) && ev.venue.photoUrls[0])
                     || '/img/fallback.jpg';
-                  const hasLoc = ev.venue?.latitude != null && ev.venue?.longitude != null;
+
                   return (
                     <div key={ev.id || ev._id || ev.slug} className="vmap-card">
                       <div className="vmap-cardImg">

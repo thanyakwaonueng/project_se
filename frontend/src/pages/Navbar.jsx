@@ -90,14 +90,11 @@ export default function Navbar() {
           data-bs-toggle="dropdown"
           aria-expanded="false"
         >
-
-        <img src="/img/users-circles-freepik.png" className="navbar-menu-link profile-icon"/>
+          <img src="/img/users-circles-freepik.png" alt="profile" className="navbar-menu-link profile-icon" />
         </button>
-        
+
         <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
-          <li className="dropdown-item-text">
-            Role: {user.role}
-          </li>
+          <li className="dropdown-item-text">Role: {user.role}</li>
           <li><hr className="dropdown-divider" /></li>
 
           {/*  ไปหน้าโปรไฟล์ก่อน */}
@@ -108,21 +105,45 @@ export default function Navbar() {
           </li>
 
           {(user.role === 'ARTIST' || user.role === 'ADMIN') && (
-            <>
-              <li><Link className="dropdown-item" to="/artist/inviterequests" onClick={closeMobileMenu}>Artist Pending Invite</Link></li>
-            </>
+            <li>
+              <Link className="dropdown-item" to="/artist/inviterequests" onClick={closeMobileMenu}>
+                Artist Pending Invite
+              </Link>
+            </li>
           )}
 
           {(user.role === 'ORGANIZE' || user.role === 'ADMIN') && (
             <>
-              <li><Link className="dropdown-item" to="/me/venue" onClick={closeMobileMenu}>My Venue</Link></li>
-              <li><Link className="dropdown-item" to="/me/event" onClick={closeMobileMenu}>Create Event</Link></li>
-              <li><Link className="dropdown-item" to="/myevents" onClick={closeMobileMenu}>My Event</Link></li>
+              {/* ✅ My Venue → ไปหน้า “รายละเอียดร้านของฉัน” โดยอิง user.id (= performerId) */}
+              <li>
+                <Link
+                  className="dropdown-item"
+                  to={user ? `/venues/${user.id}` : '/venues'}
+                  onClick={closeMobileMenu}
+                >
+                  My Venue
+                </Link>
+              </li>
+
+              <li>
+                <Link className="dropdown-item" to="/me/event" onClick={closeMobileMenu}>
+                  Create Event
+                </Link>
+              </li>
+              <li>
+                <Link className="dropdown-item" to="/myevents" onClick={closeMobileMenu}>
+                  My Event
+                </Link>
+              </li>
             </>
           )}
 
           <li><hr className="dropdown-divider" /></li>
-          <li><Link className="dropdown-item" to="/logout" onClick={closeMobileMenu}>Logout</Link></li>
+          <li>
+            <Link className="dropdown-item" to="/logout" onClick={closeMobileMenu}>
+              Logout
+            </Link>
+          </li>
         </ul>
       </div>
     );
@@ -167,24 +188,20 @@ export default function Navbar() {
               <div className="navbar-menu-text">VENUES</div>
             </a>
 
-            {/* (ลบ MAP ออก) */}
-
-            {/* Dropdowns */}
             <div className="navbar-auth-section">
               {user ? (
                 <>
-                  <LanguageDropdown />        {/* ย้ายมาเป็นอันแรก */}
+                  <LanguageDropdown />
                   <NotificationBell />
                   <AuthButtons user={user} loading={loading} />
                 </>
               ) : (
                 <>
                   <AuthButtons user={user} loading={loading} />
-                  <LanguageDropdown />        {/* สำหรับผู้ใช้ไม่ล็อกอิน */}
+                  <LanguageDropdown />
                 </>
               )}
             </div>
-
           </div>
         </div>
       </div>
