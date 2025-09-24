@@ -473,12 +473,15 @@ app.get('/artists/:id', async (req, res) => {
 });
 
 
-app.get("/groups", async (req, res) => {
+app.get('/groups', async (req, res) => {
   try {
     let meId = null;
     try {
-      await authMiddleware(req, res, () => {});
-      meId = req.user?.id ?? null;
+      const token = req.cookies?.token;
+      if (token) {
+        const decoded = jwt.verify(token, SECRET);
+        meId = decoded?.id ?? null;
+      }
     } catch {}
 
     const artists = await prisma.artist.findMany({
@@ -488,15 +491,10 @@ app.get("/groups", async (req, res) => {
             user: true,
             _count: { select: { likedBy: true } },
             likedBy: meId
-              ? {
-                  where: { userId: meId },
-                  select: { userId: true },
-                  take: 1,
-                }
+              ? { where: { userId: meId }, select: { userId: true }, take: 1 }
               : false,
           },
         },
-        // ✅ ต้อง include artistRecords เพื่อดึงรูป/วิดีโอจากที่นี่
         artistRecords: true,
         artistEvents: {
           include: {
@@ -936,10 +934,17 @@ app.post('/events', authMiddleware, async (req, res) => {
   }
 });
 
-app.get('/events', async (_req, res) => {
+app.get('/events', async (req, res) => {
   try {
+    // optional auth (ไม่ส่ง response เอง)
     let meId = null;
-    try { await authMiddleware(_req, res, () => {}); meId = _req.user?.id ?? null; } catch {}
+    try {
+      const token = req.cookies?.token;
+      if (token) {
+        const decoded = jwt.verify(token, SECRET);
+        meId = decoded?.id ?? null;
+      }
+    } catch {}
 
     const events = await prisma.event.findMany({
       include: {
@@ -956,27 +961,27 @@ app.get('/events', async (_req, res) => {
                 performer: { include: { user: true } },
                 artistEvents: true,
                 artistRecords: true,
-              }
-            }
+              },
+            },
           },
         },
-        // NEW: like info
-        _count: { select: { likedBy: true } },           // ต้องมี relation likedBy ใน Event -> LikeEvent[]
-        likedBy: meId ? { where: { userId: meId }, select: { userId: true }, take: 1 } : false,
+        _count: { select: { likedBy: true } },
+        likedBy: meId
+          ? { where: { userId: meId }, select: { userId: true }, take: 1 }
+          : false,
       },
     });
 
-    // เติม field เพิ่มให้อ่านง่าย
     const mapped = events.map(e => ({
       ...e,
       followersCount: e._count?.likedBy ?? 0,
       likedByMe: !!(Array.isArray(e.likedBy) && e.likedBy.length),
     }));
 
-    res.json(mapped);
+    return res.json(mapped);
   } catch (err) {
     console.error('GET /events error:', err);
-    res.status(500).json({ error: 'Could not fetch events' });
+    return res.status(500).json({ error: 'Could not fetch events' });
   }
 });
 

@@ -29,9 +29,9 @@ import AccountSetupPage from '../pages/AccountSetupPage';
 import AdminRoleRequestsPage from '../pages/AdminRoleRequestsPage';
 
 /** 
- * ตัวห่อเช็คว่า “ตั้งค่าโปรไฟล์แล้วหรือยัง”
- * ถ้า “ยัง” -> เด้งไป /accountsetup (replace) ทำให้กด Back แล้วไม่เด้งกลับมาหน้าเดิม
- * หน้าที่อนุญาตผ่านเสมอ: /login, /signup, /accountsetup (กัน loop)
+ * เช็คว่า “ตั้งค่าโปรไฟล์แล้วหรือยัง”
+ * ถ้ายัง -> เด้งไป /accountsetup (replace)
+ * อนุโลม: /login, /signup, /accountsetup
  */
 function RequireProfile({ children }) {
   const location = useLocation();
@@ -59,7 +59,6 @@ function RequireProfile({ children }) {
         const hasPerformer =
           !!(data?.performerInfo?.artistInfo) ||
           !!(data?.performerInfo?.venueInfo);
-
         const done = hasBasic || hasPerformer;
         if (alive) setNeedsSetup(!done);
       } catch (_e) {
@@ -79,37 +78,32 @@ function RequireProfile({ children }) {
 }
 
 /**
- * 🔁 /me/venue switcher
- * - ถ้า user มี venue ของตัวเอง -> เด้งไป /venues/:id (id = user.id/performerId)
- * - ถ้ายังไม่มี -> เด้งไป /me/venue/create (หน้า CreateVenue)
+ * /me/venue switcher
+ * - ถ้ามี venue -> /venues/:id
+ * - ถ้ายังไม่มี -> /me/venue/create
  */
 function MyVenueSwitch() {
   const navigate = useNavigate();
 
   useEffect(() => {
     let alive = true;
-
     (async () => {
       try {
-        // 1) เอา id ผู้ใช้ปัจจุบัน
         const { data } = await axios.get('/api/auth/me', { withCredentials: true });
         const myId = Number(data?.id);
         if (!Number.isInteger(myId)) {
           navigate('/login', { replace: true });
           return;
         }
-
-        // 2) ตรวจว่ามี venue จริงไหม
         try {
           await axios.get(`/api/venues/${myId}`, { withCredentials: true });
-          if (alive) navigate(`/venues/${myId}`, { replace: true }); // มี -> ไปหน้า detail
+          if (alive) navigate(`/venues/${myId}`, { replace: true });
         } catch (err) {
           if (err?.response?.status === 404) {
-            if (alive) navigate('/me/venue/create', { replace: true }); // ไม่มี -> ไปหน้า create
+            if (alive) navigate('/me/venue/create', { replace: true });
           } else if (err?.response?.status === 401) {
             if (alive) navigate('/login', { replace: true });
           } else {
-            // เคสอื่นๆ พาไปหน้า map เป็น safe fallback
             if (alive) navigate('/venues', { replace: true });
           }
         }
@@ -117,24 +111,21 @@ function MyVenueSwitch() {
         navigate('/login', { replace: true });
       }
     })();
-
     return () => { alive = false; };
   }, [navigate]);
 
-  return null; // component นี้ทำหน้าที่ redirect อย่างเดียว
+  return null;
 }
 
 export default function AppRoutes() {
   return (
     <Router>
       <Routes>
-        {/* ✅ หน้า public/อนุญาตเสมอ: login / signup / accountsetup */}
+        {/* กลุ่ม public: login / signup / logout / accountsetup */}
         <Route element={<Layout />}>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/logout" element={<Logout />} />
-
-          {/* Account Setup เปิดให้ทุก role เข้ามาตั้งค่าได้ */}
           <Route
             path="/accountsetup"
             element={
@@ -145,7 +136,23 @@ export default function AppRoutes() {
           />
         </Route>
 
-        {/* ✅ ที่เหลือ “ต้องมีโปรไฟล์แล้ว” */}
+        {/* กลุ่ม public: หน้าเนื้อหา (ไม่ต้องมีโปรไฟล์/ไม่ต้องล็อกอิน) */}
+        <Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+
+          <Route path="/artists" element={<Artist />} />
+          <Route path="/artists/:id" element={<Artist />} />
+
+          <Route path="/events" element={<Event />} />
+          <Route path="/events/:id" element={<EventDetail />} />
+
+          <Route path="/venues" element={<VenueMap />} />
+          <Route path="/venues/map" element={<VenueMap />} />
+          <Route path="/venues/:id" element={<Venue />} />
+        </Route>
+
+        {/* กลุ่มที่ “ต้องมีโปรไฟล์แล้ว” */}
         <Route
           element={
             <RequireProfile>
@@ -153,19 +160,7 @@ export default function AppRoutes() {
             </RequireProfile>
           }
         >
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-
-          <Route path="/artists" element={<Artist />} />
-          <Route path="/artists/:id" element={<Artist />} />
-
-          {/* หน้ารวม Venue = แผนที่ */}
-          <Route path="/venues" element={<VenueMap />} />
-          <Route path="/venues/map" element={<VenueMap />} />
-
-          {/* หน้ารายละเอียด Venue */}
-          <Route path="/venues/:id" element={<Venue />} />
-          {/* แบบฟอร์มแก้ไข (ใช้ในปุ่ม Edit บนหน้า /venues/:id) */}
+          {/* แก้ไข venue */}
           <Route
             path="/venues/:id/edit"
             element={
@@ -175,7 +170,7 @@ export default function AppRoutes() {
             }
           />
 
-          {/* ✅ My Venue (เมนูใน navbar) -> สวิตช์ตามเงื่อนไข */}
+          {/* My Venue (เมนู) */}
           <Route
             path="/me/venue"
             element={
@@ -184,7 +179,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-          {/* หน้า create สำหรับกรณียังไม่มีโปรไฟล์ */}
           <Route
             path="/me/venue/create"
             element={
@@ -194,8 +188,7 @@ export default function AppRoutes() {
             }
           />
 
-          <Route path="/events" element={<Event />} />
-          <Route path="/events/:id" element={<EventDetail />} />
+          {/* อื่น ๆ ที่ต้องล็อกอิน */}
           <Route path="/myevents" element={<MyEvents />} />
           <Route path="/myevents/:id" element={<EventDetail />} />
 
@@ -208,21 +201,16 @@ export default function AppRoutes() {
             }
           />
 
-          <Route
-            path="/me/artist"
-            element={
-              // เปิดหน้า create ศิลปินตามเดิม
-              <CreateArtist />
-            }
-          />
-
+          {/* สร้าง/จัดการของฉัน */}
+          <Route path="/me/artist" element={<CreateArtist />} />
           <Route path="/me/event" element={<CreateEvent />} />
           <Route path="/me/event/:eventId" element={<CreateEvent />} />
           <Route path="/me/invite_to_event/:eventId" element={<InviteArtist />} />
 
+          {/* โปรไฟล์ฉัน */}
           <Route path="/me/profile" element={<ProfilePage />} />
 
-          {/* หน้าแอดมินตรวจคำขอ/อนุมัติ/ปฏิเสธ */}
+          {/* แอดมิน */}
           <Route
             path="/admin/role_requests"
             element={
@@ -231,7 +219,6 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/artist/inviterequests"
             element={
