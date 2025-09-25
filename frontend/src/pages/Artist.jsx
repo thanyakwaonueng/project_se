@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "../css/Artist.css";
-import "../css/Artist_profile.css";
+import "../css/Artist_profile_new.css";
 
 /** ---------- LocalStorage follow (client-side) ---------- */
 const FOLLOW_KEY = "artist.follow.v1";
@@ -20,7 +20,7 @@ function SocialIcon({ href, img, label }) {
   if (!href) return null;
   return (
     <a
-      className="a-social-btn"
+      className="social-btn"
       href={href}
       target="_blank"
       rel="noreferrer"
@@ -112,20 +112,20 @@ export default function Artist() {
   }, [groups, activeFilter, searchQuery]);
 
   /** schedule */
-  const now = new Date();
-  const scheduleUpcoming = useMemo(() => {
-    const arr = (selectedGroup?.schedule || []).filter(
-      (ev) => new Date(ev.dateISO) >= now
-    );
-    return arr.sort((a, b) => new Date(a.dateISO) - new Date(b.dateISO));
-  }, [selectedGroup, now]);
+  // const now = new Date();
+  // const scheduleUpcoming = useMemo(() => {
+  //   const arr = (selectedGroup?.schedule || []).filter(
+  //     (ev) => new Date(ev.dateISO) >= now
+  //   );
+  //   return arr.sort((a, b) => new Date(a.dateISO) - new Date(b.dateISO));
+  // }, [selectedGroup, now]);
 
-  const schedulePast = useMemo(() => {
-    const arr = (selectedGroup?.schedule || []).filter(
-      (ev) => new Date(ev.dateISO) < now
-    );
-    return arr.sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
-  }, [selectedGroup, now]);
+  // const schedulePast = useMemo(() => {
+  //   const arr = (selectedGroup?.schedule || []).filter(
+  //     (ev) => new Date(ev.dateISO) < now
+  //   );
+  //   return arr.sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
+  // }, [selectedGroup, now]);
 
   /** follow/unfollow (DB-based; backend ใช้ endpoint like เดิม) */
   const toggleFollow = async (group) => {
@@ -182,253 +182,363 @@ export default function Artist() {
     return arr;
   }, [currentPage, totalPages]);
 
+
+  // if (loadingGroups) {
+  //   return <div className="artist-container a-bleed" style={{padding:16}}>Loading…</div>;
+  // }
+  // if (groupsError) {
+  //   return <div className="artist-container a-bleed" style={{padding:16}}>Failed to load artists.</div>;
+  // }
+
+
   const [scheduleTab, setScheduleTab] = useState("upcoming");
 
-  if (loadingGroups) {
-    return <div className="artist-container a-bleed" style={{padding:16}}>Loading…</div>;
-  }
-  if (groupsError) {
-    return <div className="artist-container a-bleed" style={{padding:16}}>Failed to load artists.</div>;
-  }
+  // ✅ ตัวช่วย “ต้องอยู่ตรงนี้” (นอกเงื่อนไข, ก่อน return)
+  const groupGenres = useMemo(
+    () => (selectedGroup?.genres?.length ? selectedGroup.genres : []),
+    [selectedGroup]
+  );
+
+  const otherArtists = useMemo(() => {
+    const g = groupGenres[0] || "Pop";
+    return Array.from({ length: 8 }).map((_, i) => ({
+      id: `mock-${i + 1}`,
+      name: `${g} Artist ${i + 1}`,
+      image: "/img/fallback.jpg",
+      url: "#",
+    }));
+  }, [groupGenres]);
+
+  const fmtCompact = (n) => {
+    const num = Number(n || 0);
+    if (num >= 1_000_000) { const v = (num / 1_000_000).toFixed(num < 10_000_000 ? 1 : 0); return `${v.replace(/\.0$/, "")}m`; }
+    if (num >= 1_000)     { const v = (num / 1_000).toFixed(num < 10_000 ? 1 : 0);          return `${v.replace(/\.0$/, "")}k`; }
+    return num.toLocaleString();
+  };
+
+  // schedule lists (นอกเงื่อนไขเช่นกัน)
+  const now = new Date();
+  const scheduleUpcoming = useMemo(() => {
+    const arr = (selectedGroup?.schedule || []).filter(ev => new Date(ev.dateISO) >= now);
+    return arr.sort((a,b) => new Date(a.dateISO) - new Date(b.dateISO));
+  }, [selectedGroup]); // ❌ อย่าใส่ now ใน deps (จะเปลี่ยนทุกเรนเดอร์)
+
+  const schedulePast = useMemo(() => {
+    const arr = (selectedGroup?.schedule || []).filter(ev => new Date(ev.dateISO) < now);
+    return arr.sort((a,b) => new Date(b.dateISO) - new Date(a.dateISO));
+  }, [selectedGroup]);
+
+
 
   return (
-    <div className="artist-container a-bleed">
-      {/* ====== รายการวงทั้งหมด ====== */}
-      {!selectedGroup ? (
-        <>
-          <div className="container-heading">
-            <h1 className="artist-heading">MELODY & MEMORIES</h1>
+    
+  <div className="artist-container a-bleed">
+    {/* ====== LIST MODE (ไม่มี id = ยังไม่เลือกศิลปิน) ====== */}
+    {!selectedGroup ? (
+      <>
+        <div className="container-heading">
+          <h1 className="artist-heading">MELODY & MEMORIES</h1>
+        </div>
+        <h6 className="artist-heading-detail">
+          Music is the language of emotions when words are not enough.
+        </h6>
+
+        {/* Filter + Search */}
+        <div className="seamless-filter-search a-card-min">
+          <div className="connected-filter-tabs" role="tablist" aria-label="artist filters">
+            <button
+              className={`connected-filter-tab ${activeFilter === "all" ? "active" : ""}`}
+              onClick={(e) => { setActiveFilter("all"); lastFocusRef.current = e.currentTarget; }}
+            >All</button>
+            <button
+              className={`connected-filter-tab ${activeFilter === "popular" ? "active" : ""}`}
+              onClick={(e) => { setActiveFilter("popular"); lastFocusRef.current = e.currentTarget; }}
+            >Popular</button>
+            <button
+              className={`connected-filter-tab ${activeFilter === "new" ? "active" : ""}`}
+              onClick={(e) => { setActiveFilter("new"); lastFocusRef.current = e.currentTarget; }}
+            >New</button>
           </div>
-          <h6 className="artist-heading-detail">Music is the language of emotions when words are not enough.</h6>
 
-          {/* Filter + Search */}
-          <div className="seamless-filter-search a-card-min">
-            <div className="connected-filter-tabs" role="tablist" aria-label="artist filters">
-              <button
-                className={`connected-filter-tab ${activeFilter === "all" ? "active" : ""}`}
-                onClick={(e) => { setActiveFilter("all"); lastFocusRef.current = e.currentTarget; }}
-              >All</button>
-              <button
-                className={`connected-filter-tab ${activeFilter === "popular" ? "active" : ""}`}
-                onClick={(e) => { setActiveFilter("popular"); lastFocusRef.current = e.currentTarget; }}
-              >Popular</button>
-              <button
-                className={`connected-filter-tab ${activeFilter === "new" ? "active" : ""}`}
-                onClick={(e) => { setActiveFilter("new"); lastFocusRef.current = e.currentTarget; }}
-              >New</button>
-            </div>
+          <div className="connected-search-container">
+            <input
+              type="text"
+              placeholder="Search artists, members, positions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="connected-search-box"
+            />
+            <button className="search-icon" aria-label="search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M11 19c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8Z" stroke="currentColor" strokeWidth="2"/>
+                <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
 
-            <div className="connected-search-container">
-              <input
-                type="text"
-                placeholder="Search artists, members, positions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="connected-search-box"
+        {/* Grid */}
+        <div className="group-grid">
+          {pageItems.map(group => (
+            <div key={group.id} className="group-card-wrap" ref={lastFocusRef}>
+              <button
+                className={`like-button ${group.likedByMe ? "liked" : ""}`}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFollow(group); }}
+                aria-label={group.likedByMe ? "Unfollow" : "Follow"}
+                disabled={followingIds.has(group.id)}
+                title={group.likedByMe ? "Unfollow" : "Follow"}
               />
-              <button className="search-icon" aria-label="search">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M11 19c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8Z" stroke="currentColor" strokeWidth="2"/>
-                  <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2"/>
-                </svg>
+              <Link
+                to={`/artists/${group.id}`}   /* ✅ ใช้ id */
+                className="group-card a-card-min"
+              >
+                <div className="group-card-image">
+                  <img
+                    src={group.image}
+                    alt={group.name}
+                    loading="lazy"
+                    onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
+                  />
+                </div>
+              </Link>
+              <div className="group-card-caption">
+                <h3>{group.name}</h3>
+              </div>
+              <div className="group-card-likes" style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}>
+                👥 {group.followersCount || 0} followers
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="a-line-artist" />
+
+        {/* Pagination */}
+        {filteredGroups.length > 0 && (
+          <nav className="artist-pagination" aria-label="artist pagination">
+            <div className="p-nav-left">
+              <button className="p-link" onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
+                ← Previous
               </button>
             </div>
-          </div>
-
-          {/* Grid */}
-          <div className="group-grid">
-            {pageItems.map(group => (
-              <div key={group.id} className="group-card-wrap" ref={lastFocusRef}>
-                <button
-                  className={`like-button ${group.likedByMe ? "liked" : ""}`}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFollow(group); }}
-                  aria-label={group.likedByMe ? "Unfollow" : "Follow"}
-                  disabled={followingIds.has(group.id)}
-                  title={group.likedByMe ? "Unfollow" : "Follow"}
-                />
-                <Link
-                  to={`/artists/${group.id}`}       // ✅ id-only
-                  className="group-card a-card-min"
-                  onClick={() => { setSelectedGroup(group); }}
-                >
-                  <div className="group-card-image">
-                    <img
-                      src={group.image}
-                      alt={group.name}
-                      loading="lazy"
-                      onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
-                    />
-                  </div>
-                </Link>
-                <div className="group-card-caption">
-                  <h3>{group.name}</h3>
-                </div>
-
-                {/* [FOLLOWERS] แสดงยอดผู้ติดตามใต้รูป */}
-                <div
-                  className="group-card-likes"
-                  aria-label={`${group.followersCount || 0} followers`}
-                  style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}
-                >
-                  👥 {group.followersCount || 0} followers
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="a-line-artist"></div>
-
-          {/* Pagination */}
-          {filteredGroups.length > 0 && (
-            <nav className="artist-pagination" aria-label="artist pagination">
-              <div className="p-nav-left">
-                <button className="p-link" onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
-                  ← Previous
+            <div className="p-nav-center">
+              {pageNumbers[0] > 1 && (
+                <>
+                  <button className={`p-num ${currentPage === 1 ? "is-active" : ""}`} onClick={() => goToPage(1)} aria-current={currentPage === 1 ? "page" : undefined}>1</button>
+                  {pageNumbers[0] > 2 && <span className="p-ellipsis">…</span>}
+                </>
+              )}
+              {pageNumbers.map((p) => (
+                <button key={p} className={`p-num ${p === currentPage ? "is-active" : ""}`} onClick={() => goToPage(p)} aria-current={p === currentPage ? "page" : undefined}>
+                  {p}
                 </button>
-              </div>
-              <div className="p-nav-center">
-                {pageNumbers[0] > 1 && (
-                  <>
-                    <button className={`p-num ${currentPage === 1 ? "is-active" : ""}`} onClick={() => goToPage(1)} aria-current={currentPage === 1 ? "page" : undefined}>1</button>
-                    {pageNumbers[0] > 2 && <span className="p-ellipsis">…</span>}
-                  </>
-                )}
-                {pageNumbers.map((p) => (
-                  <button key={p} className={`p-num ${p === currentPage ? "is-active" : ""}`} onClick={() => goToPage(p)} aria-current={p === currentPage ? "page" : undefined}>
-                    {p}
+              ))}
+              {pageNumbers[pageNumbers.length - 1] < totalPages && (
+                <>
+                  {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && <span className="p-ellipsis">…</span>}
+                  <button className={`p-num ${currentPage === totalPages ? "is-active" : ""}`} onClick={() => goToPage(totalPages)} aria-current={currentPage === totalPages ? "page" : undefined}>
+                    {totalPages}
                   </button>
-                ))}
-                {pageNumbers[pageNumbers.length - 1] < totalPages && (
-                  <>
-                    {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && <span className="p-ellipsis">…</span>}
-                    <button className={`p-num ${currentPage === totalPages ? "is-active" : ""}`} onClick={() => goToPage(totalPages)} aria-current={currentPage === totalPages ? "page" : undefined}>
-                      {totalPages}
-                    </button>
-                  </>
-                )}
-              </div>
-              <div className="p-nav-right">
-                <button className="p-link" onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
-                  Next →
-                </button>
-              </div>
-            </nav>
-          )}
-        </>
-      ) : (
-        /* ====== รายละเอียดวง ====== */
-        <div className="group-detail-view a-fullwide">
-          <div className="a-hero-grid">
-            <div className="a-hero-photo a-hero-emph a-shadow-sm">
-  {/* ❤️ follow button on top-right over the image */}
-  <button
-    className={`like-button a-hero-likebtn ${selectedGroup.likedByMe ? "liked" : ""}`}
-    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFollow(selectedGroup); }}
-    aria-label={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
-    disabled={followingIds.has(selectedGroup.id)}
-    title={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
-  />
-  <img
-    src={selectedGroup.image}
-    alt={selectedGroup.name}
-    onError={(e) => (e.currentTarget.src = "/img/fallback.jpg")}
-  />
-</div>
-            <div className="a-hero-name">{selectedGroup.name || "Artist"}</div>
-            <div className="a-hero-detail">{selectedGroup.details || selectedGroup.description || "No description."}</div>
+                </>
+              )}
+            </div>
+            <div className="p-nav-right">
+              <button className="p-link" onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                Next →
+              </button>
+            </div>
+          </nav>
+        )}
+      </>
+    ) : (
+      /* ====== DETAIL MODE (มี id = เลือกศิลปินแล้ว) ====== */
+      <>
+        <section className="profile">
+          <div className="profile-grid">
+            {/* ซ้าย: ชื่อ/คำบรรยาย/EPK */}
+            <div className="left-box">
+              <h1 className="title">{selectedGroup?.name || "Artist"}</h1>
+              <p className="desc">{selectedGroup?.details || selectedGroup?.description || "No description."}</p>
 
-            <div className="a-hero-photo-meta">
-              <div className="a-hero-photo-caption">
-                <span className="caption-text">LISTEN ON</span>
-                <div className="a-listen-icons">
-                  <SocialIcon href={selectedGroup?.socials?.spotify} img="/img/spotify.png" label="Spotify" />
-                  <SocialIcon href={selectedGroup?.socials?.youtube} img="/img/youtube.png" label="YouTube" />
-                  <span className="a-social-btn" aria-hidden="true" title="Sound">
-                    <img src="/img/wave-sound.png" alt="Sound" />
+              {/* ปุ่ม EPK (อยู่กึ่งกลางล่างคอลัมน์ซ้าย) */}
+              <a
+                className="epk-pill"
+                href={selectedGroup?.epkUrl || selectedGroup?.etaPdfUrl || `/pdf/artist-${selectedGroup?.id}.pdf`}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Open EPK"
+              >
+                <span>EPK</span>
+                <span className="epk-dot" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              </a>
+            </div>
+
+            {/* กลาง: รูป + เส้น (นอกกรอบ) + GENRE (ชิปเดียว) */}
+            <div className="center-wrap">
+              <div className="center-box">
+
+                {/* === Follow toggle: มุมขวาบนของรูป === */}
+                <div className="img-like-shell">
+                  <button
+                    className={`like-button ${selectedGroup.likedByMe ? "liked" : ""}`}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFollow(selectedGroup); }}
+                    aria-label={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
+                    disabled={followingIds.has(selectedGroup.id)}
+                    title={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
+                  />
+                  {/* ถ้าจะโชว์จำนวนอีกครั้ง ค่อยเติม <span> ตรงนี้ได้ */}
+                </div>
+
+                <figure className="img-frame" aria-label="Artist image">
+                  {selectedGroup?.image ? (
+                    <img
+                      className="img"
+                      src={selectedGroup.image}
+                      alt={selectedGroup?.name || "Artist"}
+                      loading="lazy"
+                      onError={(e) => (e.currentTarget.src = "/img/fallback.jpg")}
+                    />
+                  ) : (
+                    <img className="img" src="/img/fallback.jpg" alt="" />
+                  )}
+                </figure>
+              </div>
+
+              {/* เส้นคั่นอยู่นอกกรอบ */}
+              <div className="center-hr" aria-hidden="true" />
+
+              {/* GENRE: label ซ้าย / chip รวมขวา */}
+              <div className="center-caption">
+                <div className="center-caption-row">
+                  <span className="center-caption-label">GENRE</span>
+                  <span className="genre-chip genre-chip--single">
+                    {groupGenres.length ? groupGenres.join(" / ") : "—"}
                   </span>
                 </div>
               </div>
+            </div>
 
-              {/* [FOLLOW] ปุ่ม + ตัวเลข */}
-              <div className="a-hero-likebox" style={{display: 'flex', alignItems: 'center', gap: 8, marginTop: 8}}>
-                <button
-                  className={`like-button ${selectedGroup.likedByMe ? "liked" : ""}`}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFollow(selectedGroup); }}
-                  aria-label={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
-                  disabled={followingIds.has(selectedGroup.id)}
-                  title={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
-                />
-                <span style={{fontSize: 14, opacity: 0.9}}>
-                  👥 {selectedGroup.followersCount || 0} followers
-                </span>
+            {/* ขวา: ผู้ติดตาม + โซเชียล + ปุ่ม follow */}
+            <aside className="right-box">
+              <div className="follow-box" aria-label="Followers">
+                <div className="follow-big">{fmtCompact(selectedGroup?.followersCount)}+</div>
+                <div className="follow-sub">follow</div>
               </div>
 
-              <div className="a-hero-photo-line"></div>
-
-              <div className="a-hero-photo-date">
-                <span className="date-label">Date</span>
-                <span className="date-value">{dtfEvent.format(new Date())}</span>
-              </div>
-
-              <div className="a-hero-photo-eta">
-                <span className="eta-label">ETA</span>
-                <a
-                  className="a-social-btn eta-btn"
-                  href={selectedGroup?.etaPdfUrl || `/pdf/artist-${selectedGroup?.id}.pdf`}  // ✅ fallback เป็น id
-                  download
-                  title="Download ETA PDF"
-                  aria-label="Download ETA PDF"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <img src="/img/download.png" alt="PDF" />
-                </a>
-              </div>
-
-              <div className="a-hero-photo-share">
-                <span className="share-label">Share</span>
-                <div className="share-icons">
+              <div className="social-bar">
+                <div className="social-title2">Find Me Online</div>
+                <div className="social-underline"><span className="dot" /><span className="wave" /></div>
+                <div className="social-row">
                   <SocialIcon href={selectedGroup?.socials?.instagram} img="/img/instagram.png" label="Instagram" />
-                  <SocialIcon href={selectedGroup?.socials?.twitter} img="/img/twitter.png" label="Twitter / X" />
-                  <SocialIcon href={selectedGroup?.socials?.facebook} img="/img/facebook.png" label="Facebook" />
+                  <SocialIcon href={selectedGroup?.socials?.twitter}   img="/img/twitter.png"   label="Twitter/X" />
+                  <SocialIcon href={selectedGroup?.socials?.facebook}  img="/img/facebook.png"  label="Facebook" />
+                  <SocialIcon href={selectedGroup?.socials?.tiktok}    img="/img/tiktok.png"    label="TikTok" />
+                  <SocialIcon href={selectedGroup?.socials?.youtube}   img="/img/youtube.png"   label="YouTube" />
                 </div>
+
+                {/* follow toggle */}
+                {/* <div style={{display:'flex',justifyContent:'center',gap:8,marginTop:12}}>
+                  <button
+                    className={`like-button ${selectedGroup.likedByMe ? "liked" : ""}`}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFollow(selectedGroup); }}
+                    aria-label={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
+                    disabled={followingIds.has(selectedGroup.id)}
+                    title={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
+                  />
+                  <span style={{fontSize: 14, opacity: .9}}>
+                    👥 {selectedGroup.followersCount || 0} followers
+                  </span>
+                </div> */}
               </div>
+            </aside>
+          </div>
+
+          {/* ===== LISTEN ON ===== */}
+          <div className="listen2">
+            <div className="listen2-top">
+              <div className="listen2-title">LISTEN ON</div>
+              <div className="listen2-quote">“Where words fail, music speaks.”</div>
+            </div>
+            <div className="listen2-grid">
+              <a className="listen2-item" href={selectedGroup?.streams?.spotify || "#"} target="_blank" rel="noreferrer">
+                <img src="/img/spotify.png" alt="" /><span>Spotify</span>
+              </a>
+              <a className="listen2-item" href={selectedGroup?.streams?.appleMusic || "#"} target="_blank" rel="noreferrer">
+                <img src="/img/apple-music.png" alt="" /><span>Apple Music</span>
+              </a>
+              <a className="listen2-item" href={selectedGroup?.streams?.youtubeMusic || "#"} target="_blank" rel="noreferrer">
+                <img src="/img/youtube.png" alt="" /><span>YouTube Music</span>
+              </a>
+              <a className="listen2-item" href={selectedGroup?.streams?.soundcloud || "#"} target="_blank" rel="noreferrer">
+                <img src="/img/soundcloud.png" alt="" /><span>SoundCloud</span>
+              </a>
+              <a className="listen2-item" href={selectedGroup?.streams?.bandcamp || "#"} target="_blank" rel="noreferrer">
+                <img src="/img/bandcamp.png" alt="" /><span>Bandcamp</span>
+              </a>
+              <a className="listen2-item" href={selectedGroup?.streams?.shazam || "#"} target="_blank" rel="noreferrer">
+                <img src="/img/shazam.png" alt="" /><span>Shazam</span>
+              </a>
             </div>
           </div>
 
-          {/* Schedule */}
-          <section className="a-section">
-            <h2 className="a-section-title">Schedule</h2>
-            <div className="a-panel">
-              <div className="a-tabbar" role="tablist" aria-label="Schedule tabs">
-                <button role="tab" aria-selected={scheduleTab === "upcoming"} className={`a-tab ${scheduleTab === "upcoming" ? "is-active" : ""}`} onClick={() => setScheduleTab("upcoming")}>Upcoming</button>
-                <button role="tab" aria-selected={scheduleTab === "past"} className={`a-tab ${scheduleTab === "past" ? "is-active" : ""}`} onClick={() => setScheduleTab("past")}>Past</button>
+          {/* ===== SCHEDULE (อยู่ใต้ Listen On) ===== */}
+          <section className="schedule-sec">
+            <div className="schedule-head">
+              <h2 className="schedule-title">SCHEDULE</h2>
+              <div className="schedule-tabs" role="tablist" aria-label="Schedule tabs">
+                <button role="tab" aria-selected={scheduleTab === "upcoming"} className={`sch-tab ${scheduleTab === "upcoming" ? "is-active" : ""}`} onClick={() => setScheduleTab("upcoming")}>Upcoming</button>
+                <button role="tab" aria-selected={scheduleTab === "past"}      className={`sch-tab ${scheduleTab === "past" ? "is-active" : ""}`}      onClick={() => setScheduleTab("past")}>Past</button>
               </div>
+            </div>
 
-              <ul className="a-schedule-list">
-                {(scheduleTab === "upcoming" ? scheduleUpcoming : schedulePast).map((ev) => (
-                  <li key={ev.id} className="a-schedule-item">
-                    <div className="a-date">{dtfEvent.format(new Date(ev.dateISO))}</div>
-                    <div className="a-event">
-                      <div className="a-event-title">{ev.title}</div>
-                      <div className="a-event-sub">{ev.venue} • {ev.city}</div>
-                    </div>
-                    {(ev.id || ev.url || ev.ticketUrl) &&
-                      (ev.id ? (
-                        <Link className="a-link" to={`/events/${ev.id}`}>Detail</Link>
-                      ) : ev.url ? (
-                        <a className="a-link" href={ev.url} target="_blank" rel="noreferrer">Detail</a>
-                      ) : (
-                        <a className="a-link" href={ev.ticketUrl} target="_blank" rel="noreferrer">Detail</a>
-                      ))}
-                  </li>
-                ))}
-                {scheduleTab === "upcoming" && scheduleUpcoming.length === 0 && <li className="a-empty">No upcoming events</li>}
-                {scheduleTab === "past" && schedulePast.length === 0 && <li className="a-empty">No past events</li>}
-              </ul>
+            <ul className="schedule-list">
+              {(scheduleTab === "upcoming" ? scheduleUpcoming : schedulePast).map((ev) => (
+                <li key={ev.id} className="schedule-item">
+                  <div className="sch-date">{dtfEvent.format(new Date(ev.dateISO))}</div>
+                  <div className="sch-body">
+                    <div className="sch-title">{ev.title}</div>
+                    <div className="sch-sub">{ev.venue} • {ev.city}</div>
+                  </div>
+                  {(ev.id || ev.url || ev.ticketUrl) && (
+                    ev.id ? <Link className="sch-link" to={`/page_events/${ev.id}`}>Detail</Link>
+                          : <a className="sch-link" href={ev.url || ev.ticketUrl} target="_blank" rel="noreferrer">Detail</a>
+                  )}
+                </li>
+              ))}
+              {(scheduleTab === "upcoming" && scheduleUpcoming.length === 0) && <li className="a-empty">No upcoming events</li>}
+              {(scheduleTab === "past" && schedulePast.length === 0) && <li className="a-empty">No past events</li>}
+            </ul>
+          </section>
+
+          {/* เส้นคั่นยาว */}
+          <hr className="big-divider" />
+
+          {/* ===== OTHER (ศิลปิน genre เดียวกัน — mock 8 คน) ===== */}
+          <section className="other-sec">
+            <div className="other-head">
+              <h3 className="other-title">OTHER</h3>
+              <div className="other-sub">Artists in <b>{groupGenres[0] || "Pop"}</b></div>
+            </div>
+
+            <div className="other-strip" role="list">
+              {otherArtists.map((a) => (
+                <a key={a.id} href={a.url} className="other-card" role="listitem">
+                  <div className="other-thumb">
+                    <img src={a.image} alt={a.name} loading="lazy" onError={(e)=>e.currentTarget.src="/img/fallback.jpg"} />
+                  </div>
+                  <div className="other-name">{a.name}</div>
+                </a>
+              ))}
             </div>
           </section>
-        </div>
-      )}
-    </div>
-  );
+        </section>
+      </>
+    )}
+  </div>
+);
+
 }
