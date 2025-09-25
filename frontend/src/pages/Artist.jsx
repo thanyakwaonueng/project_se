@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "../css/Artist.css";
-import "../css/Artist_profile_new.css";
+import "../css/Artist_profile.css";
 
 /** ---------- LocalStorage follow (client-side) ---------- */
 const FOLLOW_KEY = "artist.follow.v1";
