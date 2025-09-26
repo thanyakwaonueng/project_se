@@ -303,6 +303,31 @@ app.post('/googlesignup', async(req, res) =>{
   }
 })
 
+/* ───────────────────────────── Forget Password ───────────────────────────── */
+
+// Forget password กรอก email -> send Otp(Call /resendOTP) -> Verify OTP(Call /verifyOTP) -> ใส่ new password (Call /resetpassword)
+
+app.post('/resetpassword', async(req, res)=>{
+  try {
+    const { email, password, confirm_password } = req.body
+    let user = await prisma.user.findUnique({where:{email}})
+    if(password !== confirm_password){
+      return res.status(400).json({error: "Password doesn't match!"})
+    }
+    if(!user){
+      return res.status(400).json({error: "User not found!"})
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10)
+     await prisma.user.update({
+      where: { email },
+      data: { passwordHash: passwordHash, otpHash: null, otpExpiredAt: null }
+    })
+  } catch (err) {
+    return res.status(400).json({error: err.message || 'Reset password failed!'})
+  }
+})
+
 
 
 /* ───────────────────────────── USERS ───────────────────────────── */
