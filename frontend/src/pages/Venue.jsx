@@ -114,8 +114,34 @@ export default function Venue() {
   return (
     <div className="vn-page">
       {/* ===== HERO ===== */}
-      <section className="vn-hero">
-        <div className="vn-hero-media">
+      {/* <div className="vn-title-box">          
+        <h1 className="vn-title">{venue.name || "Unnamed Venue"}</h1>
+      </div> */}
+      <div className="vn-hero">
+        <div className="vn-hero-body">
+          <h1 className="vn-title">{venue.performer?.user?.name || "Unnamed Venue"}</h1>
+            {/* ✅ ปุ่มแก้ไข: แสดงเฉพาะเจ้าของ/ADMIN */}
+            {canEdit && (
+              <Link
+                to={`/venues/${id}/edit`}
+                className="vn-btn-img"
+                title="Edit"
+              >
+                <img src="/img/edit-text.png" alt="Edit" />
+              </Link>
+            )}
+
+          {venue.description && <p className="vn-desc">{venue.description}</p>}
+          <div className="vn-chips">
+            {venue.genre && <span className="vn-chip">{venue.genre}</span>}
+            {venue.priceRate && <span className="vn-chip-transparent">Price: {venue.priceRate}</span>}
+            {venue.alcoholPolicy && <span className="vn-chip-transparent">Alcohol: {venue.alcoholPolicy}</span>}
+            {venue.ageRestriction && <span className="vn-chip-transparent">Age: {venue.ageRestriction}+</span>}
+            {venue.capacity && <span className="vn-chip-transparent">Capacity: {venue.capacity}</span>}
+          </div>
+        </div>
+
+          <div className="vn-hero-media">
           <img
             src={heroImg}
             alt={venue.performer?.user?.name || 'Venue'}
@@ -123,31 +149,13 @@ export default function Venue() {
             onError={(e)=>{ e.currentTarget.src = FALLBACK_IMG; }}
           />
         </div>
+      </div>
 
-        <div className="vn-hero-body">
-          <div className="vn-title-row">
-            <h1 className="vn-title">{venue.performer?.user?.name || "Unnamed Venue"}</h1>
-            {/* ✅ ปุ่มแก้ไข: แสดงเฉพาะเจ้าของ/ADMIN */}
-            {canEdit && (
-              <Link
-                to={`/venues/${id}/edit`}
-                className="vn-btn"
-                style={{ marginLeft: 12, whiteSpace: 'nowrap' }}
-              >
-                Edit
-              </Link>
-            )}
-          </div>
 
-          <div className="vn-chips">
-            {venue.genre && <span className="vn-chip">{venue.genre}</span>}
-            {venue.priceRate && <span className="vn-chip">Price: {venue.priceRate}</span>}
-            {venue.alcoholPolicy && <span className="vn-chip">Alcohol: {venue.alcoholPolicy}</span>}
-            {venue.ageRestriction && <span className="vn-chip">Age: {venue.ageRestriction}+</span>}
-            {venue.capacity && <span className="vn-chip">Cap: {venue.capacity}</span>}
-          </div>
-          {venue.description && <p className="vn-desc">{venue.description}</p>}
+      {/* ===== INFO GRID ===== */}
+      <div className="vn-section">
 
+        <div className="vn-info-grid">
           {/* โซเชียล/ลิงก์สำคัญ */}
           <div className="vn-actions">
             {venue.websiteUrl && <a className="vn-btn" href={venue.websiteUrl} target="_blank" rel="noreferrer">Website ↗</a>}
@@ -158,8 +166,16 @@ export default function Venue() {
           </div>
         </div>
 
-        <aside className="vn-hero-side">
-          <div className="vn-card">
+        <div className="vn-info-grid">
+          {/* <div className="vn-info-block">
+            <div className="vn-info-title">Basics</div>
+            <div className="vn-kv"><div>Genre</div><div>{venue.genre || "—"}</div></div>
+            <div className="vn-kv"><div>Capacity</div><div>{venue.capacity || "—"}</div></div>
+            <div className="vn-kv"><div>Alcohol</div><div>{venue.alcoholPolicy || "—"}</div></div>
+            <div className="vn-kv"><div>Age Restriction</div><div>{venue.ageRestriction || "—"}</div></div>
+          </div> */}
+
+          <div className="vn-info-block">
             <div className="vn-card-title">Contact</div>
             <div className="vn-kv"><div>Email</div><div>{venue.performer?.contactEmail ? <a className="vn-link" href={`mailto:${venue.performer.contactEmail}`}>{venue.performer.contactEmail}</a> : "—"}</div></div>
             <div className="vn-kv"><div>Phone</div><div>{venue.performer?.contactPhone ? <a className="vn-link" href={`tel:${venue.performer.contactPhone}`}>{venue.performer.contactPhone}</a> : "—"}</div></div>
@@ -173,38 +189,49 @@ export default function Venue() {
             </div>
           </div>
 
-          <div className="vn-card">
+          <div className="vn-info-block">
             <div className="vn-card-title">Hours & Dates</div>
             <div className="vn-kv"><div>Open</div><div>{fmtTime(venue.timeOpen)}</div></div>
             <div className="vn-kv"><div>Close</div><div>{fmtTime(venue.timeClose)}</div></div>
             <div className="vn-kv"><div>Date Open</div><div>{fmtDate(venue.dateOpen)}</div></div>
             <div className="vn-kv"><div>Date Close</div><div>{fmtDate(venue.dateClose)}</div></div>
           </div>
-        </aside>
-      </section>
 
-      {/* ===== INFO GRID ===== */}
-      <section className="vn-section">
-        <div className="vn-info-grid">
           <div className="vn-info-block">
-            <div className="vn-info-title">Basics</div>
-            <div className="vn-kv"><div>Genre</div><div>{venue.genre || "—"}</div></div>
-            <div className="vn-kv"><div>Capacity</div><div>{venue.capacity || "—"}</div></div>
-            <div className="vn-kv"><div>Alcohol</div><div>{venue.alcoholPolicy || "—"}</div></div>
-            <div className="vn-kv"><div>Age Restriction</div><div>{venue.ageRestriction || "—"}</div></div>
+            <div className="vn-card-title">Find Me Online</div>
+            <div className="vn-social-icons">
+              {venue.facebook && (
+                <a href={venue.facebook} target="_blank" rel="noreferrer">
+                  <img src="/img/facebook.png" alt="Facebook"/>
+                </a>
+              )}
+              {venue.instagram && (
+                <a href={venue.instagram} target="_blank" rel="noreferrer">
+                  <img src="/img/instagram.png" alt="Instagram"/>
+                </a>
+              )}
+              {venue.line && (
+                <a href={venue.line} target="_blank" rel="noreferrer">
+                  <img src="/img/line.png" alt="LINE"/>
+                </a>
+              )}
+              {venue.tiktok && (
+                <a href={venue.tiktok} target="_blank" rel="noreferrer">
+                  <img src="/img/tiktok.png" alt="TikTok"/>
+                </a>
+              )}
+              {venue.website && (
+                <a href={venue.website} target="_blank" rel="noreferrer">
+                  <img src="/img/web.png" alt="Website"/>
+                </a>
+              )} 
+
+              {/* กรณีไม่มีลิงก์ */}
+              {!(venue.facebook || venue.instagram || venue.line || venue.tiktok || venue.website) && <span>—</span>}
+            </div>
           </div>
 
-          <div className="vn-info-block">
-            <div className="vn-info-title">Address</div>
-            <div className="vn-text">{venue.address || "—"}</div>
-            {mapPoint && (
-              <a className="vn-btn-ghost" style={{ marginTop: 8, width: "fit-content" }}
-                 href={`https://www.google.com/maps?q=${mapPoint.lat},${mapPoint.lng}`}
-                 target="_blank" rel="noreferrer">Open in Maps ↗</a>
-            )}
-          </div>
-
-          <div className="vn-info-block">
+          {/* <div className="vn-info-block">
             <div className="vn-info-title">Links</div>
             <ul className="vn-links">
               {venue.websiteUrl && <li><a className="vn-link" href={venue.websiteUrl} target="_blank" rel="noreferrer">Website</a></li>}
@@ -214,9 +241,9 @@ export default function Venue() {
               {venue.performer?.lineUrl && <li><a className="vn-link" href={venue.performer.lineUrl} target="_blank" rel="noreferrer">LINE</a></li>}
               {!(venue.websiteUrl||venue.performer?.facebookUrl||venue.performer?.instagramUrl||venue.performer?.tiktokUrl||venue.performer?.lineUrl) && <li>—</li>}
             </ul>
-          </div>
+          </div> */}
         </div>
-      </section>
+      </div>
 
       {/* ===== GALLERY ===== */}
       {gallery.length > 0 && (
@@ -235,7 +262,7 @@ export default function Venue() {
 
       {/* ===== UPCOMING ===== */}
       <section className="vn-section">
-        <h2 className="a-section-title">Upcoming</h2>
+        <h2 className="vn-section-title">Upcoming</h2>
         <div className="a-panel">
           <ul className="a-schedule-list">
             {eventsUpcoming.map(ev => (
