@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const SECRET = process.env.JWT_SECRET || 'your_secret_key';
 require('dotenv').config({path:'.env.dev'}) //อ่านข้อมูลใน .env.dev
+require('dotenv').config({path:'.env'}) 
 
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -10,6 +11,22 @@ const prisma = new PrismaClient();
 const nodemailer = require('nodemailer')
 const { OAuth2Client } = require('google-auth-library')
 //const { requireRole } = require('./authz');
+
+//for dealing with multipart form-data(those one where it send file along with other form field)
+//since express cannot handle it by default(it will gives undefined)
+const multer = require('multer')
+const storage = multer.memoryStorage()
+const upload = multer({ storage: storage })
+
+const { createClient } = require('@supabase/supabase-js')
+const path = require('path');
+const fs = require('fs');
+
+// Supabase client (service role key, backend-only)
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
 
 //Google OAuth
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, "http://localhost:5173")
@@ -1721,7 +1738,47 @@ app.delete('/events/:id/like', authMiddleware, async (req, res) => {
 });
 
 
+/* ───────────────────────────── bucket from supabase ───────────────────────────── */
 
+app.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file;
+    const caption = req.body.caption || '';
+    if (!file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const fileName = `${Date.now()}-${file.originalname}`;
+    const bucketName = 'project-se-file-server';
+    const filePath = `user-uploads/${fileName}`;
+
+    // Upload file
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true,
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    // Get public URL
+    const { data: publicData, error: publicError } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(filePath);
+
+    if (publicError) {
+      console.error('Supabase public URL error:', publicError);
+      return res.status(500).json({ error: publicError.message });
+    }
+
+    res.json({ url: publicData.publicUrl, caption });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
 
 
 
