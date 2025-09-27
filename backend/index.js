@@ -19,17 +19,6 @@ app.use(express.json());
 app.use(cookieParser());
 const port = process.env.PORT || 4000;
 
-/**
- * ✅ รองรับ FE ที่เรียก /api/* โดยรีไรท์เป็นเส้นทางเดิม
- *    เช่น /api/groups -> /groups
- *    วาง middleware นี้ไว้ "ก่อน" ประกาศ route ทั้งหมด
- */
-app.use((req, _res, next) => {
-  if (req.url.startsWith('/api/')) {
-    req.url = req.url.slice(4); // ตัด "/api"
-  }
-  next();
-});
 
 /**
  * ✅ รองรับ FE ที่เรียก /api/* โดยรีไรท์เป็นเส้นทางเดิม
@@ -56,6 +45,31 @@ async function notify(client, userId, type, message, data = null) {
     data: { userId, type, message, data },
   });
 }
+
+
+
+// ===== Event readiness helpers (ทุกคำเชิญต้อง ACCEPTED ถึงจะ "พร้อม") =====
+function summarizeReadiness(artistEvents = []) {
+  const total = artistEvents.length;
+  const accepted = artistEvents.filter(ae => ae.status === 'ACCEPTED').length;
+  return {
+    totalInvited: total,
+    accepted,
+    declined: artistEvents.filter(ae => ae.status === 'DECLINED').length,
+    pending: artistEvents.filter(ae => ae.status === 'PENDING').length,
+    isReady: total > 0 && accepted === total,
+  };
+}
+
+
+
+
+
+
+
+
+
+
 
 /* ───────────────────────────── AUTH MIDDLEWARE ───────────────────────────── */
 async function authMiddleware(req, res, next) {
@@ -936,7 +950,7 @@ app.post('/events', authMiddleware, async (req, res) => {
 
 app.get('/events', async (req, res) => {
   try {
-    // optional auth (ไม่ส่ง response เอง)
+    // optional auth
     let meId = null;
     try {
       const token = req.cookies?.token;
@@ -947,6 +961,13 @@ app.get('/events', async (req, res) => {
     } catch {}
 
     const events = await prisma.event.findMany({
+      where: {
+        // แสดงเฉพาะที่ “พร้อม”: มีเชิญอย่างน้อย 1 และทุกเชิญ ACCEPTED
+        artistEvents: {
+          some: {},                  // มีอย่างน้อย 1
+          every: { status: 'ACCEPTED' }, // ทุกคน ACCEPTED
+        },
+      },
       include: {
         venue: {
           include: {
@@ -970,13 +991,18 @@ app.get('/events', async (req, res) => {
           ? { where: { userId: meId }, select: { userId: true }, take: 1 }
           : false,
       },
+      orderBy: { date: 'asc' },
     });
 
-    const mapped = events.map(e => ({
-      ...e,
-      followersCount: e._count?.likedBy ?? 0,
-      likedByMe: !!(Array.isArray(e.likedBy) && e.likedBy.length),
-    }));
+    const mapped = events.map(e => {
+      const readiness = summarizeReadiness(e.artistEvents || []);
+      return {
+        ...e,
+        followersCount: e._count?.likedBy ?? 0,
+        likedByMe: !!(Array.isArray(e.likedBy) && e.likedBy.length),
+        _ready: readiness,
+      };
+    });
 
     return res.json(mapped);
   } catch (err) {
@@ -985,62 +1011,403 @@ app.get('/events', async (req, res) => {
   }
 });
 
+
 app.get('/events/:id', async (req, res) => {
   try {
-    const id = +req.params.id;
-    const event = await prisma.event.findUnique({
-      where: { id: id },
+    const id = Number(req.params.id);
+
+    // decode token: เอาทั้ง id และ role (ใน token มี role อยู่แล้ว)
+    const me = (() => {
+      try {
+        const token = req.cookies?.token;
+        if (!token) return null;
+        const d = jwt.verify(token, SECRET);
+        return d && typeof d === 'object' ? { id: d.id, role: d.role } : null;
+      } catch { return null; }
+    })();
+
+    const ev = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        venue: {
+          include: { performer: { include: { user: true } }, location: true },
+        },
+        artistEvents: {
+          include: {
+            artist: { include: { performer: { include: { user: true } } } },
+          },
+          orderBy: [{ slotStartAt: 'asc' }, { updatedAt: 'asc' }],
+        },
+        scheduleSlots: true,
+        likedBy: me?.id
+          ? { where: { userId: me.id }, select: { userId: true }, take: 1 }
+          : false,
+        _count: { select: { likedBy: true } },
+      },
+    });
+    if (!ev) return res.status(404).json({ message: 'not found' });
+
+    const readiness = summarizeReadiness(ev.artistEvents || []);
+    const isOwnerOrAdmin = !!(me && (me.role === 'ADMIN' || me.id === ev.venueId));
+
+    // สาธารณะ: ยังไม่พร้อม -> 404
+    if (!isOwnerOrAdmin && !readiness.isReady) {
+      return res.status(404).json({ message: 'not found' });
+    }
+
+    const followersCount = ev._count?.likedBy ?? 0;
+    const likedByMe = !!(Array.isArray(ev.likedBy) && ev.likedBy.length);
+
+    res.json({
+      ...ev,
+      followersCount,
+      likedByMe,
+      _ready: readiness,
+      _isOwner: isOwnerOrAdmin,
+    });
+  } catch (e) {
+    console.error('GET /events/:id error', e);
+    res.status(500).json({ message: 'failed to fetch event' });
+  }
+});
+
+
+
+
+
+/* ───────────────────── EVENT SCHEDULE ───────────────────── */
+// helper: ตรวจสิทธิ์แก้ไขตารางเวลางานนี้ (ADMIN หรือ ORGANIZE เจ้าของ venue)
+async function canManageEventSchedule(tx, user, eventId) {
+  if (!user) return false;
+  if (user.role === 'ADMIN') return true;
+
+  // หา event -> venueId (คือ performerId ของเจ้าของสถานที่)
+  const ev = await tx.event.findUnique({
+    where: { id: Number(eventId) },
+    select: { venueId: true },
+  });
+  if (!ev) return false;
+
+  // ถ้าเป็น ORGANIZE และเป็นเจ้าของ venue (venueId = user.id) ให้ผ่าน
+  return user.role === 'ORGANIZE' && ev.venueId === user.id;
+}
+
+// GET schedule
+app.get('/events/:id/schedule', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid event id' });
+
+    const schedule = await prisma.eventSchedule.findUnique({
+      where: { eventId: id },
+      include: { slots: { orderBy: { startAt: 'asc' } } },
+    });
+
+    if (!schedule) {
+      // คืนโครงเปล่า (FE จะยังโชว์ปุ่มถ้าคุณมีสิทธิ์)
+      const ev = await prisma.event.findUnique({
+        where: { id },
+        select: { id: true, date: true, doorOpenTime: true, endTime: true },
+      });
+      return res.json({ event: { id: ev?.id, startAt: ev?.date || null, endAt: null }, slots: [] });
+    }
+
+    res.json({
+      event: { id: schedule.eventId, startAt: schedule.startAt, endAt: schedule.endAt },
+      slots: schedule.slots.map(s => ({
+        id: s.id,
+        stage: s.stage,
+        title: s.title,
+        artistId: s.artistId,
+        artistName: s.artistName,
+        startAt: s.startAt,
+        endAt: s.endAt,
+        note: s.note,
+      })),
+    });
+  } catch (e) {
+    console.error('GET /events/:id/schedule error', e);
+    res.status(500).json({ error: 'Failed to load schedule' });
+  }
+});
+
+// POST slot
+app.post('/events/:id/schedule/slots', authMiddleware, async (req, res) => {
+  try {
+    const eventId = Number(req.params.id);
+    if (!Number.isFinite(eventId)) return res.status(400).json({ error: 'Invalid event id' });
+
+    const allowed = await canManageEventSchedule(prisma, req.user, eventId);
+    if (!allowed) return res.sendStatus(403);
+
+    const { stage = 'Main', title, artistId, artistName, startAt, endAt, note } = req.body;
+
+    const result = await prisma.$transaction(async (tx) => {
+      // สร้าง schedule ถ้ายังไม่มี
+      const sched = await tx.eventSchedule.upsert({
+        where: { eventId },
+        update: {},
+        create: { eventId, startAt: startAt ? new Date(startAt) : null, endAt: endAt ? new Date(endAt) : null },
+      });
+
+      // (optional) ตรวจซ้อนทับใน DB ชั้นที่สอง (กันแข่งกันยิง request)
+      const overlap = await tx.eventScheduleSlot.findFirst({
+        where: {
+          scheduleId: sched.id,
+          stage,
+          NOT: [
+            { endAt: { lte: new Date(startAt) } },
+            { startAt: { gte: new Date(endAt) } },
+          ],
+        },
+      });
+      if (overlap) throw new Error('ช่วงเวลาซ้อนกับรายการอื่น');
+
+      const slot = await tx.eventScheduleSlot.create({
+        data: {
+          scheduleId: sched.id,
+          stage,
+          title: title || null,
+          artistId: artistId ?? null,
+          artistName: artistName || null,
+          startAt: new Date(startAt),
+          endAt: new Date(endAt),
+          note: note || null,
+        },
+      });
+      return slot;
+    });
+
+    res.status(201).json(result);
+  } catch (e) {
+    console.error('POST /events/:id/schedule/slots error', e);
+    res.status(400).json({ error: e.message || 'Create slot failed' });
+  }
+});
+
+// PATCH slot
+app.patch('/events/:id/schedule/slots/:slotId', authMiddleware, async (req, res) => {
+  try {
+    const eventId = Number(req.params.id);
+    const slotId = Number(req.params.slotId);
+    if (!Number.isFinite(eventId) || !Number.isFinite(slotId)) {
+      return res.status(400).json({ error: 'Invalid id' });
+    }
+
+    const allowed = await canManageEventSchedule(prisma, req.user, eventId);
+    if (!allowed) return res.sendStatus(403);
+
+    const { stage, title, artistId, artistName, startAt, endAt, note } = req.body;
+
+    const slot = await prisma.eventScheduleSlot.findUnique({
+      where: { id: slotId },
+      include: { schedule: true },
+    });
+    if (!slot || slot.schedule.eventId !== eventId) return res.sendStatus(404);
+
+    const result = await prisma.$transaction(async (tx) => {
+      // ตรวจซ้อนทับ
+      if (startAt && endAt) {
+        const overlap = await tx.eventScheduleSlot.findFirst({
+          where: {
+            scheduleId: slot.scheduleId,
+            stage: stage ?? slot.stage,
+            id: { not: slotId },
+            NOT: [
+              { endAt: { lte: new Date(startAt) } },
+              { startAt: { gte: new Date(endAt) } },
+            ],
+          },
+        });
+        if (overlap) throw new Error('ช่วงเวลาซ้อนกับรายการอื่น');
+      }
+
+      return tx.eventScheduleSlot.update({
+        where: { id: slotId },
+        data: {
+          stage: stage ?? undefined,
+          title: title ?? undefined,
+          artistId: artistId === undefined ? undefined : (artistId ?? null),
+          artistName: artistName ?? undefined,
+          startAt: startAt ? new Date(startAt) : undefined,
+          endAt: endAt ? new Date(endAt) : undefined,
+          note: note ?? undefined,
+        },
+      });
+    });
+
+    res.json(result);
+  } catch (e) {
+    console.error('PATCH /events/:id/schedule/slots/:slotId error', e);
+    res.status(400).json({ error: e.message || 'Update slot failed' });
+  }
+});
+
+// DELETE slot
+app.delete('/events/:id/schedule/slots/:slotId', authMiddleware, async (req, res) => {
+  try {
+    const eventId = Number(req.params.id);
+    const slotId = Number(req.params.slotId);
+
+    const allowed = await canManageEventSchedule(prisma, req.user, eventId);
+    if (!allowed) return res.sendStatus(403);
+
+    const slot = await prisma.eventScheduleSlot.findUnique({
+      where: { id: slotId },
+      include: { schedule: true },
+    });
+    if (!slot || slot.schedule.eventId !== eventId) return res.sendStatus(404);
+
+    await prisma.eventScheduleSlot.delete({ where: { id: slotId } });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('DELETE /events/:id/schedule/slots/:slotId error', e);
+    res.status(400).json({ error: 'Delete slot failed' });
+  }
+});
+
+
+app.get('/myevents', authMiddleware, async (req, res) => {
+  try {
+    if (!['ORGANIZE', 'ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const ownerId =
+      req.user.role === 'ADMIN' && req.query.venueId
+        ? Number(req.query.venueId)
+        : req.user.id;
+
+    const events = await prisma.event.findMany({
+      where: { venueId: ownerId },
       include: {
         venue: {
           include: {
-            performer: {
-              include: { user: true }
-            },
+            performer: { include: { user: true } },
             location: true,
-          }
+          },
         },
         artistEvents: {
           include: {
             artist: {
               include: {
-                performer: {
-                  include: { user: true }
-                },
+                performer: { include: { user: true } },
                 artistEvents: true,
                 artistRecords: true,
-              }
-            }
+              },
+            },
           },
         },
+        _count: { select: { likedBy: true } },
       },
+      orderBy: { date: 'desc' },
     });
 
-    event
-      ? res.json(event)
-      : res.status(404).send('Event not found');
+    const mapped = events.map(e => ({
+      ...e,
+      followersCount: e._count?.likedBy ?? 0,
+      _ready: summarizeReadiness(e.artistEvents || []),
+    }));
+
+    res.json(mapped);
   } catch (err) {
-    console.error('GET /events/:id error:', err);
-    res.status(500).json({ error: 'Could not fetch event' });
+    console.error('GET /myevents error:', err);
+    res.status(500).json({ error: 'Could not fetch my events' });
   }
 });
+
+
+
+
+
+
+
+
+
+
 
 /* ───────────────────────────── ARTIST INVITES ─────────── */
 app.post('/artist-events/invite', authMiddleware, async (req, res) => {
   try {
-    const { artistId, eventId, ...rest } = req.body;
+    const { artistId, eventId, startTime, endTime, stage } = req.body || {};
+    const aid = Number(artistId);
+    const eid = Number(eventId);
 
-    const invite = await prisma.artistEvent.upsert({
-      where: { artistId_eventId: { artistId, eventId } },
-      update: { ...rest, status: "PENDING" },
-      create: { artistId, eventId, ...rest, status: "PENDING" },
+    if (!Number.isInteger(aid) || !Number.isInteger(eid)) {
+      return res.status(400).json({ message: 'artistId/eventId ไม่ถูกต้อง' });
+    }
+    if (!startTime || !endTime) {
+      return res.status(400).json({ message: 'ต้องมี startTime และ endTime (HH:MM)' });
+    }
+
+    const ev = await prisma.event.findUnique({ where: { id: eid } });
+    if (!ev) return res.status(404).json({ message: 'ไม่พบอีเวนต์' });
+
+    // สิทธิ์: ADMIN ผ่าน / ORGANIZE ต้องเป็นเจ้าของ venue
+    if (!(req.user.role === 'ADMIN' || (req.user.role === 'ORGANIZE' && ev.venueId === req.user.id))) {
+      return res.sendStatus(403);
+    }
+
+    // แปลง HH:MM -> Date ของวันงาน
+    const h2d = (hhmm) => {
+      const m = String(hhmm).match(/^(\d{1,2}):(\d{2})$/);
+      if (!m) return null;
+      const [y, m0, d] = [ev.date.getFullYear(), ev.date.getMonth(), ev.date.getDate()];
+      return new Date(y, m0, d, Math.min(23, +m[1]), Math.min(59, +m[2]), 0, 0);
+    };
+    const startAt = h2d(startTime);
+    const endAt = h2d(endTime);
+    if (!startAt || !endAt || endAt <= startAt) {
+      return res.status(400).json({ message: 'ช่วงเวลาไม่ถูกต้อง' });
+    }
+
+    // กันชนกับคนอื่นใน event เดียวกัน (ยกเว้นตัวเอง)
+    const overlapped = await prisma.scheduleSlot.findFirst({
+      where: {
+        eventId: eid,
+        NOT: { artistId: aid },
+        AND: [{ startAt: { lt: endAt } }, { endAt: { gt: startAt } }],
+      },
+    });
+    if (overlapped) {
+      return res.status(409).json({ message: 'ช่วงเวลาชนกับศิลปินคนอื่น' });
+    }
+
+    // Upsert ArtistEvent + sync เวลา
+    const ae = await prisma.artistEvent.upsert({
+      where: { artistId_eventId: { artistId: aid, eventId: eid } },
+      update: { slotStartAt: startAt, slotEndAt: endAt, slotStage: stage || null, status: 'PENDING' },
+      create: {
+        artistId: aid,
+        eventId: eid,
+        status: 'PENDING',
+        slotStartAt: startAt,
+        slotEndAt: endAt,
+        slotStage: stage || null,
+      },
     });
 
-    res.status(201).json(invite);
-  } catch (err) {
-    console.error("Invite error:", err);
-    res.status(500).json({ error: "Could not send invite" });
+    // Upsert ScheduleSlot (หนึ่งศิลปินหนึ่งแถวต่ออีเวนต์)
+    const existed = await prisma.scheduleSlot.findFirst({
+      where: { eventId: eid, artistId: aid },
+      orderBy: { id: 'asc' },
+    });
+
+    const slot = existed
+      ? await prisma.scheduleSlot.update({
+          where: { id: existed.id },
+          data: { startAt, endAt, stage: stage || null, title: null, note: null },
+        })
+      : await prisma.scheduleSlot.create({
+          data: { eventId: eid, artistId: aid, startAt, endAt, stage: stage || null },
+        });
+
+    res.json({ ok: true, artistEvent: ae, scheduleSlot: slot });
+  } catch (e) {
+    console.error('POST /artist-events/invite failed:', e);
+    res.status(500).json({ message: 'Invite failed', error: e?.message || String(e) });
   }
 });
+
 
 app.post('/artist-events/respond', authMiddleware, async (req, res) => {
   try {

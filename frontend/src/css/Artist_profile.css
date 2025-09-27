@@ -12,8 +12,8 @@
 .profile { padding: 24px 16px; }
 
 /* ป้องกันคอนเทนต์ล้นแทร็ก */
-img,
-svg {
+.profile img,
+.profile svg {
   max-width: 100%;
   height: auto;
   display: block;

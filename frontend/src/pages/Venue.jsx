@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import api, { extractErrorMessage } from "../lib/api";
-import { useAuth } from "../lib/auth";            // ✅ เพิ่ม
 import "../css/Venue.css";
 
 const FALLBACK_IMG = "/img/fallback.jpg";
@@ -23,197 +22,361 @@ const fmtDate = (v) => {
 const fmtTime = (v) => (v ? v : "—");
 
 export default function Venue() {
-  const params = useParams();
-  const id = Number(params.id ?? params.slugOrId);
-  const [venue, setVenue] = useState(null);
+  // ใช้พาธ /venues/:id (id = performerId / owner userId)
+  const { id } = useParams();
+  const vid = Number(id);
+
+  const [venueData, setVenueData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-  const { user } = useAuth();                     // ✅ ใช้ข้อมูลผู้ใช้
-  const canEdit = !!user && (user.role === "ADMIN" || user.id === id); // ✅ เงื่อนไขแสดงปุ่ม
+
+  // โหลดผู้ใช้ปัจจุบันเพื่อเช็คสิทธิ์แก้ไข
+  const [me, setMe] = useState(null);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        setErr(""); setLoading(true);
+        const { data } = await api.get("/auth/me", { withCredentials: true });
+        if (alive) setMe(data);
+      } catch {
+        /* not logged in → ไม่มีปุ่ม edit */
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
 
-        if (!Number.isFinite(id) || !Number.isInteger(id)) { // ✅ กัน NaN
-          setErr("Invalid venue id");
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setErr("");
+        setLoading(true);
+
+        if (!Number.isInteger(vid)) {
+          if (alive) setErr("Invalid venue id");
           return;
         }
 
-        const v = (await api.get(`/venues/${id}`)).data;
-
+        const v = (await api.get(`/venues/${vid}`)).data; // include performer{user}, location, events
         if (!alive) return;
         if (!v) setErr("ไม่พบสถานที่ที่ต้องการ");
-        else setVenue(v);
+        else setVenueData(v);
       } catch (e) {
         if (!alive) return;
         setErr(
-          extractErrorMessage?.(e, "เกิดข้อผิดพลาดระหว่างดึงข้อมูลสถานที่") || "เกิดข้อผิดพลาด"
+          extractErrorMessage?.(e, "เกิดข้อผิดพลาดระหว่างดึงข้อมูลสถานที่") ||
+            "เกิดข้อผิดพลาด"
         );
       } finally {
         if (alive) setLoading(false);
       }
     })();
     return () => { alive = false; };
-  }, [id]);
+  }, [vid]);
 
-  const heroImg = useMemo(() => {
-    if (!venue) return FALLBACK_IMG;
+  // ชื่อจาก performer.user.name
+  const displayName = useMemo(() => {
     return (
-      venue.performer?.user?.profilePhotoUrl ||
-      venue.bannerUrl ||
-      venue.coverImage ||
+      venueData?.performer?.user?.name ||
+      venueData?.name ||
+      "Unnamed Venue"
+    );
+  }, [venueData]);
+
+  // รูปหลัก
+  const heroImg = useMemo(() => {
+    const v = venueData;
+    if (!v) return FALLBACK_IMG;
+    return (
+      v.performer?.user?.profilePhotoUrl ||
+      v.bannerUrl ||
+      v.coverImage ||
       FALLBACK_IMG
     );
-  }, [venue]);
+  }, [venueData]);
 
+  // จุดแผนที่
   const mapPoint = useMemo(() => {
+    const loc = venueData?.location;
     return parseLatLng(
-      venue?.location?.locationUrl || venue?.googleMapUrl,
-      venue?.location?.latitude,
-      venue?.location?.longitude
+      loc?.locationUrl || venueData?.googleMapUrl,
+      loc?.latitude,
+      loc?.longitude
     );
-  }, [venue]);
+  }, [venueData]);
 
   const fmtEnLong = (v) => {
     const d = v instanceof Date ? v : new Date(v);
     if (isNaN(d)) return "—";
     return new Intl.DateTimeFormat("en-US", {
-      month: "long", day: "numeric", year: "numeric"
+      month: "long",
+      day: "numeric",
+      year: "numeric",
     }).format(d);
   };
 
+  // Upcoming events
   const eventsUpcoming = useMemo(() => {
-    const list = Array.isArray(venue?.events) ? venue.events : [];
+    const list = Array.isArray(venueData?.events) ? venueData.events : [];
     const today = new Date();
-    const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayMid = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
     return list
-      .filter(ev => ev?.date && !isNaN(new Date(ev.date)) && new Date(ev.date) >= todayMid)
+      .filter(
+        (ev) =>
+          ev?.date && !isNaN(new Date(ev.date)) && new Date(ev.date) >= todayMid
+      )
       .sort((a, b) => new Date(a.date) - new Date(b.date));
-  }, [venue]);
+  }, [venueData]);
 
-  if (loading) return <div className="vn-page"><div className="vn-loading">กำลังโหลด…</div></div>;
-  if (err) return (
-    <div className="vn-page">
-      <div className="vn-error">{err}</div>
-      <div style={{ marginTop: 8 }}>
-        <Link to="/venues" className="vn-btn-ghost">← กลับแผนที่</Link>
+  // ✅ เช็คสิทธิ์แก้ไข: ORGANIZE/ADMIN + เป็นเจ้าของ venue นี้
+  const canEdit = useMemo(() => {
+    if (!me || !venueData) return false;
+    const roleOK = me.role === "ORGANIZE" || me.role === "ADMIN";
+    const ownerMatches =
+      Number(me.id) === Number(venueData.performerId) ||
+      Number(me.id) === Number(venueData.ownerId) ||
+      Number(me.id) === Number(venueData?.performer?.user?.id) ||
+      Number(me.id) === Number(id);
+    return roleOK && ownerMatches;
+  }, [me, venueData, id]);
+
+  if (loading)
+    return (
+      <div className="vn-page">
+        <div className="vn-loading">กำลังโหลด…</div>
       </div>
-    </div>
-  );
-  if (!venue) return null;
+    );
 
-  const gallery = (venue.photoUrls || venue.photos || "")
+  if (err)
+    return (
+      <div className="vn-page">
+        <div className="vn-error">{err}</div>
+        <div style={{ marginTop: 8 }}>
+          <Link to="/venues" className="vn-btn-ghost">
+            ← กลับแผนที่
+          </Link>
+        </div>
+      </div>
+    );
+
+  if (!venueData) return null;
+
+  // แกลเลอรี
+  const gallery = (venueData.photoUrls || venueData.photos || "")
     .toString()
     .split(",")
-    .map(s => s.trim())
+    .map((s) => s.trim())
     .filter(Boolean);
+
+  // โซเชียลจาก performer
+  const socials = venueData.performer || {};
 
   return (
     <div className="vn-page">
       {/* ===== HERO ===== */}
-      <section className="vn-hero">
-        <div className="vn-hero-media">
-          <img
-            src={heroImg}
-            alt={venue.performer?.user?.name || 'Venue'}
-            loading="lazy"
-            onError={(e)=>{ e.currentTarget.src = FALLBACK_IMG; }}
-          />
-        </div>
-
+      <div className="vn-hero">
         <div className="vn-hero-body">
-          <div className="vn-title-row">
-            <h1 className="vn-title">{venue.performer?.user?.name || "Unnamed Venue"}</h1>
-            {/* ✅ ปุ่มแก้ไข: แสดงเฉพาะเจ้าของ/ADMIN */}
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12}}>
+            <h1 className="vn-title" style={{marginBottom:0}}>{displayName}</h1>
+
+            {/* 🔧 ปุ่มแก้ไข → ชี้ไปหน้า editor เดียว /venue/edit */}
             {canEdit && (
               <Link
-                to={`/venues/${id}/edit`}
-                className="vn-btn"
-                style={{ marginLeft: 12, whiteSpace: 'nowrap' }}
+                to={`/venue/edit`}
+                className="vn-btn-ghost"
+                style={{background:'#1f6feb', color:'#fff', borderColor:'#1f6feb'}}
+                title="แก้ไขสถานที่นี้"
               >
-                Edit
+                EDIT
               </Link>
             )}
           </div>
 
-          <div className="vn-chips">
-            {venue.genre && <span className="vn-chip">{venue.genre}</span>}
-            {venue.priceRate && <span className="vn-chip">Price: {venue.priceRate}</span>}
-            {venue.alcoholPolicy && <span className="vn-chip">Alcohol: {venue.alcoholPolicy}</span>}
-            {venue.ageRestriction && <span className="vn-chip">Age: {venue.ageRestriction}+</span>}
-            {venue.capacity && <span className="vn-chip">Cap: {venue.capacity}</span>}
-          </div>
-          {venue.description && <p className="vn-desc">{venue.description}</p>}
+          {venueData.description && (
+            <p className="vn-desc">{venueData.description}</p>
+          )}
 
-          {/* โซเชียล/ลิงก์สำคัญ */}
-          <div className="vn-actions">
-            {venue.websiteUrl && <a className="vn-btn" href={venue.websiteUrl} target="_blank" rel="noreferrer">Website ↗</a>}
-            {venue.performer?.facebookUrl && <a className="vn-btn-ghost" href={venue.performer.facebookUrl} target="_blank" rel="noreferrer">Facebook</a>}
-            {venue.performer?.instagramUrl && <a className="vn-btn-ghost" href={venue.performer.instagramUrl} target="_blank" rel="noreferrer">Instagram</a>}
-            {venue.performer?.tiktokUrl && <a className="vn-btn-ghost" href={venue.performer.tiktokUrl} target="_blank" rel="noreferrer">TikTok</a>}
-            {venue.performer?.lineUrl && <a className="vn-btn-ghost" href={venue.performer.lineUrl} target="_blank" rel="noreferrer">LINE</a>}
+          <div className="vn-chips">
+            {venueData.genre && <span className="vn-chip">{venueData.genre}</span>}
+            {venueData.priceRate && (
+              <span className="vn-chip-transparent">Price: {venueData.priceRate}</span>
+            )}
+            {venueData.alcoholPolicy && (
+              <span className="vn-chip-transparent">Alcohol: {venueData.alcoholPolicy}</span>
+            )}
+            {venueData.ageRestriction && (
+              <span className="vn-chip-transparent">Age: {venueData.ageRestriction}+</span>
+            )}
+            {venueData.capacity && (
+              <span className="vn-chip-transparent">Capacity: {venueData.capacity}</span>
+            )}
           </div>
         </div>
 
-        <aside className="vn-hero-side">
-          <div className="vn-card">
-            <div className="vn-card-title">Contact</div>
-            <div className="vn-kv"><div>Email</div><div>{venue.performer?.contactEmail ? <a className="vn-link" href={`mailto:${venue.performer.contactEmail}`}>{venue.performer.contactEmail}</a> : "—"}</div></div>
-            <div className="vn-kv"><div>Phone</div><div>{venue.performer?.contactPhone ? <a className="vn-link" href={`tel:${venue.performer.contactPhone}`}>{venue.performer.contactPhone}</a> : "—"}</div></div>
-            <div className="vn-kv"><div>Location</div>
-              <div>
-                {venue?.location?.locationUrl
-                  ? <a className="vn-link" href={venue.location.locationUrl} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>
-                  : (mapPoint ? <a className="vn-link" href={`https://www.google.com/maps?q=${mapPoint.lat},${mapPoint.lng}`} target="_blank" rel="noreferrer">Open in Google Maps ↗</a> : "—")
-                }
-              </div>
-            </div>
-          </div>
-
-          <div className="vn-card">
-            <div className="vn-card-title">Hours & Dates</div>
-            <div className="vn-kv"><div>Open</div><div>{fmtTime(venue.timeOpen)}</div></div>
-            <div className="vn-kv"><div>Close</div><div>{fmtTime(venue.timeClose)}</div></div>
-            <div className="vn-kv"><div>Date Open</div><div>{fmtDate(venue.dateOpen)}</div></div>
-            <div className="vn-kv"><div>Date Close</div><div>{fmtDate(venue.dateClose)}</div></div>
-          </div>
-        </aside>
-      </section>
+        <div className="vn-hero-media">
+          <img
+            src={heroImg}
+            alt={displayName}
+            loading="lazy"
+            onError={(e) => {
+              e.currentTarget.src = FALLBACK_IMG;
+            }}
+          />
+        </div>
+      </div>
 
       {/* ===== INFO GRID ===== */}
       <section className="vn-section">
         <div className="vn-info-grid">
+          {/* Contact */}
           <div className="vn-info-block">
-            <div className="vn-info-title">Basics</div>
-            <div className="vn-kv"><div>Genre</div><div>{venue.genre || "—"}</div></div>
-            <div className="vn-kv"><div>Capacity</div><div>{venue.capacity || "—"}</div></div>
-            <div className="vn-kv"><div>Alcohol</div><div>{venue.alcoholPolicy || "—"}</div></div>
-            <div className="vn-kv"><div>Age Restriction</div><div>{venue.ageRestriction || "—"}</div></div>
-          </div>
+            <div className="vn-info-title">Contact</div>
 
-          <div className="vn-info-block">
-            <div className="vn-info-title">Address</div>
-            <div className="vn-text">{venue.address || "—"}</div>
-            {mapPoint && (
-              <a className="vn-btn-ghost" style={{ marginTop: 8, width: "fit-content" }}
-                 href={`https://www.google.com/maps?q=${mapPoint.lat},${mapPoint.lng}`}
-                 target="_blank" rel="noreferrer">Open in Maps ↗</a>
+            <div className="vn-kv">
+              <div>Email</div>
+              <div>
+                {socials.contactEmail ? (
+                  <a className="vn-link" href={`mailto:${socials.contactEmail}`}>
+                    {socials.contactEmail}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </div>
+            </div>
+
+            <div className="vn-kv">
+              <div>Phone</div>
+              <div>
+                {socials.contactPhone ? (
+                  <a className="vn-link" href={`tel:${socials.contactPhone}`}>
+                    {socials.contactPhone}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </div>
+            </div>
+
+            <div className="vn-kv">
+              <div>Location</div>
+              <div>
+                {venueData.location?.locationUrl ? (
+                  <a
+                    className="vn-link"
+                    href={venueData.location.locationUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open in Google Maps ↗
+                  </a>
+                ) : mapPoint ? (
+                  <a
+                    className="vn-link"
+                    href={`https://www.google.com/maps?q=${mapPoint.lat},${mapPoint.lng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open in Google Maps ↗
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </div>
+            </div>
+
+            {(venueData.timeOpen ||
+              venueData.timeClose ||
+              venueData.dateOpen ||
+              venueData.dateClose) && (
+              <div className="vn-hours">
+                <div className="vn-kv">
+                  <div>Open</div>
+                  <div>{fmtTime(venueData.timeOpen)}</div>
+                </div>
+                <div className="vn-kv">
+                  <div>Close</div>
+                  <div>{fmtTime(venueData.timeClose)}</div>
+                </div>
+                <div className="vn-kv">
+                  <div>Date Open</div>
+                  <div>{fmtDate(venueData.dateOpen)}</div>
+                </div>
+                <div className="vn-kv">
+                  <div>Date Close</div>
+                  <div>{fmtDate(venueData.dateClose)}</div>
+                </div>
+              </div>
             )}
           </div>
 
+          {/* Basics */}
+          <div className="vn-info-block">
+            <div className="vn-info-title">Basics</div>
+            <div className="vn-kv">
+              <div>Genre</div>
+              <div>{venueData.genre || "—"}</div>
+            </div>
+            <div className="vn-kv">
+              <div>Capacity</div>
+              <div>{venueData.capacity || "—"}</div>
+            </div>
+            <div className="vn-kv">
+              <div>Alcohol</div>
+              <div>{venueData.alcoholPolicy || "—"}</div>
+            </div>
+            <div className="vn-kv">
+              <div>Age Restriction</div>
+              <div>{venueData.ageRestriction || "—"}</div>
+            </div>
+          </div>
+
+          {/* Links / Socials */}
           <div className="vn-info-block">
             <div className="vn-info-title">Links</div>
-            <ul className="vn-links">
-              {venue.websiteUrl && <li><a className="vn-link" href={venue.websiteUrl} target="_blank" rel="noreferrer">Website</a></li>}
-              {venue.performer?.facebookUrl && <li><a className="vn-link" href={venue.performer.facebookUrl} target="_blank" rel="noreferrer">Facebook</a></li>}
-              {venue.performer?.instagramUrl && <li><a className="vn-link" href={venue.performer.instagramUrl} target="_blank" rel="noreferrer">Instagram</a></li>}
-              {venue.performer?.tiktokUrl && <li><a className="vn-link" href={venue.performer.tiktokUrl} target="_blank" rel="noreferrer">TikTok</a></li>}
-              {venue.performer?.lineUrl && <li><a className="vn-link" href={venue.performer.lineUrl} target="_blank" rel="noreferrer">LINE</a></li>}
-              {!(venue.websiteUrl||venue.performer?.facebookUrl||venue.performer?.instagramUrl||venue.performer?.tiktokUrl||venue.performer?.lineUrl) && <li>—</li>}
-            </ul>
+            <div className="vn-social-icons">
+              {venueData.websiteUrl && (
+                <a href={venueData.websiteUrl} target="_blank" rel="noreferrer">
+                  <img src="/img/web.png" alt="Website" />
+                </a>
+              )}
+              {socials.facebookUrl && (
+                <a href={socials.facebookUrl} target="_blank" rel="noreferrer">
+                  <img src="/img/facebook.png" alt="Facebook" />
+                </a>
+              )}
+              {socials.instagramUrl && (
+                <a href={socials.instagramUrl} target="_blank" rel="noreferrer">
+                  <img src="/img/instagram.png" alt="Instagram" />
+                </a>
+              )}
+              {socials.lineUrl && (
+                <a href={socials.lineUrl} target="_blank" rel="noreferrer">
+                  <img src="/img/line.png" alt="LINE" />
+                </a>
+              )}
+              {socials.tiktokUrl && (
+                <a href={socials.tiktokUrl} target="_blank" rel="noreferrer">
+                  <img src="/img/tiktok.png" alt="TikTok" />
+                </a>
+              )}
+              {socials.youtubeUrl && (
+                <a href={socials.youtubeUrl} target="_blank" rel="noreferrer">
+                  <img src="/img/youtube.png" alt="YouTube" />
+                </a>
+              )}
+              {!(venueData.websiteUrl ||
+                socials.facebookUrl ||
+                socials.instagramUrl ||
+                socials.lineUrl ||
+                socials.tiktokUrl ||
+                socials.youtubeUrl) && <span>—</span>}
+            </div>
           </div>
         </div>
       </section>
@@ -225,8 +388,14 @@ export default function Venue() {
           <div className="vn-gallery">
             {gallery.map((src, i) => (
               <div key={i} className="vn-thumb">
-                <img src={src} alt={`photo ${i+1}`} loading="lazy"
-                     onError={(e)=>{ e.currentTarget.style.opacity=0; }} />
+                <img
+                  src={src}
+                  alt={`photo ${i + 1}`}
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.style.opacity = 0;
+                  }}
+                />
               </div>
             ))}
           </div>
@@ -238,26 +407,38 @@ export default function Venue() {
         <h2 className="a-section-title">Upcoming</h2>
         <div className="a-panel">
           <ul className="a-schedule-list">
-            {eventsUpcoming.map(ev => (
+            {eventsUpcoming.map((ev) => (
               <li key={ev.id || ev.slug || ev.title} className="a-schedule-item">
                 <div className="a-date">{fmtEnLong(ev.date || ev.dateISO)}</div>
                 <div className="a-event">
                   <div className="a-event-title">{ev.title || ev.name}</div>
                   <div className="a-event-sub">
-                    {(ev.venue?.name || venue.performer?.user?.name) || ""}{/* ✅ กัน null */}
+                    {(ev.venue?.name ||
+                      venueData?.performer?.user?.name ||
+                      displayName) || ""}
                     {ev.city ? ` • ${ev.city}` : ""}
                     {ev.price ? ` • ${ev.price}` : ""}
                   </div>
                 </div>
-                {(ev.id || ev.url || ev.ticketLink) && (
-                  ev.id ? (
-                    <Link className="a-link" to={`/events/${ev.id}`}>Detail</Link>
+                {(ev.id || ev.url || ev.ticketLink) &&
+                  (ev.id ? (
+                    <Link className="a-link" to={`/events/${ev.id}`}>
+                      Detail
+                    </Link>
                   ) : ev.url ? (
-                    <a className="a-link" href={ev.url} target="_blank" rel="noreferrer">Detail</a>
+                    <a className="a-link" href={ev.url} target="_blank" rel="noreferrer">
+                      Detail
+                    </a>
                   ) : (
-                    <a className="a-link" href={ev.ticketLink} target="_blank" rel="noreferrer">Detail</a>
-                  )
-                )}
+                    <a
+                      className="a-link"
+                      href={ev.ticketLink}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Detail
+                    </a>
+                  ))}
               </li>
             ))}
 

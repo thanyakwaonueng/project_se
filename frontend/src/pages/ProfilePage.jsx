@@ -310,10 +310,14 @@ export default function ProfilePage() {
             </div>
 
             <div className="profile-actions">
-              <Link to="/accountsetup?edit=1" className="btn-primary">Edit profile</Link>
-              {isArtistApproved && artistInfo && <Link to={`/artists/${myArtistId}`} className="btn-ghost">View public artist</Link>}
-              {venue && <Link to="/me/venue" className="btn-ghost">Manage venue</Link>}
-            </div>
+  <Link to="/accountsetup?edit=1" className="btn-primary">Edit profile</Link>
+  {isArtistApproved && artistInfo && (
+    <Link to={`/artists/${myArtistId}`} className="btn-ghost">View public artist</Link>
+  )}
+  {venue && (
+    <Link to={`/venues/${venue.performerId}`} className="btn-ghost">Manage venue</Link>
+  )}
+</div>
           </div>
 
           {/* Following */}

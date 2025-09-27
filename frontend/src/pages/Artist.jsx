@@ -1,4 +1,4 @@
-// src/pages/artist.jsx
+// src/pages/Artist.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -7,9 +7,7 @@ import "../css/Artist_profile.css";
 
 /** ---------- LocalStorage follow (client-side) ---------- */
 const FOLLOW_KEY = "artist.follow.v1";
-const loadFollowed = () => {
-  try { return JSON.parse(localStorage.getItem(FOLLOW_KEY)) || {}; } catch { return {}; }
-};
+const loadFollowed = () => { try { return JSON.parse(localStorage.getItem(FOLLOW_KEY)) || {}; } catch { return {}; } };
 const saveFollowed = (obj) => { try { localStorage.setItem(FOLLOW_KEY, JSON.stringify(obj)); } catch {} };
 
 /** ---------- Utils ---------- */
@@ -43,10 +41,10 @@ export default function Artist() {
 
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [followed, setFollowed] = useState(loadFollowed());
-  const [followingIds, setFollowingIds] = useState(new Set()); // เดิมชื่อ likingIds
+  const [followingIds, setFollowingIds] = useState(new Set());
 
   const lastFocusRef = useRef(null);
-  const { id } = useParams();               // ✅ ใช้เฉพาะ id
+  const { id } = useParams();  // ใช้ id อย่างเดียว
   const navigate = useNavigate();
 
   /** fetch groups */
@@ -91,7 +89,7 @@ export default function Artist() {
   const filteredGroups = useMemo(() => {
     const base = groups.filter((g) => {
       if (activeFilter === "popular") return (g.followersCount || 0) >= 100000;
-      if (activeFilter === "new") return Number(g.stats?.debut || 0) >= 2023;
+      if (activeFilter === "new") return Number(g?.stats?.debut || 0) >= 2023;
       return true;
     });
     const q = searchQuery.trim().toLowerCase();
@@ -101,31 +99,9 @@ export default function Artist() {
         g.name?.toLowerCase().includes(q) ||
         (g.description || "").toLowerCase().includes(q) ||
         (g.details || "").toLowerCase().includes(q);
-      const inMembers = (g.artists || []).some(
-        (a) =>
-          a.name?.toLowerCase().includes(q) ||
-          (a.koreanName || "").toLowerCase().includes(q) ||
-          (a.position || "").toLowerCase().includes(q)
-      );
-      return inGroup || inMembers;
+      return inGroup;
     });
   }, [groups, activeFilter, searchQuery]);
-
-  /** schedule */
-  // const now = new Date();
-  // const scheduleUpcoming = useMemo(() => {
-  //   const arr = (selectedGroup?.schedule || []).filter(
-  //     (ev) => new Date(ev.dateISO) >= now
-  //   );
-  //   return arr.sort((a, b) => new Date(a.dateISO) - new Date(b.dateISO));
-  // }, [selectedGroup, now]);
-
-  // const schedulePast = useMemo(() => {
-  //   const arr = (selectedGroup?.schedule || []).filter(
-  //     (ev) => new Date(ev.dateISO) < now
-  //   );
-  //   return arr.sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
-  // }, [selectedGroup, now]);
 
   /** follow/unfollow (DB-based; backend ใช้ endpoint like เดิม) */
   const toggleFollow = async (group) => {
@@ -182,32 +158,16 @@ export default function Artist() {
     return arr;
   }, [currentPage, totalPages]);
 
-
-  // if (loadingGroups) {
-  //   return <div className="artist-container a-bleed" style={{padding:16}}>Loading…</div>;
-  // }
-  // if (groupsError) {
-  //   return <div className="artist-container a-bleed" style={{padding:16}}>Failed to load artists.</div>;
-  // }
-
-
   const [scheduleTab, setScheduleTab] = useState("upcoming");
 
-  // ✅ ตัวช่วย “ต้องอยู่ตรงนี้” (นอกเงื่อนไข, ก่อน return)
-  const groupGenres = useMemo(
-    () => (selectedGroup?.genres?.length ? selectedGroup.genres : []),
-    [selectedGroup]
-  );
-
-  const otherArtists = useMemo(() => {
-    const g = groupGenres[0] || "Pop";
-    return Array.from({ length: 8 }).map((_, i) => ({
-      id: `mock-${i + 1}`,
-      name: `${g} Artist ${i + 1}`,
-      image: "/img/fallback.jpg",
-      url: "#",
-    }));
-  }, [groupGenres]);
+  // genres: กลุ่มเดิมไม่มี `genres[]` ให้แตกมาจาก `details` ถ้ามี
+  const groupGenres = useMemo(() => {
+    if (!selectedGroup) return [];
+    if (Array.isArray(selectedGroup.genres) && selectedGroup.genres.length) return selectedGroup.genres;
+    const d = (selectedGroup.details || "").trim();
+    if (!d) return [];
+    return d.split(/[\/,|•]+/).map(s => s.trim()).filter(Boolean);
+  }, [selectedGroup]);
 
   const fmtCompact = (n) => {
     const num = Number(n || 0);
@@ -216,24 +176,28 @@ export default function Artist() {
     return num.toLocaleString();
   };
 
-  // schedule lists (นอกเงื่อนไขเช่นกัน)
+  // schedule lists
   const now = new Date();
   const scheduleUpcoming = useMemo(() => {
     const arr = (selectedGroup?.schedule || []).filter(ev => new Date(ev.dateISO) >= now);
     return arr.sort((a,b) => new Date(a.dateISO) - new Date(b.dateISO));
-  }, [selectedGroup]); // ❌ อย่าใส่ now ใน deps (จะเปลี่ยนทุกเรนเดอร์)
+  }, [selectedGroup]); // ห้ามใส่ now ใน deps
 
   const schedulePast = useMemo(() => {
     const arr = (selectedGroup?.schedule || []).filter(ev => new Date(ev.dateISO) < now);
     return arr.sort((a,b) => new Date(b.dateISO) - new Date(a.dateISO));
   }, [selectedGroup]);
 
-
+  if (loadingGroups) {
+    return <div className="artist-container a-bleed" style={{padding:16}}>Loading…</div>;
+  }
+  if (groupsError) {
+    return <div className="artist-container a-bleed" style={{padding:16}}>Failed to load artists.</div>;
+  }
 
   return (
-    
   <div className="artist-container a-bleed">
-    {/* ====== LIST MODE (ไม่มี id = ยังไม่เลือกศิลปิน) ====== */}
+    {/* ====== LIST MODE ====== */}
     {!selectedGroup ? (
       <>
         <div className="container-heading">
@@ -263,7 +227,7 @@ export default function Artist() {
           <div className="connected-search-container">
             <input
               type="text"
-              placeholder="Search artists, members, positions..."
+              placeholder="Search artists…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="connected-search-box"
@@ -289,7 +253,7 @@ export default function Artist() {
                 title={group.likedByMe ? "Unfollow" : "Follow"}
               />
               <Link
-                to={`/artists/${group.id}`}   /* ✅ ใช้ id */
+                to={`/artists/${group.id}`}
                 className="group-card a-card-min"
               >
                 <div className="group-card-image">
@@ -351,7 +315,7 @@ export default function Artist() {
         )}
       </>
     ) : (
-      /* ====== DETAIL MODE (มี id = เลือกศิลปินแล้ว) ====== */
+      /* ====== DETAIL MODE ====== */
       <>
         <section className="profile">
           <div className="profile-grid">
@@ -360,28 +324,28 @@ export default function Artist() {
               <h1 className="title">{selectedGroup?.name || "Artist"}</h1>
               <p className="desc">{selectedGroup?.details || selectedGroup?.description || "No description."}</p>
 
-              {/* ปุ่ม EPK (อยู่กึ่งกลางล่างคอลัมน์ซ้าย) */}
-              <a
-                className="epk-pill"
-                href={selectedGroup?.epkUrl || selectedGroup?.etaPdfUrl || `/pdf/artist-${selectedGroup?.id}.pdf`}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Open EPK"
-              >
-                <span>EPK</span>
-                <span className="epk-dot" aria-hidden="true">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </span>
-              </a>
+              {/* ปุ่ม EPK => ใช้ techRider.downloadUrl ถ้ามี */}
+              {selectedGroup?.techRider?.downloadUrl && (
+                <a
+                  className="epk-pill"
+                  href={selectedGroup.techRider.downloadUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open EPK"
+                >
+                  <span>EPK</span>
+                  <span className="epk-dot" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </span>
+                </a>
+              )}
             </div>
 
-            {/* กลาง: รูป + เส้น (นอกกรอบ) + GENRE (ชิปเดียว) */}
+            {/* กลาง: รูป + เส้น + GENRE */}
             <div className="center-wrap">
               <div className="center-box">
-
-                {/* === Follow toggle: มุมขวาบนของรูป === */}
                 <div className="img-like-shell">
                   <button
                     className={`like-button ${selectedGroup.likedByMe ? "liked" : ""}`}
@@ -390,7 +354,6 @@ export default function Artist() {
                     disabled={followingIds.has(selectedGroup.id)}
                     title={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
                   />
-                  {/* ถ้าจะโชว์จำนวนอีกครั้ง ค่อยเติม <span> ตรงนี้ได้ */}
                 </div>
 
                 <figure className="img-frame" aria-label="Artist image">
@@ -408,10 +371,8 @@ export default function Artist() {
                 </figure>
               </div>
 
-              {/* เส้นคั่นอยู่นอกกรอบ */}
               <div className="center-hr" aria-hidden="true" />
 
-              {/* GENRE: label ซ้าย / chip รวมขวา */}
               <div className="center-caption">
                 <div className="center-caption-row">
                   <span className="center-caption-label">GENRE</span>
@@ -422,7 +383,7 @@ export default function Artist() {
               </div>
             </div>
 
-            {/* ขวา: ผู้ติดตาม + โซเชียล + ปุ่ม follow */}
+            {/* ขวา: ผู้ติดตาม + โซเชียล */}
             <aside className="right-box">
               <div className="follow-box" aria-label="Followers">
                 <div className="follow-big">{fmtCompact(selectedGroup?.followersCount)}+</div>
@@ -439,53 +400,39 @@ export default function Artist() {
                   <SocialIcon href={selectedGroup?.socials?.tiktok}    img="/img/tiktok.png"    label="TikTok" />
                   <SocialIcon href={selectedGroup?.socials?.youtube}   img="/img/youtube.png"   label="YouTube" />
                 </div>
-
-                {/* follow toggle */}
-                {/* <div style={{display:'flex',justifyContent:'center',gap:8,marginTop:12}}>
-                  <button
-                    className={`like-button ${selectedGroup.likedByMe ? "liked" : ""}`}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFollow(selectedGroup); }}
-                    aria-label={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
-                    disabled={followingIds.has(selectedGroup.id)}
-                    title={selectedGroup.likedByMe ? "Unfollow" : "Follow"}
-                  />
-                  <span style={{fontSize: 14, opacity: .9}}>
-                    👥 {selectedGroup.followersCount || 0} followers
-                  </span>
-                </div> */}
               </div>
             </aside>
           </div>
 
-          {/* ===== LISTEN ON ===== */}
+          {/* ===== LISTEN ON (ใช้ socials.* ที่เป็นบริการสตรีม) ===== */}
           <div className="listen2">
             <div className="listen2-top">
               <div className="listen2-title">LISTEN ON</div>
               <div className="listen2-quote">“Where words fail, music speaks.”</div>
             </div>
             <div className="listen2-grid">
-              <a className="listen2-item" href={selectedGroup?.streams?.spotify || "#"} target="_blank" rel="noreferrer">
+              <a className="listen2-item" href={selectedGroup?.socials?.spotify || "#"} target="_blank" rel="noreferrer">
                 <img src="/img/spotify.png" alt="" /><span>Spotify</span>
               </a>
-              <a className="listen2-item" href={selectedGroup?.streams?.appleMusic || "#"} target="_blank" rel="noreferrer">
+              <a className="listen2-item" href={selectedGroup?.socials?.appleMusic || "#"} target="_blank" rel="noreferrer">
                 <img src="/img/apple-music.png" alt="" /><span>Apple Music</span>
               </a>
-              <a className="listen2-item" href={selectedGroup?.streams?.youtubeMusic || "#"} target="_blank" rel="noreferrer">
+              <a className="listen2-item" href={selectedGroup?.socials?.youtube || "#"} target="_blank" rel="noreferrer">
                 <img src="/img/youtube.png" alt="" /><span>YouTube Music</span>
               </a>
-              <a className="listen2-item" href={selectedGroup?.streams?.soundcloud || "#"} target="_blank" rel="noreferrer">
+              <a className="listen2-item" href={selectedGroup?.socials?.soundcloud || "#"} target="_blank" rel="noreferrer">
                 <img src="/img/soundcloud.png" alt="" /><span>SoundCloud</span>
               </a>
-              <a className="listen2-item" href={selectedGroup?.streams?.bandcamp || "#"} target="_blank" rel="noreferrer">
+              <a className="listen2-item" href={selectedGroup?.socials?.bandcamp || "#"} target="_blank" rel="noreferrer">
                 <img src="/img/bandcamp.png" alt="" /><span>Bandcamp</span>
               </a>
-              <a className="listen2-item" href={selectedGroup?.streams?.shazam || "#"} target="_blank" rel="noreferrer">
+              <a className="listen2-item" href={selectedGroup?.socials?.shazam || "#"} target="_blank" rel="noreferrer">
                 <img src="/img/shazam.png" alt="" /><span>Shazam</span>
               </a>
             </div>
           </div>
 
-          {/* ===== SCHEDULE (อยู่ใต้ Listen On) ===== */}
+          {/* ===== SCHEDULE ===== */}
           <section className="schedule-sec">
             <div className="schedule-head">
               <h2 className="schedule-title">SCHEDULE</h2>
@@ -501,10 +448,10 @@ export default function Artist() {
                   <div className="sch-date">{dtfEvent.format(new Date(ev.dateISO))}</div>
                   <div className="sch-body">
                     <div className="sch-title">{ev.title}</div>
-                    <div className="sch-sub">{ev.venue} • {ev.city}</div>
+                    <div className="sch-sub">{ev.venue}{ev.city ? ` • ${ev.city}` : ""}</div>
                   </div>
                   {(ev.id || ev.url || ev.ticketUrl) && (
-                    ev.id ? <Link className="sch-link" to={`/page_events/${ev.id}`}>Detail</Link>
+                    ev.id ? <Link className="sch-link" to={`/events/${ev.id}`}>Detail</Link>
                           : <a className="sch-link" href={ev.url || ev.ticketUrl} target="_blank" rel="noreferrer">Detail</a>
                   )}
                 </li>
@@ -514,10 +461,9 @@ export default function Artist() {
             </ul>
           </section>
 
-          {/* เส้นคั่นยาว */}
           <hr className="big-divider" />
 
-          {/* ===== OTHER (ศิลปิน genre เดียวกัน — mock 8 คน) ===== */}
+          {/* ===== OTHER: mock ไว้ก่อน (ไม่พึ่ง API) ===== */}
           <section className="other-sec">
             <div className="other-head">
               <h3 className="other-title">OTHER</h3>
@@ -525,12 +471,12 @@ export default function Artist() {
             </div>
 
             <div className="other-strip" role="list">
-              {otherArtists.map((a) => (
-                <a key={a.id} href={a.url} className="other-card" role="listitem">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <a key={`mock-${i}`} href="#" className="other-card" role="listitem" onClick={(e)=>e.preventDefault()}>
                   <div className="other-thumb">
-                    <img src={a.image} alt={a.name} loading="lazy" onError={(e)=>e.currentTarget.src="/img/fallback.jpg"} />
+                    <img src="/img/fallback.jpg" alt="artist" loading="lazy" onError={(e)=>e.currentTarget.src="/img/fallback.jpg"} />
                   </div>
-                  <div className="other-name">{a.name}</div>
+                  <div className="other-name">{(groupGenres[0] || "Pop") + " Artist " + (i+1)}</div>
                 </a>
               ))}
             </div>
@@ -539,6 +485,5 @@ export default function Artist() {
       </>
     )}
   </div>
-);
-
+  );
 }

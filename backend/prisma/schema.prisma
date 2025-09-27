@@ -97,6 +97,7 @@ model Artist {
   // new explicit relation
   artistEvents ArtistEvent[]
   artistRecords ArtistRecord[]
+  scheduleSlots ScheduleSlot[]
 
   @@index([performerId])
 }
@@ -213,7 +214,35 @@ model Event {
   artistEvents ArtistEvent[]
 
   likedBy  LikeEvent [] @relation("LikedEvent")
+
+
+  // ← NEW: ตารางย่อยของ schedule
+  scheduleSlots ScheduleSlot[]
 }
+
+
+
+model ScheduleSlot {
+  id       Int       @id @default(autoincrement())
+  eventId  Int
+  artistId Int?      // null = ช่วงพัก/MC/Changeover ก็เก็บได้
+  title    String?
+  stage    String?
+  startAt  DateTime
+  endAt    DateTime
+  note     String?
+
+  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  artist Artist? @relation(fields: [artistId], references: [performerId], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId, startAt])
+  @@index([eventId, stage, startAt])
+}
+
+
 
 // new join model that get from a fucking GPT 
 // (ใจเย็นๆโยม)
@@ -221,17 +250,20 @@ model ArtistEvent {
   artistId Int
   eventId  Int
 
-  // metadata fields you wanted
-  status   ArtistEventStatus @default(PENDING)
+  status    ArtistEventStatus @default(PENDING)
   notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 
-  // relations
+  // ← NEW (optional): เวลาที่ตกลงในคำเชิญ (mirrors ScheduleSlot)
+  slotStartAt DateTime?
+  slotEndAt   DateTime?
+  slotStage   String?
+
   artist Artist @relation(fields: [artistId], references: [performerId], onDelete: Cascade)
-  event  Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
-  @@id([artistId, eventId]) // composite PK prevents duplicate pair
+  @@id([artistId, eventId])
   @@index([eventId])
   @@index([artistId])
 }

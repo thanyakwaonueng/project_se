@@ -81,6 +81,8 @@ function normalizeEvent(ev) {
     // สำหรับติดตามอีเวนต์
     likedByMe: !!ev?.likedByMe,
     followersCount: ev?.followersCount ?? ev?.likesCount ?? 0,
+    // readiness จาก backend (ถ้ามี)
+    _ready: ev?._ready || null,
   };
 }
 
@@ -325,7 +327,16 @@ export default function Event() {
                       </div>
                     )}
 
-                    <Link to={`/myevents/${ev.id}`} className="btn-event-detail">
+                    {/* readiness badge (ถ้ามีข้อมูลจาก backend) */}
+                    {ev._ready && (
+                      <div style={{ fontSize: 12, marginBottom: 8, color: ev._ready.isReady ? '#0a7' : '#b35' }}>
+                        {ev._ready.isReady
+                          ? 'Ready: all artists accepted'
+                          : `Pending: ${ev._ready.accepted}/${ev._ready.totalInvited} accepted`}
+                      </div>
+                    )}
+
+                    <Link to={`/events/${ev.id}`} className="btn-event-detail">
                       View Event
                     </Link>
                   </div>

@@ -12,11 +12,12 @@ import Event from '../pages/Event';
 import Login from '../pages/Login';
 import Signup from '../pages/Signup';
 import Logout from '../pages/Logout';
-//import EventCreate from '../pages/EventCreate';
+// import EventCreate from '../pages/EventCreate';
 import ArtistProfileForm from '../pages/ArtistProfileForm';
-import VenueProfileForm from '../pages/VenueProfileForm';
+// 🔁 ลบ 2 import เก่า
+// import VenueProfileForm from '../pages/VenueProfileForm';
+// import CreateVenue from '../pages/CreateVenue';
 import CreateArtist from '../pages/CreateArtist';
-import CreateVenue from '../pages/CreateVenue';
 import CreateEvent from '../pages/CreateEvent';
 import ProtectedRoute from '../components/ProtectedRoute';
 import EventDetail from '../pages/EventDetail';
@@ -28,11 +29,10 @@ import ProfilePage from "../pages/ProfilePage";
 import AccountSetupPage from '../pages/AccountSetupPage';
 import AdminRoleRequestsPage from '../pages/AdminRoleRequestsPage';
 
-/** 
- * เช็คว่า “ตั้งค่าโปรไฟล์แล้วหรือยัง”
- * ถ้ายัง -> เด้งไป /accountsetup (replace)
- * อนุโลม: /login, /signup, /accountsetup
- */
+// ✅ เพจใหม่ (ตัวเดียวใช้ได้ทั้งสร้าง/แก้ไข)
+import VenueEditor from '../pages/VenueEditor';
+
+/** เช็คว่าตั้งค่าโปรไฟล์ขั้นต่ำหรือยัง */
 function RequireProfile({ children }) {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
@@ -79,41 +79,14 @@ function RequireProfile({ children }) {
 
 /**
  * /me/venue switcher
- * - ถ้ามี venue -> /venues/:id
- * - ถ้ายังไม่มี -> /me/venue/create
+ * เดิม: ถ้ามี venue -> /venues/:id, ถ้ายังไม่มี -> /me/venue/create
+ * ใหม่: พาไปหน้าเดียว /venue/edit เสมอ (หน้าเดียวรองรับทั้งสร้าง/แก้)
  */
 function MyVenueSwitch() {
   const navigate = useNavigate();
-
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const { data } = await axios.get('/api/auth/me', { withCredentials: true });
-        const myId = Number(data?.id);
-        if (!Number.isInteger(myId)) {
-          navigate('/login', { replace: true });
-          return;
-        }
-        try {
-          await axios.get(`/api/venues/${myId}`, { withCredentials: true });
-          if (alive) navigate(`/venues/${myId}`, { replace: true });
-        } catch (err) {
-          if (err?.response?.status === 404) {
-            if (alive) navigate('/me/venue/create', { replace: true });
-          } else if (err?.response?.status === 401) {
-            if (alive) navigate('/login', { replace: true });
-          } else {
-            if (alive) navigate('/venues', { replace: true });
-          }
-        }
-      } catch {
-        navigate('/login', { replace: true });
-      }
-    })();
-    return () => { alive = false; };
+    navigate('/venue/edit', { replace: true });
   }, [navigate]);
-
   return null;
 }
 
@@ -121,7 +94,7 @@ export default function AppRoutes() {
   return (
     <Router>
       <Routes>
-        {/* กลุ่ม public: login / signup / logout / accountsetup */}
+        {/* public: login / signup / logout / accountsetup */}
         <Route element={<Layout />}>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -136,7 +109,7 @@ export default function AppRoutes() {
           />
         </Route>
 
-        {/* กลุ่ม public: หน้าเนื้อหา (ไม่ต้องมีโปรไฟล์/ไม่ต้องล็อกอิน) */}
+        {/* public: หน้าเนื้อหา */}
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
@@ -152,7 +125,7 @@ export default function AppRoutes() {
           <Route path="/venues/:id" element={<Venue />} />
         </Route>
 
-        {/* กลุ่มที่ “ต้องมีโปรไฟล์แล้ว” */}
+        {/* ต้องมีโปรไฟล์แล้ว */}
         <Route
           element={
             <RequireProfile>
@@ -160,17 +133,17 @@ export default function AppRoutes() {
             </RequireProfile>
           }
         >
-          {/* แก้ไข venue */}
+          {/* ✅ แก้ไข/สร้าง venue ใช้หน้าเดียว */}
           <Route
-            path="/venues/:id/edit"
+            path="/venue/edit"
             element={
               <ProtectedRoute allow={['ORGANIZE', 'ADMIN']}>
-                <VenueProfileForm />
+                <VenueEditor />
               </ProtectedRoute>
             }
           />
 
-          {/* My Venue (เมนู) */}
+          {/* ✅ My Venue menu → เด้งไปหน้า editor เดียว */}
           <Route
             path="/me/venue"
             element={
@@ -179,14 +152,11 @@ export default function AppRoutes() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/me/venue/create"
-            element={
-              <ProtectedRoute allow={['ORGANIZE', 'ADMIN']}>
-                <CreateVenue />
-              </ProtectedRoute>
-            }
-          />
+
+          {/* ❌ ลบ 2 เส้นทางเก่า
+              /venues/:id/edit  (VenueProfileForm)
+              /me/venue/create  (CreateVenue)
+          */}
 
           {/* อื่น ๆ ที่ต้องล็อกอิน */}
           <Route path="/myevents" element={<MyEvents />} />
@@ -201,13 +171,11 @@ export default function AppRoutes() {
             }
           />
 
-          {/* สร้าง/จัดการของฉัน */}
           <Route path="/me/artist" element={<CreateArtist />} />
           <Route path="/me/event" element={<CreateEvent />} />
           <Route path="/me/event/:eventId" element={<CreateEvent />} />
           <Route path="/me/invite_to_event/:eventId" element={<InviteArtist />} />
 
-          {/* โปรไฟล์ฉัน */}
           <Route path="/me/profile" element={<ProfilePage />} />
 
           {/* แอดมิน */}
