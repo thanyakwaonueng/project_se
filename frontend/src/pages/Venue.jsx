@@ -22,7 +22,7 @@ const fmtDate = (v) => {
 const fmtTime = (v) => (v ? v : "—");
 
 export default function Venue() {
-  // ใช้พาธ /venues/:id (id = performerId / owner userId)
+  // /venues/:id  (id = performerId/userId ของเจ้าของ venue)
   const { id } = useParams();
   const vid = Number(id);
 
@@ -30,7 +30,7 @@ export default function Venue() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // โหลดผู้ใช้ปัจจุบันเพื่อเช็คสิทธิ์แก้ไข
+  // ผู้ใช้ปัจจุบันเพื่อแสดงปุ่มแก้ไข
   const [me, setMe] = useState(null);
 
   useEffect(() => {
@@ -40,10 +40,12 @@ export default function Venue() {
         const { data } = await api.get("/auth/me", { withCredentials: true });
         if (alive) setMe(data);
       } catch {
-        /* not logged in → ไม่มีปุ่ม edit */
+        /* not logged in */
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -58,7 +60,8 @@ export default function Venue() {
           return;
         }
 
-        const v = (await api.get(`/venues/${vid}`)).data; // include performer{user}, location, events
+        // ✅ backend ส่ง include performer{user}, location, events
+        const v = (await api.get(`/venues/${vid}`, { withCredentials: true })).data;
         if (!alive) return;
         if (!v) setErr("ไม่พบสถานที่ที่ต้องการ");
         else setVenueData(v);
@@ -72,7 +75,9 @@ export default function Venue() {
         if (alive) setLoading(false);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [vid]);
 
   // ชื่อจาก performer.user.name
@@ -84,7 +89,7 @@ export default function Venue() {
     );
   }, [venueData]);
 
-  // รูปหลัก
+  // รูปหลัก (ตามเดิม)
   const heroImg = useMemo(() => {
     const v = venueData;
     if (!v) return FALLBACK_IMG;
@@ -116,7 +121,7 @@ export default function Venue() {
     }).format(d);
   };
 
-  // Upcoming events
+  // Upcoming events (ตามเดิม)
   const eventsUpcoming = useMemo(() => {
     const list = Array.isArray(venueData?.events) ? venueData.events : [];
     const today = new Date();
@@ -166,14 +171,14 @@ export default function Venue() {
 
   if (!venueData) return null;
 
-  // แกลเลอรี
+  // แกลเลอรี (ตามเดิม)
   const gallery = (venueData.photoUrls || venueData.photos || "")
     .toString()
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
 
-  // โซเชียลจาก performer
+  // โซเชียล/คอนแทกต์จาก performer
   const socials = venueData.performer || {};
 
   return (
@@ -181,15 +186,24 @@ export default function Venue() {
       {/* ===== HERO ===== */}
       <div className="vn-hero">
         <div className="vn-hero-body">
-          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:12}}>
-            <h1 className="vn-title" style={{marginBottom:0}}>{displayName}</h1>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <h1 className="vn-title" style={{ marginBottom: 0 }}>
+              {displayName}
+            </h1>
 
-            {/* 🔧 ปุ่มแก้ไข → ชี้ไปหน้า editor เดียว /venue/edit */}
+            {/* 🔧 ปุ่มแก้ไข → กลับไป route เดิม /venue/edit */}
             {canEdit && (
               <Link
                 to={`/venue/edit`}
                 className="vn-btn-ghost"
-                style={{background:'#1f6feb', color:'#fff', borderColor:'#1f6feb'}}
+                style={{ background: "#1f6feb", color: "#fff", borderColor: "#1f6feb" }}
                 title="แก้ไขสถานที่นี้"
               >
                 EDIT
@@ -370,12 +384,14 @@ export default function Venue() {
                   <img src="/img/youtube.png" alt="YouTube" />
                 </a>
               )}
-              {!(venueData.websiteUrl ||
+              {!(
+                venueData.websiteUrl ||
                 socials.facebookUrl ||
                 socials.instagramUrl ||
                 socials.lineUrl ||
                 socials.tiktokUrl ||
-                socials.youtubeUrl) && <span>—</span>}
+                socials.youtubeUrl
+              ) && <span>—</span>}
             </div>
           </div>
         </div>
@@ -404,7 +420,7 @@ export default function Venue() {
 
       {/* ===== UPCOMING ===== */}
       <section className="vn-section">
-        <h2 className="a-section-title">Upcoming</h2>
+        <h2 className="vn-section-title">Upcoming</h2>
         <div className="a-panel">
           <ul className="a-schedule-list">
             {eventsUpcoming.map((ev) => (

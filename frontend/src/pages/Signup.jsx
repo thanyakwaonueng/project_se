@@ -91,7 +91,7 @@ export default function Signup() {
             text: 'Your account has been created successfully.',
             confirmButtonColor: '#3085d6'
           }).then(() => {
-            window.location.assign('/account_setup');
+            window.location.assign('/accountsetup');
         });
 
           
@@ -164,7 +164,7 @@ export default function Signup() {
                   disabled={busy}
                 />
               </div>
-
+              
               {/* หมายเหตุ: ระบบจะตั้งค่า role เป็น FAN อัตโนมัติหลังสมัคร
                   ถ้าต้องการสิทธิ์ ARTIST/VENUE/ORGANIZER ให้ไปขออัปเกรดสิทธิ์ภายหลังที่เมนู "Request role upgrade"
                   ใน Account dropdown (ที่ Navbar) */}

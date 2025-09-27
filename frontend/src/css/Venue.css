@@ -97,7 +97,39 @@
   font-weight: bold;
   font-size: 40px;
   margin: 2px 0 10px;
+  text-transform: uppercase;
 }
+
+.vn-btn-img {
+  position: absolute; /* ให้อยู่ทับบนรูป */
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  padding: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.vn-btn-img img {
+  width: 24px;
+  height: 24px;
+  display: block;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              filter 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: brightness(0); /* ไอคอนสีดำเริ่มต้น */
+}
+
+.vn-btn-img:hover img {
+  transform: scale(1.15);
+  filter: brightness(0) saturate(100%) invert(73%) sepia(29%) saturate(3745%) hue-rotate(176deg) brightness(97%) contrast(97%);
+  opacity: 0.95;
+}
+
+
 .vn-desc {
   color: var(--c-soft);
   line-height: 1.6;
@@ -167,10 +199,11 @@
   padding: 14px 14px 12px;
 }
 .vn-card-title {
-  font-weight: 800;
-  font-size: 14px;
+  font-weight: 600;
+  font-size: 16px;
   letter-spacing: .3px;
   margin-bottom: 10px;
+  text-transform: uppercase;
 }
 
 .vn-kv {
@@ -207,8 +240,11 @@
 }
 
 .vn-section-title {
+  font-weight: 600;
   font-size: 16px;
-  font-weight: bold;
+  letter-spacing: .3px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
 }
 
 .vn-info-grid {
@@ -362,6 +398,30 @@
   .vn-page .a-link  { grid-area: btn; }
 }
 
+@media (max-width: 768px) {
+  .vn-hero {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .vn-hero-body {
+    order: 2;
+  }
+
+  .vn-hero-media {
+    order: 1;
+  }
+  .vn-info-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+@media (min-width: 600px) {
+  .a-schedule-list {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+}
 /* ==========================================================================
    REDUCED MOTION — สำหรับผู้ใช้ที่ปิดแอนิเมชัน
    ========================================================================== */
@@ -373,8 +433,3 @@
     transition: none !important;
   }
 }
-
-
-
-
-
