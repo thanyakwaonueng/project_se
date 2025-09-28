@@ -28,7 +28,7 @@ import ArtistInviteRequestsPage from '../pages/ArtistInviteRequestsPage';
 import ProfilePage from "../pages/ProfilePage";
 import AccountSetupPage from '../pages/AccountSetupPage';
 import AdminRoleRequestsPage from '../pages/AdminRoleRequestsPage';
-// import UploadFile from '../pages/UploadFile';
+import UploadFile from '../pages/UploadFile';
 
 // ✅ เพจใหม่ (ตัวเดียวใช้ได้ทั้งสร้าง/แก้ไข)
 // import VenueEditor from '../pages/VenueEditor';
@@ -97,7 +97,7 @@ export default function AppRoutes() {
       <Routes>
         
         {/* just for testing purpose */}
-        {/* <Route path="/uploadfile" element={<UploadFile />} /> */}
+        <Route path="/uploadfile" element={<UploadFile />} />
 
 
         {/* กลุ่ม public: login / signup / logout / accountsetup */}
