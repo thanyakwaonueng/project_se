@@ -28,8 +28,8 @@ import ArtistInviteRequestsPage from '../pages/ArtistInviteRequestsPage';
 import ProfilePage from "../pages/ProfilePage";
 import AccountSetupPage from '../pages/AccountSetupPage';
 import AdminRoleRequestsPage from '../pages/AdminRoleRequestsPage';
-import UploadFile from '../pages/UploadFile';
-
+//import UploadFile from '../pages/UploadFile';
+import NotificationsPage from '../pages/Notifications';
 // ✅ เพจใหม่ (ตัวเดียวใช้ได้ทั้งสร้าง/แก้ไข)
 import VenueEditor from '../pages/VenueEditor';
 
@@ -97,7 +97,7 @@ export default function AppRoutes() {
       <Routes>
         
         {/* just for testing purpose */}
-        <Route path="/uploadfile" element={<UploadFile />} />
+        {/* <Route path="/uploadfile" element={<UploadFile />} /> */}
 
 
         {/* กลุ่ม public: login / signup / logout / accountsetup */}
@@ -139,6 +139,9 @@ export default function AppRoutes() {
             </RequireProfile>
           }
         >
+          {/* ✅ หน้าแจ้งเตือนรวมทุกชนิด */}
+          <Route path="/notifications" element={<NotificationsPage />} />
+
           {/* ✅ แก้ไข/สร้าง venue ใช้หน้าเดียว */}
           <Route
             path="/venue/edit"

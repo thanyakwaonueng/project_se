@@ -57,10 +57,78 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-async function notify(client, userId, type, message, data = null) {
-  return client.notification.create({
+
+
+// ───────── NOTIFICATION HELPER ─────────────────────────────────────────────
+async function notify(prismaClient, userId, type, message, data = null) {
+  return prismaClient.notification.create({
     data: { userId, type, message, data },
   });
+}
+const uniq = (arr) => Array.from(new Set(arr)).filter(Boolean);
+
+function diffFields(before, after, fields) {
+  const changed = [];
+  for (const f of fields) {
+    const bv = before?.[f] instanceof Date ? before[f].toISOString() : before?.[f];
+    const av = after?.[f]  instanceof Date ? after[f].toISOString()  : after?.[f];
+    if (JSON.stringify(bv) !== JSON.stringify(av)) changed.push(f);
+  }
+  return changed;
+}
+
+async function getFollowersOfArtist(prismaClient, artistId /* = performerId */) {
+  const rows = await prismaClient.likePerformer.findMany({
+    where: { performerId: Number(artistId) },
+    select: { userId: true },
+  });
+  return rows.map(r => r.userId);
+}
+
+async function getAudienceForEventUpdate(prismaClient, eventId) {
+  const [eventLikers, artistFollowers] = await Promise.all([
+    prismaClient.likeEvent.findMany({
+      where: { eventId: Number(eventId) },
+      select: { userId: true },
+    }),
+    prismaClient.artistEvent.findMany({
+      where: { eventId: Number(eventId), status: 'ACCEPTED' },
+      select: { artistId: true },
+    }).then(async (aes) => {
+      const lists = await Promise.all(aes.map(ae => getFollowersOfArtist(prismaClient, ae.artistId)));
+      return lists.flat();
+    }),
+  ]);
+  return uniq([
+    ...eventLikers.map(x => x.userId),
+    ...artistFollowers,
+  ]);
+}
+
+async function fanout(prismaClient, userIds, type, message, data) {
+  if (!userIds?.length) return;
+  await prismaClient.$transaction(
+    userIds.map(uid => prismaClient.notification.create({
+      data: { userId: uid, type, message, data },
+    }))
+  );
+}
+
+// ช็อตคัตยิง event.updated
+async function eventUpdatedFanout(prismaClient, eventId, changedFields) {
+  const ev = await prismaClient.event.findUnique({
+    where: { id: Number(eventId) },
+    select: { id: true, name: true },
+  });
+  if (!ev) return;
+  const audience = await getAudienceForEventUpdate(prismaClient, ev.id);
+  await fanout(
+    prismaClient,
+    audience,
+    'event.updated',
+    `อัปเดตงาน: ${ev.name}`,
+    { eventId: ev.id, changedFields }
+  );
 }
 
 
@@ -77,16 +145,6 @@ function summarizeReadiness(artistEvents = []) {
     isReady: total > 0 && accepted === total,
   };
 }
-
-
-
-
-
-
-
-
-
-
 
 /* ───────────────────────────── AUTH MIDDLEWARE ───────────────────────────── */
 async function authMiddleware(req, res, next) {
@@ -936,54 +994,43 @@ app.post('/events', authMiddleware, async (req, res) => {
     const data = req.body;
 
     const venue = await prisma.venue.findUnique({
-      where: { performerId: userId },
-      include: {
-        performer: {
-          include: {
-            user: true
-          }
-        },
-        location: true,
-      },
-    });
-
-    if (!venue) {
-      return res.status(400).json({ error: "Venue profile not found for this user" });
-    }
+  where: { performerId: userId },
+  include: {
+    performer: { include: { user: true } },
+    location: true,
+  },
+});
+    if (!venue) return res.status(400).json({ error: "Venue profile not found for this user" });
 
     let event;
+    let changed = [];
 
     if (data.id) {
+      const before = await prisma.event.findUnique({ where: { id: data.id } });
 
-      const existing = await prisma.event.findUnique({
-        where: { id: data.id },
-      });
-
-      if (existing && existing.venueId === venue.performerId) {
-        event = await prisma.event.update({
-          where: { id: data.id },
-          data,
-        });
+      if (before && before.venueId === venue.performerId) {
+        event = await prisma.event.update({ where: { id: data.id }, data });
+        // ⬇️ ตรวจฟิลด์สำคัญ
+        changed = diffFields(before, event, ['date','doorOpenTime','endTime','venueId']);
       } else {
         const { id, ...createData } = data;
         event = await prisma.event.create({
-          data: {
-            ...createData,
-            venue: { connect: { performerId: venue.performerId } },
-          },
+          data: { ...createData, venue: { connect: { performerId: venue.performerId } } },
         });
+        // create ใหม่—ยังไม่ถือว่า “อัปเดต”
       }
     } else {
       event = await prisma.event.create({
-        data: {
-          ...data,
-          venue: { connect: { performerId: venue.performerId } },
-        },
+        data: { ...data, venue: { connect: { performerId: venue.performerId } } },
       });
     }
 
-    return res.json(event);
+    // 🔔 ถ้ามีการเปลี่ยนฟิลด์สำคัญ → แจ้งผู้ติดตามงาน + แฟนศิลปินในงาน
+    if (changed.length) {
+      try { await eventUpdatedFanout(prisma, event.id, changed); } catch(e) { console.error(e); }
+    }
 
+    return res.json(event);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Could not create/update event' });
@@ -1058,7 +1105,7 @@ app.get('/events/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
 
-    // decode token: เอาทั้ง id และ role (ใน token มี role อยู่แล้ว)
+    // decode token เพื่อรู้ว่าใครเรียก
     const me = (() => {
       try {
         const token = req.cookies?.token;
@@ -1091,9 +1138,12 @@ app.get('/events/:id', async (req, res) => {
 
     const readiness = summarizeReadiness(ev.artistEvents || []);
     const isOwnerOrAdmin = !!(me && (me.role === 'ADMIN' || me.id === ev.venueId));
+    //  อนุญาตศิลปินที่ถูกเชิญ (มี artistEvent ของ user.id) เห็นงานได้แม้ยังไม่ ready
+    const isInvitedArtist =
+      !!(me && me.role === 'ARTIST' && (ev.artistEvents || []).some(ae => ae.artistId === me.id));
 
-    // สาธารณะ: ยังไม่พร้อม -> 404
-    if (!isOwnerOrAdmin && !readiness.isReady) {
+    // เดิม: if (!isOwnerOrAdmin && !readiness.isReady) return 404
+    if (!isOwnerOrAdmin && !isInvitedArtist && !readiness.isReady) {
       return res.status(404).json({ message: 'not found' });
     }
 
@@ -1112,6 +1162,7 @@ app.get('/events/:id', async (req, res) => {
     res.status(500).json({ message: 'failed to fetch event' });
   }
 });
+
 
 
 
@@ -1384,12 +1435,12 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
     const ev = await prisma.event.findUnique({ where: { id: eid } });
     if (!ev) return res.status(404).json({ message: 'ไม่พบอีเวนต์' });
 
-    // สิทธิ์: ADMIN ผ่าน / ORGANIZE ต้องเป็นเจ้าของ venue
+    // สิทธิ์
     if (!(req.user.role === 'ADMIN' || (req.user.role === 'ORGANIZE' && ev.venueId === req.user.id))) {
       return res.sendStatus(403);
     }
 
-    // แปลง HH:MM -> Date ของวันงาน
+    // HH:MM -> Date ของวันงาน
     const h2d = (hhmm) => {
       const m = String(hhmm).match(/^(\d{1,2}):(\d{2})$/);
       if (!m) return null;
@@ -1402,7 +1453,7 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'ช่วงเวลาไม่ถูกต้อง' });
     }
 
-    // กันชนกับคนอื่นใน event เดียวกัน (ยกเว้นตัวเอง)
+    // กันชน
     const overlapped = await prisma.scheduleSlot.findFirst({
       where: {
         eventId: eid,
@@ -1414,7 +1465,7 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
       return res.status(409).json({ message: 'ช่วงเวลาชนกับศิลปินคนอื่น' });
     }
 
-    // Upsert ArtistEvent + sync เวลา
+    // Upsert ArtistEvent
     const ae = await prisma.artistEvent.upsert({
       where: { artistId_eventId: { artistId: aid, eventId: eid } },
       update: { slotStartAt: startAt, slotEndAt: endAt, slotStage: stage || null, status: 'PENDING' },
@@ -1428,7 +1479,7 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
       },
     });
 
-    // Upsert ScheduleSlot (หนึ่งศิลปินหนึ่งแถวต่ออีเวนต์)
+    // Upsert ScheduleSlot
     const existed = await prisma.scheduleSlot.findFirst({
       where: { eventId: eid, artistId: aid },
       orderBy: { id: 'asc' },
@@ -1443,6 +1494,35 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
           data: { eventId: eid, artistId: aid, startAt, endAt, stage: stage || null },
         });
 
+    // 🔔 ส่ง noti ถึงศิลปิน (aid = performerId = userId ของศิลปิน)
+    try {
+      await notify(
+        prisma,
+        aid,
+        'artist_event.invited',
+        `คุณถูกเชิญให้แสดงในงาน "${ev.name}" เวลา ${startTime}–${endTime}`,
+        { eventId: eid, artistId: aid, startTime, endTime }
+      );
+    } catch (e) {
+      console.error('NOTIFY_INVITE_ERROR', e);
+    }
+
+    // 🔔 fanout: แจ้งแฟนคลับศิลปินว่า "ศิลปินที่กดไลค์มีงานใหม่"
+    try {
+      const followerIds = await getFollowersOfArtist(prisma, aid);
+      if (followerIds.length) {
+        await fanout(
+          prisma,
+          followerIds,
+          'artist.new_event',
+          `ศิลปิน #${aid} มีงานใหม่: ${ev.name}`,
+          { eventId: eid, artistId: aid, startTime, endTime }
+        );
+      }
+    } catch (e) {
+      console.error('FANOUT_artist.new_event_ERROR', e);
+    }
+
     res.json({ ok: true, artistEvent: ae, scheduleSlot: slot });
   } catch (e) {
     console.error('POST /artist-events/invite failed:', e);
@@ -1454,20 +1534,81 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
 app.post('/artist-events/respond', authMiddleware, async (req, res) => {
   try {
     const { artistId, eventId, decision } = req.body;
+    const aid = Number(artistId);
+    const eid = Number(eventId);
 
     if (!["ACCEPTED", "DECLINED"].includes(decision)) {
       return res.status(400).json({ error: "Invalid decision" });
     }
 
+    // อนุญาตเฉพาะ ARTIST เจ้าของเอง หรือ ADMIN
+    if (!(req.user.role === 'ARTIST' || req.user.role === 'ADMIN')) {
+      return res.sendStatus(403);
+    }
+    if (req.user.role !== 'ADMIN' && req.user.id !== aid) {
+      return res.status(403).json({ error: 'You can respond only for your own artistId' });
+    }
+
+    // อัปเดตสถานะคำเชิญ
     const updated = await prisma.artistEvent.update({
-      where: { artistId_eventId: { artistId, eventId } },
+      where: { artistId_eventId: { artistId: aid, eventId: eid } },
       data: { status: decision },
+      include: {
+        artist: { include: { performer: { include: { user: true } } } },
+        event:  { include: { _count: { select: { likedBy: true } } } }
+      }
     });
 
-    res.json(updated);
+    // ------ แจ้ง organizer ------
+    try {
+      const ev = await prisma.event.findUnique({
+        where: { id: eid },
+        select: { id: true, name: true, venueId: true },
+      });
+
+      if (ev?.venueId) {
+        const type = decision === 'ACCEPTED' ? 'artist_event.accepted' : 'artist_event.declined';
+        const msg  = decision === 'ACCEPTED'
+          ? `ศิลปิน #${aid} ยืนยันเข้าร่วมงาน "${ev.name}"`
+          : `ศิลปิน #${aid} ปฏิเสธคำเชิญงาน "${ev.name}"`;
+
+        await notify(prisma, ev.venueId, type, msg, {
+          eventId: ev.id,
+          artistId: aid,
+          status: decision
+        });
+      }
+
+      // ------ แจ้งผู้ติดตามอีเวนต์ว่า "งานมีการอัปเดต (ไลน์อัป)" ------
+      // ตรงกับสเปค: event.updated — งานเปลี่ยนวัน/เวลา/สถานที่/ไลน์อัป
+      const likers = await prisma.likeEvent.findMany({
+        where: { eventId: eid },
+        select: { userId: true },
+      });
+
+      if (likers.length) {
+        const lineupMsg = decision === 'ACCEPTED'
+          ? `งาน "${ev.name}" อัปเดตไลน์อัป: ศิลปิน #${aid} ตอบรับเข้าร่วม`
+          : `งาน "${ev.name}" อัปเดตไลน์อัป: ศิลปิน #${aid} ปฏิเสธ/ถอนตัว`;
+
+        await Promise.all(
+          likers.map(({ userId }) =>
+            notify(prisma, userId, 'event.updated', lineupMsg, {
+              eventId: ev.id,
+              change: { type: 'lineup', artistId: aid, status: decision }
+            })
+          )
+        );
+      }
+    } catch (e) {
+      console.error('NOTIFY_RESPOND_ERROR', e);
+      // ไม่ทำให้ request ล้ม — การแจ้งเตือนล้มเหลวไม่ควรบล็อกการตอบรับ
+    }
+
+    return res.json(updated);
   } catch (err) {
     console.error("Respond error:", err);
-    res.status(500).json({ error: "Could not respond to invite" });
+    return res.status(500).json({ error: "Could not respond to invite" });
   }
 });
 
@@ -1857,6 +1998,8 @@ app.get('/role-requests/:id', authMiddleware, requireAdmin, async (req, res) => 
 });
 
 /* ───────────────────────────── NOTIFICATIONS ───────────────────────────── */
+
+// GET /notifications?unread=1  → ถ้า unread=1 จะกรองเฉพาะที่ยังไม่อ่าน
 app.get('/notifications', authMiddleware, async (req, res) => {
   try {
     const where = { userId: req.user.id };
@@ -1874,7 +2017,7 @@ app.get('/notifications', authMiddleware, async (req, res) => {
   }
 });
 
-
+// POST /notifications/:id/read → มาร์คอ่านรายการเดียว
 app.post('/notifications/:id/read', authMiddleware, async (req, res) => {
   try {
     await prisma.notification.update({
@@ -1888,6 +2031,32 @@ app.post('/notifications/:id/read', authMiddleware, async (req, res) => {
   }
 });
 
+// (ทางเลือก) POST /notifications/read_all → มาร์คอ่านทั้งหมดของผู้ใช้
+app.post('/notifications/read_all', authMiddleware, async (req, res) => {
+  try {
+    await prisma.notification.updateMany({
+      where: { userId: req.user.id, isRead: false },
+      data: { isRead: true },
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('MARK_ALL_READ_NOTIFICATION_ERROR', e);
+    res.status(400).json({ error: 'Mark all read failed' });
+  }
+});
+
+// (ทางเลือก) GET /notifications/unread_count → จำนวนที่ยังไม่อ่าน
+app.get('/notifications/unread_count', authMiddleware, async (req, res) => {
+  try {
+    const count = await prisma.notification.count({
+      where: { userId: req.user.id, isRead: false },
+    });
+    res.json({ count });
+  } catch (e) {
+    console.error('UNREAD_COUNT_ERROR', e);
+    res.status(400).json({ error: 'Get count failed' });
+  }
+});
 
 /* ───────────── ONBOARDING / EDIT PROFILE ───────────── */
 /*  รับ artistApplication + desiredRole และเก็บลง RoleRequest.application */
@@ -1924,7 +2093,7 @@ app.post('/me/setup', authMiddleware, async (req, res) => {
     // อัปเกรดบทบาท: ให้ "ยื่นขอ" ได้เฉพาะ ARTIST เท่านั้น
     // ORGANIZE ต้องให้แอดมินกำหนดเอง
     let createdRoleRequest = null;
-    let venueequestIgnored = false;
+    let organizeRequestIgnored = false;
 
     if (desiredRole === 'ORGANIZE') {
       // ตอนนี้ยังไม่รองรับยื่น ORGANIZE จากหน้านี้
@@ -1978,7 +2147,7 @@ app.post('/me/setup', authMiddleware, async (req, res) => {
     res.json({
       ok: true,
       createdRoleRequest: Boolean(createdRoleRequest),
-      venueequestIgnored,
+      organizeRequestIgnored,
     });
   } catch (e) {
     console.error('POST /me/setup error', e);
@@ -1996,19 +2165,12 @@ app.patch('/me/profile', authMiddleware, async (req, res) => {
         ? favoriteGenres.split(',').map(s => s.trim()).filter(Boolean)
         : [];
 
-    await prisma.user.upsert({
-      where: { userId: req.user.id },
-      update: {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
         name: name ?? null,
         favoriteGenres: genres,
-        profileImageUrl: profileImageUrl ?? null,
-        birthday: birthday ? new Date(birthday) : null,
-      },
-      create: {
-        userId: req.user.id,
-        name: name ?? null,
-        favoriteGenres: genres,
-        profileImageUrl: profileImageUrl ?? null,
+        profilePhotoUrl: profileImageUrl ?? null, // ใช้ชื่อเดียวกับจุดอื่น
         birthday: birthday ? new Date(birthday) : null,
       },
     });
@@ -2146,29 +2308,6 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     res.status(500).json({ error: 'Upload failed' });
   }
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /* ───────────────────────────── HEALTH ───────────────────────────── */

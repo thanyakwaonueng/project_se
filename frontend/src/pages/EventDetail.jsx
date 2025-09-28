@@ -45,25 +45,52 @@ function dtToHHMM(x) {
 }
 
 /* ========== invite/edit modal ========== */
-function InviteModal({ open, onClose, eventId, initial, onSaved }) {
+function InviteModal({
+  open,
+  onClose,
+  eventId,
+  initial,
+  onSaved,
+  windowStartHHMM,   // HH:MM ของ doorOpenTime (อาจว่าง)
+  windowEndHHMM,     // HH:MM ของ endTime (อาจว่าง)
+  invitedIds = [],   // รายชื่อ artistId ที่ถูกเชิญแล้ว
+}) {
+  const DURATIONS = [15, 30, 45, 60, 90, 120]; // นาที
+
   const [loadingArtists, setLoadingArtists] = useState(false);
   const [artists, setArtists] = useState([]);
   const [q, setQ] = useState('');
   const [selectedId, setSelectedId] = useState(initial?.artistId ?? null);
+  const [warn, setWarn] = useState('');
 
   const [form, setForm] = useState({
     startTime: normTime(initial?.start) || '',
     endTime: normTime(initial?.end) || '',
+    duration: (() => {
+      const st = normTime(initial?.start);
+      const et = normTime(initial?.end);
+      const sm = toMin(st || '');
+      const em = toMin(et || '');
+      return (sm!=null && em!=null && em>sm) ? (em-sm) : 60; // default 60 นาที
+    })(),
   });
 
+  // เมื่อเปลี่ยน initial ให้รีเซ็ต
   useEffect(() => {
+    const st = normTime(initial?.start) || '';
+    const et = normTime(initial?.end) || '';
+    const sm = toMin(st || '');
+    const em = toMin(et || '');
     setSelectedId(initial?.artistId ?? null);
     setForm({
-      startTime: normTime(initial?.start) || '',
-      endTime: normTime(initial?.end) || '',
+      startTime: st,
+      endTime: et,
+      duration: (sm!=null && em!=null && em>sm) ? (em-sm) : 60,
     });
+    setWarn('');
   }, [initial]);
 
+  // โหลดรายชื่อศิลปิน
   useEffect(() => {
     if (!open) return;
     let alive = true;
@@ -78,6 +105,19 @@ function InviteModal({ open, onClose, eventId, initial, onSaved }) {
     })();
     return () => { alive = false; };
   }, [open]);
+
+  // คำนวณ endTime อัตโนมัติเมื่อ startTime/duration เปลี่ยน และ clamp ด้วยกรอบงาน
+  useEffect(() => {
+    if (!open) return;
+    const sm = toMin(form.startTime || '');
+    if (sm==null) return;
+    const minM = windowStartHHMM ? toMin(windowStartHHMM) : 18*60;
+    const maxM = windowEndHHMM   ? toMin(windowEndHHMM)   : 24*60;
+    const d = Number(form.duration) || 60;
+    const endM = Math.min(maxM, sm + d);
+    setForm(f => ({ ...f, endTime: minToHHMM(endM) }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, form.startTime, form.duration, windowStartHHMM, windowEndHHMM]);
 
   const displayName = (a) =>
     a?.performer?.user?.name || `Artist #${a?.performerId ?? ''}`;
@@ -96,15 +136,43 @@ function InviteModal({ open, onClose, eventId, initial, onSaved }) {
     return artists.filter(a => displayName(a).toLowerCase().includes(s));
   }, [artists, q]);
 
+  const alreadyInvited = (id) => invitedIds?.includes?.(Number(id));
+
+  const validate = () => {
+    if (selectedId && alreadyInvited(selectedId)) {
+      return 'ศิลปินคนนี้อยู่ในไลน์อัปของงานนี้อยู่แล้ว';
+    }
+    const st = normTime(form.startTime);
+    const et = normTime(form.endTime);
+    if (!st || !et) return 'กรอกเวลาเริ่มและเวลาจบให้ครบ';
+    const sm = toMin(st), em = toMin(et);
+    if (sm==null || em==null) return 'รูปแบบเวลาไม่ถูกต้อง (เช่น 19:30)';
+    if (sm >= em) return 'เวลาเริ่มต้องน้อยกว่าเวลาจบ';
+
+    const wmS = windowStartHHMM ? toMin(windowStartHHMM) : null;
+    const wmE = windowEndHHMM ? toMin(windowEndHHMM) : null;
+    if (wmS!=null && sm < wmS) return `เวลาเริ่มก่อนเวลาเปิดงาน (${windowStartHHMM})`;
+    if (wmE!=null && em > wmE) return `เวลาจบเกินเวลาสิ้นสุดงาน (${windowEndHHMM})`;
+
+    return '';
+  };
+
+  useEffect(() => {
+    setWarn(validate());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, form.startTime, form.endTime, windowStartHHMM, windowEndHHMM, invitedIds]);
+
   const submit = async (e) => {
     e.preventDefault();
+    const msg = validate();
+    if (msg) { setWarn(msg); return; }
     if (!selectedId) return;
+
     const payload = {
       artistId: Number(selectedId),
       eventId: Number(eventId),
       startTime: normTime(form.startTime),
       endTime: normTime(form.endTime),
-      // ไม่ส่ง stage
     };
     await api.post('/artist-events/invite', payload, { withCredentials: true });
     onSaved?.();
@@ -116,6 +184,12 @@ function InviteModal({ open, onClose, eventId, initial, onSaved }) {
     <div className="mdl-backdrop" onClick={onClose}>
       <div className="mdl" onClick={(e)=>e.stopPropagation()}>
         <h3 style={{marginTop:0}}>เชิญศิลปิน/จัดตาราง</h3>
+
+        {(windowStartHHMM || windowEndHHMM) && (
+          <div className="note" style={{marginBottom:8, fontSize:13}}>
+            ช่วงเวลางาน: {windowStartHHMM || '—'} – {windowEndHHMM || '—'}
+          </div>
+        )}
 
         {/* ค้นหา */}
         <div className="artist-header">
@@ -138,20 +212,26 @@ function InviteModal({ open, onClose, eventId, initial, onSaved }) {
           <div className="artist-grid">
             {filtered.map(a => {
               const id = a.performerId;
-              const selected = Number(selectedId) === Number(id);
+              const sel = Number(selectedId) === Number(id);
+              const disabled = alreadyInvited(id);
               return (
                 <div
                   key={id}
-                  className={`artist-card ${selected ? 'selected' : ''}`}
-                  onClick={()=>setSelectedId(id)}
+                  className={`artist-card ${sel ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
+                  onClick={()=>{ if (!disabled) setSelectedId(id); }}
                   role="button"
+                  title={disabled ? 'ศิลปินอยู่ในไลน์อัปแล้ว' : displayName(a)}
                 >
-                  <img className="artist-thumb" src={displayThumb(a)} alt={displayName(a)} onError={(e)=>{e.currentTarget.src='/img/graphic-3.png';}} />
+                  <img className="artist-thumb" src={displayThumb(a)} alt={displayName(a)}
+                       onError={(e)=>{e.currentTarget.src='/img/graphic-3.png';}} />
                   <div className="artist-info">
                     <div className="artist-name" title={displayName(a)}>{displayName(a)}</div>
                     <div className="artist-actions">
                       <Link to={`/artists/${id}`} className="btn-xs">View detail</Link>
-                      <span className={`pill ${selected ? 'on':''}`}>{selected ? 'Selected' : 'Select'}</span>
+                      {disabled
+                        ? <span className="pill" style={{opacity:.75}}>Already in lineup</span>
+                        : <span className={`pill ${sel ? 'on':''}`}>{sel ? 'Selected' : 'Select'}</span>
+                      }
                     </div>
                   </div>
                 </div>
@@ -163,19 +243,79 @@ function InviteModal({ open, onClose, eventId, initial, onSaved }) {
           </div>
         </div>
 
-        {/* เวลา */}
+        {/* เตือน validate */}
+        {warn && <div className="warn">{warn}</div>}
+
+        {/* เวลา (Start + Duration) */}
         <form onSubmit={submit} className="frm" style={{marginTop:12}}>
+          {/* Quick slots ภายในกรอบงาน */}
+          {(() => {
+            const slots = [];
+            const step = 30; // ทุก 30 นาที
+            const d = Number(form.duration) || 60;
+            const minM = windowStartHHMM ? toMin(windowStartHHMM) : 18*60;
+            const maxM = windowEndHHMM   ? toMin(windowEndHHMM)   : 24*60;
+            for (let m = minM; m + d <= maxM && slots.length < 6; m += step) {
+              slots.push([m, m + d]);
+            }
+            if (slots.length === 0) return null;
+            return (
+              <div className="chips">
+                {slots.map(([s,e],i)=>(
+                  <button key={i} type="button" className="chip"
+                    onClick={()=>setForm(f=>({ ...f, startTime:minToHHMM(s), endTime:minToHHMM(e) }))}>
+                    {minToHHMM(s)}–{minToHHMM(e)}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+
           <div className="grid2">
-            <label>เวลาเริ่ม (HH:MM)
-              <input value={form.startTime} onChange={(e)=>setForm(v=>({...v, startTime: e.target.value}))} placeholder="19:30" />
+            {/* เวลาเริ่ม */}
+            <label>เวลาเริ่ม
+              <input
+                type="time"
+                step="300"
+                value={form.startTime}
+                onChange={(e)=>{
+                  const st = normTime(e.target.value);
+                  setForm(v=>({ ...v, startTime: st }));
+                }}
+                placeholder="19:30"
+              />
             </label>
-            <label>เวลาจบ (HH:MM)
-              <input value={form.endTime} onChange={(e)=>setForm(v=>({...v, endTime: e.target.value}))} placeholder="20:15" />
+
+            {/* ระยะเวลา */}
+            <label>ระยะเวลา
+              <div className="duration-wrap">
+                <select
+                  value={form.duration}
+                  onChange={(e)=>setForm(v=>({ ...v, duration: Number(e.target.value) || 60 }))}>
+                  {DURATIONS.map(d=><option key={d} value={d}>{d} นาที</option>)}
+                </select>
+                <div className="duration-chips">
+                  {DURATIONS.slice(0,5).map(d=>(
+                    <button key={d} type="button"
+                      className={`chip ${Number(form.duration)===d?'on':''}`}
+                      onClick={()=>setForm(v=>({ ...v, duration:d }))}>
+                      {d}′
+                    </button>
+                  ))}
+                </div>
+              </div>
             </label>
           </div>
+
+          {/* Preview เวลาจบ */}
+          <div className="kv" style={{marginTop:4}}>
+            <b>เวลาจบ</b><span>{form.endTime || '—'}</span>
+          </div>
+
+          {/* ปุ่ม */}
           <div className="act">
             <button type="button" className="btn" onClick={onClose}>ยกเลิก</button>
-            <button type="submit" className="btn primary" disabled={!selectedId}>เชิญศิลปิน</button>
+            <button type="submit" className="btn primary" disabled={!selectedId || !!warn}>เชิญศิลปิน</button>
           </div>
         </form>
       </div>
@@ -251,7 +391,7 @@ export default function EventDetail() {
     return isOrg && owns;
   }, [me, ev]);
 
-  // แปลงเป็นแถวตารางแบบเรียบ
+  // แปลง artistEvents + scheduleSlots เป็นแถว
   const scheduleRows = useMemo(() => {
     const rows = [];
     const aes = Array.isArray(ev?.artistEvents) ? ev.artistEvents : [];
@@ -267,7 +407,6 @@ export default function EventDetail() {
         status: ae?.status || 'PENDING',
         start: dtToHHMM(ae?.slotStartAt),
         end: dtToHHMM(ae?.slotEndAt),
-        // stage เก็บได้ แต่ไม่แสดงผล
         stage: ae?.slotStage || 'Main',
       });
     }
@@ -302,7 +441,12 @@ export default function EventDetail() {
       });
   }, [ev]);
 
-  // ช่วงเวลาโชว์
+  const invitedIds = useMemo(() => {
+    const aes = Array.isArray(ev?.artistEvents) ? ev.artistEvents : [];
+    return aes.map(ae => Number(ae.artistId));
+  }, [ev]);
+
+  // ขอบเขตเวลาโชว์
   const windowRange = useMemo(() => {
     const eventStart = normTime(ev?.doorOpenTime);
     const eventEnd   = normTime(ev?.endTime);
@@ -322,7 +466,7 @@ export default function EventDetail() {
     minM = Math.floor(minM/60)*60;
     maxM = Math.ceil(maxM/60)*60;
 
-    return { minM, maxM, startHH: minToHHMM(minM), endHH: minToHHMM(maxM) };
+    return { minM, maxM, startHH: minToHHMM(minM), endHH: minToHHMM(maxM), rawStart: eventStart, rawEnd: eventEnd };
   }, [ev, scheduleRows]);
 
   if (loading) return <div className="page"><div className="note">กำลังโหลด…</div></div>;
@@ -420,6 +564,9 @@ export default function EventDetail() {
         eventId={ev.id}
         initial={editing}
         onSaved={fetchEvent}
+        windowStartHHMM={windowRange.rawStart || null}
+        windowEndHHMM={windowRange.rawEnd || null}
+        invitedIds={invitedIds}
       />
 
       {/* ===== CSS ===== */}
@@ -469,31 +616,77 @@ export default function EventDetail() {
 
   /* ===== Modal / Artist selector ===== */
   .mdl-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50}
-  .mdl{background:#fff;border-radius:14px;max-width:820px;width:96vw;padding:18px 18px 16px;max-height:88vh;overflow:hidden;box-shadow:0 18px 36px rgba(0,0,0,.12)}
-  .frm{display:grid;gap:12px}
+  .mdl{
+    background:#fff;
+    border-radius:14px;
+    max-width:820px;
+    width:96vw;
+    padding:18px 18px 16px;
+    max-height:88vh;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    box-shadow:0 18px 36px rgba(0,0,0,.12)
+  }
+
+  /* ฟอร์มเวลาอยู่ล่างติดเสมอ */
+  .frm{
+    position:sticky; bottom:0;
+    background:#fff;
+    padding-top:10px;
+    margin-top:12px;
+    border-top:1px solid #eee;
+    display:grid; gap:12px
+  }
   .frm input{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px}
   .act{display:flex;gap:8px;justify-content:flex-end}
 
+  /* ส่วนหัวค้นหา */
   .artist-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:6px 2px 10px}
   .search-wrap{position:relative;flex:1}
   .search-input{width:100%;padding:10px 34px 10px 40px;border:1px solid #e5e7eb;border-radius:999px;background:#f8fafc;outline:none}
   .search-input:focus{border-color:#1f6feb;box-shadow:0 0 0 3px rgba(31,111,235,.15)}
   .search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.65}
   .search-meta{font-size:12px;color:#6b7280}
-  .artist-list{max-height:48vh;overflow:auto;padding-right:6px;margin-bottom:8px;scrollbar-width:thin}
-  .artist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-  .artist-card{display:flex;gap:12px;border:1px solid #e5e7eb;border-radius:14px;padding:10px 12px;align-items:center;background:#fff;cursor:pointer;transition:box-shadow .15s,border-color .15s}
+
+  /* ลิสต์ศิลปินให้เตี้ยลง + เป็นตัวสกรอลล์หลัก */
+  .artist-list{
+    flex:1;
+    max-height:38vh;
+    overflow:auto;
+    padding-right:6px;
+    margin-bottom:8px;
+    scrollbar-width:thin
+  }
+  .artist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+  .artist-card{display:flex;gap:10px;border:1px solid #e5e7eb;border-radius:14px;padding:8px 10px;align-items:center;background:#fff;cursor:pointer;transition:box-shadow .15s,border-color .15s}
   .artist-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.06)}
   .artist-card.selected{border-color:#1f6feb;box-shadow:0 0 0 3px rgba(31,111,235,.18)}
-  .artist-thumb{width:54px;height:54px;border-radius:12px;object-fit:cover;border:1px solid #e5e7eb;background:#fafafa}
-  .artist-info{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .artist-card.disabled{opacity:.55;pointer-events:none}
+  .artist-thumb{width:48px;height:48px;border-radius:12px;object-fit:cover;border:1px solid #e5e7eb;background:#fafafa}
+  .artist-info{display:flex;flex-direction:column;gap:4px;min-width:0}
   .artist-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .artist-actions{display:flex;gap:8px;align-items:center}
   .pill{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid #d0d7de;background:#f1f5f9}
   .pill.on{background:#1f6feb;color:#fff;border-color:#1f6feb}
+  .warn{margin:6px 2px 0;background:#fff7e6;border:1px solid #ffe0a3;color:#7a5200;padding:8px 10px;border-radius:10px;font-size:13px}
 
-  @media (min-width:900px){ .artist-list{max-height:56vh} }
-  @media (max-width:980px){ .hero{grid-template-columns:1fr} }
+  /* Duration & quick slots */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+  .chip{padding:6px 10px;border-radius:999px;border:1px solid #d0d7de;background:#f8fafc;font-size:12px;cursor:pointer}
+  .chip:hover{background:#eef2ff;border-color:#cfe1ff}
+  .chip.on{background:#1f6feb;color:#fff;border-color:#1f6feb}
+  .duration-wrap{display:flex;flex-direction:column;gap:6px}
+  .duration-wrap select{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fff}
+  .duration-chips{display:flex;flex-wrap:wrap;gap:6px}
+
+  @media (min-width:900px){
+    .artist-list{max-height:44vh}
+  }
+  @media (max-width:980px){
+    .hero{grid-template-columns:1fr}
+    .artist-list{max-height:32vh}
+  }
       `}</style>
     </div>
   );
@@ -531,7 +724,6 @@ function BasicSchedule({ rows, minM, maxM, onBarClick }) {
           <div key={r.key} className="bs-row">
             <div>
               <div className="bs-name">{r.name}</div>
-              {/* ตัดชนิดเวทีออก: แสดงเฉพาะสถานะ */}
               <div className="bs-sub">
                 <span className={`st ${cls}`}>{st}</span>
               </div>
