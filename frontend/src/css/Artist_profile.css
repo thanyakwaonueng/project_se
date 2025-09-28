@@ -261,6 +261,14 @@
 
 
 /* ===================== [5] LISTEN ON ===================== */
+
+:root {
+  /* ปรับขนาดไอคอน/ช่องไฟได้จากตัวแปรนี้ */
+  --listen2-icon-size: 40px;   /* ขนาดไอคอน */
+  --listen2-label-gap: 8px;    /* ระยะห่างไอคอน↔ข้อความ */
+}
+
+
 .listen2 {
   width: 92%;
   margin: 0 auto 24px auto;
@@ -285,53 +293,76 @@
   color: #666;
 }
 
+/* ---------- กริดหลัก: 3 คอลัมน์ ⇒ ถ้าของครบ 6 ชิ้น = 2 แถวพอดี ---------- */
 .listen2-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0;
+  gap: 0;                          /* ให้เส้นกรอบต่อเนื่อง ไม่เว้นช่อง */
   border: 1px solid #9c9c9c;
   border-radius: 2px;
   overflow: hidden;
 }
 
+/* ---------- เซลล์แต่ละช่อง ---------- */
 .listen2-item {
-  display: flex;
-  justify-content: center;
+  position: relative;              /* ให้ไอคอน absolute อ้างอิงได้ */
+  display: flex;                   /* ใช้ flex จัดแนวตั้ง label ให้อยู่กึ่งกลาง */
   align-items: center;
-  gap: 10px;
+  /* padding รอบเซลล์ */
   padding: clamp(18px, 2.2vw, 26px);
+  /* ดัน "จุดเริ่มข้อความ" ไปทางขวากึ่งกลาง + ครึ่งไอคอน + ช่องว่างเล็กน้อย
+     เพื่อให้ไอคอนที่ล็อกกลาง ไม่โดนข้อความทับจากซ้าย */
+  padding-left: calc(38% + (var(--listen2-icon-size) / 2) + var(--listen2-label-gap));
+
   color: #444;
   text-decoration: none;
+
+  /* เส้นตารางย่อย (คอลัมน์ขวาสุด/แถวล่างสุดจะถูกตัดด้านล่าง) */
   border-right: 1px solid #9c9c9c;
   border-bottom: 1px solid #9c9c9c;
+
   transition:
     background-color .6s ease,
     color .6s ease,
     box-shadow .6s ease;
 }
 
+/* คอลัมน์ขวาสุด: ไม่ต้องมีเส้นขวา เพื่อไม่ให้ซ้อนกับกรอบนอก */
 .listen2-item:nth-child(3n) { border-right: 0; }
+
+/* แถวล่างสุด: ไม่ต้องมีเส้นล่าง เพื่อไม่ให้ซ้อนกับกรอบนอก */
 .listen2-item:nth-last-child(-n+3) { border-bottom: 0; }
 
-.listen2-item img {
-  width: 28px;
-  height: 28px;
+/* ---------- ไอคอน: ล็อกกลางช่องจริง ๆ ---------- */
+.listen2-item img,
+.listen2-item .listen2-icon {
+  position: absolute;
+  left: 36%;
+  top: 50%;
+  /* ดึงจุดกึ่งกลางของรูปมาทับกึ่งกลางเซลล์พอดี */
+  transform: translate(-50%, -50%);
+  width: var(--listen2-icon-size);
+  height: var(--listen2-icon-size);
   object-fit: contain;
   opacity: .95;
+  transition: transform .6s ease;
 }
 
-.listen2-item span {
-  font-size: 14px;
-  font-weight: 700;
+/* ---------- ป้ายชื่อ: อยู่ขวาของไอคอนเสมอ (เพราะ padding-left ข้างบน) ---------- */
+.listen2-item span,
+.listen2-item .listen2-label {
+  white-space: nowrap;             /* กันตัดบรรทัด */
+  font-size: 18px;
+  font-weight: 600;
   letter-spacing: .01em;
 }
 
-.listen2-item img{
-  transform: scale(1.01);                 /* เริ่มขนาดปกติ */
-  transition: transform .6s ease;      /* ค่อย ๆ ขยาย 0.6s */
+/* ---------- Hover (ไม่กระทบเลย์เอาต์/เส้นกรอบ) ---------- */
+.listen2-item:hover img,
+.listen2-item:hover .listen2-icon {
+  /* คงตำแหน่งกึ่งกลางไว้ แล้วค่อย scale */
+  transform: translate(-50%, -50%) scale(1.12);
 }
-
-.listen2-item:hover img { transform: scale(1.12); }
 
 .listen2-item:hover {
   background: #ececeb;
@@ -627,9 +658,6 @@
 
 
 
-
-
-
 /* ให้สามารถวางปุ่มแบบ absolute บนรูปได้ */
 .center-box { position: relative; }
 
@@ -651,4 +679,232 @@
 .img-like-shell .like-button:hover{
   transform: translateY(-1px), scale(1.01);
   box-shadow: 0 8px 18px rgba(0,0,0,.14);
+}
+
+
+
+
+
+
+/* ==========================================================================
+   [6] GALLERY — Photos on top, Videos bottom
+   - การ์ดเล็กลง
+   - แถวละ 4
+   - See more → แถวแนวนอนเลื่อนได้
+   - Lightbox สำหรับรูป
+   ========================================================================== */
+
+
+/* ===================== 6.0 SECTION WRAPPER / HEADER ===================== */
+.gallery {
+  width: 92%;
+  margin: 0 auto 24px auto;
+}
+.gallery-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 40px;                  /* เว้นหัวบน */
+}
+.gallery-title {
+  font-weight: 700;
+  letter-spacing: .06em;
+  font-size: clamp(20px, 2.6vw, 28px);
+}
+.gallery-quote {
+  font-size: 13px;
+  color: #666;
+}
+
+/* ย่อ grid ให้กระชับนิดนึงเมื่อใส่ .small */
+.gallery.small .gallery-grid {
+  gap: 10px;
+  padding: 5px;
+}
+
+
+/* ===================== 6.1 ROW HEAD (หัวแถว + See more) ===================== */
+.gallery-row {                       /* กล่องต่อแถว Photos / Videos */
+  margin-bottom: 16px;
+}
+.gallery-row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 0 6px;
+}
+.gallery-row-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.gallery-see-more {
+  border: none;
+  background: none;
+  font-size: 13px;
+  cursor: pointer;
+  color: #111;
+  opacity: .85;
+  padding: 4px 6px;
+}
+.gallery-see-more:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+
+/* ===================== 6.2 GRID (แถวละ 4) ===================== */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);  /* สำคัญ: 4 ต่อแถว */
+  gap: 10px;
+  border: 1px solid #9c9c9c;              /* กรอบนอก */
+  border-radius: 2px;
+  padding: 10px;
+}
+
+/* เฉพาะตัวแปรคลาส g-4 (เผื่อใช้ร่วม) */
+.gallery-grid.g-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+
+/* ===================== 6.3 CARD & MEDIA ===================== */
+.gallery-item {
+  position: relative;
+  display: block;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f7f7f8;
+  border: 1px solid #ddd;
+  transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease;
+}
+.gallery-media {
+  width: 100%;
+  aspect-ratio: 16/9;                /* คง 16:9 */
+  object-fit: cover;
+  display: block;
+}
+
+/* กรณีการ์ดเป็นปุ่ม (แทน <a>) */
+.gallery-item.as-button {
+  background: none;
+  padding: 0;
+  border: 1px solid #ddd;
+  width: 100%;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+
+/* ===================== 6.4 VIDEO OVERLAY (ปุ่มเล่น) ===================== */
+.gallery-item.is-video::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(transparent 0 42%, rgba(0,0,0,.16) 43% 100%);
+  pointer-events: none;
+}
+.gallery-item.is-video::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.58);
+  box-shadow: 0 2px 6px rgba(0,0,0,.22);
+  pointer-events: none;
+  -webkit-mask:
+    radial-gradient(closest-side, transparent 59%, #000 60%) top left/100% 100% no-repeat,
+    conic-gradient(from 0deg at 46% 50%, transparent 0 60deg, #000 60deg 300deg, transparent 300deg) center/60% 60% no-repeat;
+  mask:
+    radial-gradient(closest-side, transparent 59%, #000 60%) top left/100% 100% no-repeat,
+    conic-gradient(from 0deg at 46% 50%, transparent 0 60deg, #000 60deg 300deg, transparent 300deg) center/60% 60% no-repeat;
+}
+.gallery-item.is-video:hover::before {
+  background: rgba(0,0,0,.7);
+}
+
+
+/* ===================== 6.5 HOVER EFFECT ===================== */
+.gallery-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 12px rgba(0,0,0,.06);
+  border-color: #cfcfcf;
+}
+
+
+/* ===================== 6.6 RESPONSIVE ===================== */
+@media (max-width: 1100px) {
+  .gallery-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 800px) {
+  .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  .gallery-grid { grid-template-columns: 1fr; }
+}
+
+
+/* ===================== 6.7 EXPAND MODE (See more → สกรอลล์แนวนอน) ===================== */
+.gallery-grid.is-expanded {
+  display: grid;
+  grid-auto-flow: column;                 /* เรียงเป็นคอลัมน์ยาว */
+  grid-auto-columns: minmax(220px, 1fr);  /* ความกว้างการ์ดในโหมดเลื่อน */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.gallery-grid.is-expanded .gallery-item {
+  scroll-snap-align: start;
+}
+
+
+/* ===================== 6.8 LIGHTBOX ===================== */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+}
+.lightbox-inner {
+  position: relative;
+  max-width: 92vw;
+  max-height: 86vh;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+.lightbox-inner img {
+  display: block;
+  max-width: 92vw;
+  max-height: 86vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+.lightbox-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.lightbox-close:hover {
+  background: rgba(255,255,255,.28);
 }

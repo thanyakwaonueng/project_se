@@ -46,7 +46,75 @@ export default function Artist() {
   const lastFocusRef = useRef(null);
   const { id } = useParams();  // ใช้ id อย่างเดียว
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
 
+
+    // ---------- 2) AUTH กันหน้าเด้ง (จับ 401) ----------
+    useEffect(() => {
+      let alive = true;
+      (async () => {
+        try {
+          const res = await api.get("/auth/me");
+          if (alive) setUser(res.data);
+        } catch (e) {
+          if (alive) setUser(null);   // อย่าปล่อย throw
+        }
+      })();
+      return () => { alive = false; };
+    }, []);
+
+  // ---------- 3) MOCK GALLERY + แยกรูป/วิดีโอ ----------
+  // ---- mock data ----
+  const GALLERY_SAMPLE = [
+    // photos
+    { type: "image", src: "https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg", alt: "Live at City Hall" },
+    { type: "image", src: "https://images.pexels.com/photos/3359713/pexels-photo-3359713.jpeg", alt: "Backstage moment" },
+    { type: "image", src: "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg", alt: "Studio session" },
+    { type: "image", src: "https://images.pexels.com/photos/21067/pexels-photo.jpg", alt: "Crowd shot" },
+    { type: "image", src: "https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg", alt: "Hall angle" },
+    // videos
+    { type: "video", src: "/media/demo-showcase.mp4", poster: "https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg", alt: "Music video teaser" },
+    { type: "video", src: "/media/behind-the-scenes.mp4", poster: "https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg", alt: "Behind the scenes" },
+    { type: "video", src: "/media/live-clip.mp4", poster: "https://images.pexels.com/photos/3359713/pexels-photo-3359713.jpeg", alt: "Live clip" },
+    { type: "video", src: "/media/studio-talk.mp4", poster: "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg", alt: "Studio talk" },
+    { type: "video", src: "/media/interview.mp4", poster: "https://images.pexels.com/photos/21067/pexels-photo.jpg", alt: "Interview" },
+  ];
+
+
+
+  // แยกเป็นรูป/วิดีโอ
+  const imagesAll = useMemo(() => GALLERY_SAMPLE.filter(x => x.type === "image"), []);
+  const videosAll = useMemo(() => GALLERY_SAMPLE.filter(x => x.type === "video"), []);
+
+  // See more / less
+  const [showAllImages, setShowAllImages] = useState(false);
+  const [showAllVideos, setShowAllVideos] = useState(false); // เผื่ออยากให้วีดีโอขยายแนวนอนได้เหมือนกัน
+
+  const imagesToShow = showAllImages ? imagesAll : imagesAll.slice(0, 4);
+  const videosToShow = showAllVideos ? videosAll : videosAll.slice(0, 4);
+
+  const hasMoreImages = imagesAll.length > 4 && !showAllImages;
+  const hasMoreVideos = videosAll.length > 4 && !showAllVideos;
+
+  // Lightbox (เฉพาะรูป)
+  const [lightbox, setLightbox] = useState({ open: false, index: 0 });
+  const openLightbox = (idx) => setLightbox({ open: true, index: idx });
+  const closeLightbox = () => setLightbox({ open: false, index: 0 });
+
+  // ปิดด้วย ESC
+  useEffect(() => {
+    if (!lightbox.open) return;
+    const onKey = (e) => { if (e.key === "Escape") closeLightbox(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox.open]);
+
+
+
+
+
+
+  
   /** fetch groups */
   useEffect(() => {
     let cancelled = false;
@@ -268,7 +336,7 @@ export default function Artist() {
               <div className="group-card-caption">
                 <h3>{group.name}</h3>
               </div>
-              <div className="group-card-likes" style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}>
+              <div className="group-card-likes" style={{ marginTop: 0, fontSize: 13, opacity: 0.8, paddingLeft:10 }}>
                 👥 {group.followersCount || 0} followers
               </div>
             </div>
@@ -461,8 +529,103 @@ export default function Artist() {
             </ul>
           </section>
 
-          <hr className="big-divider" />
+          {/* <hr className="big-divider" /> */}
 
+
+
+          {/* ===================== [6] GALLERY (Photos top / Videos bottom, mock + See more) ===================== */}
+          {/* ===================== [6] GALLERY ===================== */}
+          <section className="gallery small" aria-label="Artist gallery">
+            <div className="gallery-top">
+              <h2 className="gallery-title">GALLERY</h2>
+              <p className="gallery-quote">Photos on top, videos below.</p>
+            </div>
+
+            {/* ---------- Photos Row ---------- */}
+            {imagesAll.length > 0 && (
+              <div className="gallery-row">
+                <div className="gallery-row-head">
+                  <h3 className="gallery-row-title">Photos</h3>
+                  {hasMoreImages ? (
+                    <button className="gallery-see-more" type="button" onClick={() => setShowAllImages(true)}>
+                      See more →
+                    </button>
+                  ) : showAllImages ? (
+                    <button className="gallery-see-more" type="button" onClick={() => setShowAllImages(false)}>
+                      ← See less
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className={`gallery-grid g-4 ${showAllImages ? "is-expanded" : ""}`}>
+                  {imagesToShow.map((it, i) => (
+                    <button
+                      key={`img-${i}`}
+                      type="button"
+                      className="gallery-item as-button"
+                      onClick={() => openLightbox(showAllImages ? i : i)}  /* index ตามลิสต์ที่โชว์ */
+                      aria-label={it.alt || "Open image"}
+                      title={it.alt || "Open image"}
+                    >
+                      <img className="gallery-media" src={it.src} alt={it.alt || ""} loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ---------- Videos Row ---------- */}
+            {videosAll.length > 0 && (
+              <div className="gallery-row">
+                <div className="gallery-row-head">
+                  <h3 className="gallery-row-title">Videos</h3>
+                  {hasMoreVideos ? (
+                    <button className="gallery-see-more" type="button" onClick={() => setShowAllVideos(true)}>
+                      See more →
+                    </button>
+                  ) : showAllVideos ? (
+                    <button className="gallery-see-more" type="button" onClick={() => setShowAllVideos(false)}>
+                      ← See less
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className={`gallery-grid g-4 ${showAllVideos ? "is-expanded" : ""}`}>
+                  {videosToShow.map((it, i) => (
+                    <div className="gallery-item is-video" key={`vid-${i}`}>
+                      <video
+                        className="gallery-media"
+                        controls
+                        preload="metadata"
+                        poster={it.poster || undefined}
+                        aria-label={it.alt || "Artist video"}
+                      >
+                        <source src={it.src} />
+                      </video>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ---------- Lightbox (เฉพาะรูป) ---------- */}
+            {lightbox.open && (
+              <div className="lightbox" role="dialog" aria-modal="true" onClick={closeLightbox}>
+                <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
+                  <img
+                    src={(showAllImages ? imagesAll : imagesToShow)[lightbox.index]?.src}
+                    alt={(showAllImages ? imagesAll : imagesToShow)[lightbox.index]?.alt || ""}
+                  />
+                  <button className="lightbox-close" type="button" onClick={closeLightbox} aria-label="Close">×</button>
+                </div>
+              </div>
+            )}
+          </section>
+
+
+
+
+          <hr className="big-divider" />
           {/* ===== OTHER: mock ไว้ก่อน (ไม่พึ่ง API) ===== */}
           <section className="other-sec">
             <div className="other-head">

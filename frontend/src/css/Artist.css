@@ -179,14 +179,14 @@ body {
   display: flex;
   flex-direction: column;
   /* align-items: center;   */
-  gap: 18px;             
+  /* gap: 10px;              */
 }
 
 .group-card-caption {
   width: 100%;          /* กินเต็มความกว้างการ์ด */
   text-align: left;     /* จัดตัวอักษรชิดซ้าย */
   padding-left: 12px;   /* ขยับเข้ามาทางขวานิดหน่อย */
-  /* margin-top: auto;   */
+  margin-top: 10px;  
 }
 
 .group-card-caption h3 {
