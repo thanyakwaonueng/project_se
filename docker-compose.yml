@@ -22,6 +22,7 @@ services:
       - db
     env_file:
       - .env.dev
+      - .env
     environment:
       DATABASE_URL: postgres://user:pass@db:5432/your_db
 
