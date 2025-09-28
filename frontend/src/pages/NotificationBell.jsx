@@ -1,64 +1,25 @@
-// src/components/NotificationBell.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuth } from '../lib/auth';
 
-export default function NotificationBell() {
+export default function NotificationBell({ mobileMode = false }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [hover, setHover] = useState(false);
+  const [loading, setLoading] = useState(false);       // ✅ เพิ่ม
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // ✅ inline styles
-  const styles = `
-    .nbell { position: relative; }
-    .nbell-btn {
-      position: relative; display:inline-flex; align-items:center; justify-content:center;
-      width:36px; height:36px; padding:0; background:transparent; border:none; color:#222; cursor:pointer; outline:none;
-    }
-    .nbell-btn:hover .nbell-icon { opacity:0.85; }
-    .nbell-icon { display:block; }
-    .nbell-badge {
-      position:absolute; top:-4px; right:-6px;
-      min-width:18px; height:18px; padding:0 5px; background:#d32f2f; color:#fff;
-      border-radius:999px; font-size:11px; line-height:18px; text-align:center; font-weight:700;
-      box-shadow:0 0 0 2px #fff;
-    }
-    .nbell-menu { min-width: 280px; padding: 8px; display: block; }
-    .nbell-item { white-space:pre-wrap; }
-    .nbell-item h6 { margin:0 0 2px 0; font-weight:600; font-size:14px }
-    .nbell-item .meta { font-size:12px; color:#666 }
-    .nbell-row { display:flex; gap:8px; margin-top:6px; flex-wrap:wrap }
-    .nbell-empty { padding:6px 2px; color:#666 }
-    .nbell-topbar { display:flex; align-items:center; justify-content:space-between; padding:4px 8px 8px; border-bottom:1px solid #eee; margin:-8px -8px 8px }
-    .nbell-topbar h5 { margin:0; font-size:14px; font-weight:700 }
-  `;
-
+  // โหลด notifications
   const load = async () => {
     if (!user) return;
     try {
-      setLoading(true);
       const { data } = await api.get('/notifications?unread=1', { withCredentials: true });
-      setItems(Array.isArray(data) ? data : []);
-    } catch {
-      /* silent */
-    } finally {
-      setLoading(false);
-    }
+      setItems(data || []);
+    } catch {}
   };
 
-  // ปิด dropdown เมื่อคลิกนอกบริเวณ
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('.nbell')) setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // โหลดครั้งแรก + โพลทุก 15s (เฉพาะเมื่อมี user)
   useEffect(() => {
     if (!user) return;
     load();
@@ -66,24 +27,39 @@ export default function NotificationBell() {
     return () => clearInterval(t);
   }, [user?.id]);
 
+  // ปิดเมื่อคลิกนอกระฆัง (เฉพาะ desktop)
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (mobileMode) return;
+      if (!e.target.closest('.nbell')) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [mobileMode]);
+
   const markRead = async (id) => {
     try {
       await api.post(`/notifications/${id}/read`, {}, { withCredentials: true });
       setItems((prev) => prev.filter((x) => x.id !== id));
-    } catch {/* ignore */}
+    } catch {}
   };
 
+  // ✅ เพิ่ม: Mark all read
   const markAllRead = async () => {
     try {
+      setLoading(true);
       await api.post('/notifications/read_all', {}, { withCredentials: true });
       setItems([]);
-    } catch {
-      const current = [...items];
-      for (const it of current) {
-        try { await api.post(`/notifications/${it.id}/read`, {}, { withCredentials: true }); } catch {}
-      }
-      setItems([]);
+    } catch {} finally {
+      setLoading(false);
     }
+  };
+
+  // ✅ เพิ่ม: ไปหน้ารีวิวคำขอบทบาท (ใช้ใน mobileMode)
+  const goReview = async (notifId) => {
+    try { await api.post(`/notifications/${notifId}/read`, {}, { withCredentials: true }); } catch {}
+    setOpen(false);
+    navigate('/admin/role_requests');
   };
 
   // ===== helper: ตรวจชนิดโนติและ CTA ที่เหมาะสม =====
@@ -99,24 +75,12 @@ export default function NotificationBell() {
     const eventId = meta.eventId ?? n.eventId ?? meta.entityId;
     const artistId = meta.artistId;
 
-    // 1) ศิลปินถูกเชิญ (สำหรับ ARTIST) → type: artist_event.invited
-    const artistInvited = typeIs(n, [
-      'artist_event.invited',
-      /artist[_\-\.]?event[_\-\.]?invited/i,
-      /artist[_\-\.]?invited/i,
-      /invite.*artist/i,
-    ]);
-
-    // 2) ศิลปินยืนยัน/ปฏิเสธ (สำหรับ ORGANIZER/ADMIN)
-    const artistAccepted = typeIs(n, ['artist_event.accepted', /accepted/i]);
-    const artistDeclined = typeIs(n, ['artist_event.declined', /declined/i]);
-
-    // 3) คำขอบทบาทใหม่ (ADMIN)
-    const roleReqNew = typeIs(n, ['role_request.new']);
-
-    // 4) งานอัปเดต/งานใหม่จากศิลปินที่คุณไลค์
-    const eventUpdated = typeIs(n, ['event.updated']);
-    const artistNewEvent = typeIs(n, ['artist.new_event']);
+    const artistInvited   = typeIs(n, ['artist_event.invited', /artist[_\-\.]?event[_\-\.]?invited/i, /artist[_\-\.]?invited/i, /invite.*artist/i]);
+    const artistAccepted  = typeIs(n, ['artist_event.accepted', /accepted/i]);
+    const artistDeclined  = typeIs(n, ['artist_event.declined', /declined/i]);
+    const roleReqNew      = typeIs(n, ['role_request.new']);
+    const eventUpdated    = typeIs(n, ['event.updated']);
+    const artistNewEvent  = typeIs(n, ['artist.new_event']);
 
     const actions = [];
 
@@ -187,7 +151,6 @@ export default function NotificationBell() {
       });
     }
 
-    // สำรอง: ถ้ามี url มากับ data
     if (!actions.length && meta.url) {
       actions.push({
         label: 'Open',
@@ -199,7 +162,6 @@ export default function NotificationBell() {
       });
     }
 
-    // ปุ่มพื้นฐาน
     actions.push({
       label: 'Mark read',
       outline: true,
@@ -212,36 +174,129 @@ export default function NotificationBell() {
   const count = items.length;
   const badgeText = count > 99 ? '99+' : String(count);
 
-  return (
-    <div className="dropdown ml-3 nbell">
-      <style>{styles}</style>
+  // ===== Mobile
+  if (mobileMode) {
+    return (
+      <div className="mobile-notification-section">
+        <a
+          href="#"
+          className="mobile-menu-link"
+          onClick={(e) => {
+            e.preventDefault();
+            const next = !open;
+            setOpen(next);
+            if (next) load();
+          }}
+        >
+          NOTIFICATIONS
+          {count > 0 && <span className="nbell-badge-mobile">{badgeText}</span>}
+          <span style={{ fontSize: '0.6em', marginLeft: 4 }}>{open ? '▲' : '▼'}</span>
+        </a>
 
+        {open && (
+          <div className="mobile-submenu" style={{ paddingLeft: '15px' }}>
+            {!items.length ? (
+              <div className="dropdown-item-text">{loading ? 'Loading…' : 'No notifications'}</div>
+            ) : (
+              items.map((n) => (
+                <div key={n.id} className="dropdown-item-text" style={{ whiteSpace: 'pre-wrap' }}>
+                  <div style={{ fontWeight: 600 }}>{n.message}</div>
+                  <div style={{ fontSize: 12, color: '#666' }}>{new Date(n.createdAt).toLocaleString()}</div>
+                  <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
+                    {user?.role === 'ADMIN' && n.type === 'role_request.new' && (
+                      <button className="btn btn-sm btn-primary" onClick={() => goReview(n.id)}>Review</button>
+                    )}
+                    <button className="btn btn-sm btn-outline-secondary" onClick={() => markRead(n.id)}>Mark read</button>
+                  </div>
+                  <hr />
+                </div>
+              ))
+            )}
+            {!!items.length && (
+              <button className="btn btn-sm btn-outline-secondary" onClick={markAllRead} disabled={loading}>
+                Mark all read
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ===== Desktop
+  return (
+    <div className="dropdown nbell">
       <button
         className="nbell-btn"
         type="button"
-        aria-label={count ? `Notifications ${badgeText} unread` : 'Notifications'}
+        style={{
+          position: 'relative',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 36,
+          height: 36,
+          padding: 0,
+          border: 'none',
+          outline: 'none',
+          cursor: 'pointer',
+          backgroundColor: hover ? '#8b8b8b30' : 'transparent',
+          borderRadius: '50%',
+          transition: 'background-color 0.2s ease',
+        }}
         onClick={() => {
           const next = !open;
           setOpen(next);
           if (next) load();
         }}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        aria-label={count ? `Notifications ${badgeText} unread` : 'Notifications'}
         aria-expanded={open}
       >
-        {/* bell icon */}
-        <svg className="nbell-icon" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+        <svg className="nbell-icon" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"
+          style={{ display: 'block', transition: 'opacity 0.2s ease', opacity: hover ? 0.85 : 1 }}
+        >
           <path
             d="M15 17H9c-2 0-3.5-1.2-3.5-2.7 0-.3.1-.6.2-.9C6.5 12.2 7 10.8 7 9c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.8.5 3.2 1.3 4.4.2.3.2.6.2.9 0 1.5-1.5 2.7-3.5 2.7Z"
             fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
           />
           <path d="M10 19a2 2 0 0 0 4 0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
-        {count > 0 && <span className="nbell-badge">{badgeText}</span>}
+
+        {count > 0 && (
+          <span
+            className="nbell-badge"
+            style={{
+              position: 'absolute',
+              top: -4,
+              right: -6,
+              minWidth: 18,
+              height: 18,
+              padding: '0 5px',
+              background: '#d32f2f',
+              color: '#fff',
+              borderRadius: 999,
+              fontSize: 11,
+              lineHeight: '18px',
+              textAlign: 'center',
+              fontWeight: 700,
+              boxShadow: '0 0 0 2px #fff',
+              pointerEvents: 'none', // ✅ กัน badge มาบังคลิกปุ่ม
+            }}
+          >
+            {badgeText}
+          </span>
+        )}
       </button>
 
       {open && (
-        <div className="dropdown-menu dropdown-menu-end nbell-menu">
-          <div className="nbell-topbar">
-            <h5>Notifications</h5>
+        <div
+          className={`dropdown-menu dropdown-menu-end nbell-menu show`}  // ✅ ให้ Bootstrap โชว์
+          style={{ display: 'block' }}                                    // ✅ บังคับกันธีมอื่น
+        >
+          <div className="nbell-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h5 style={{ margin: 0 }}>Notifications</h5>
             {count > 0 && (
               <button className="btn btn-sm btn-outline-secondary" onClick={markAllRead} disabled={loading}>
                 Mark all read
@@ -259,7 +314,7 @@ export default function NotificationBell() {
                   <h6>{n.title || n.message || 'Notification'}</h6>
                   <div className="meta">{new Date(n.createdAt).toLocaleString()}</div>
                   {!!actions.length && (
-                    <div className="nbell-row">
+                    <div className="nbell-row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
                       {actions.map((a, i) => (
                         <button
                           key={i}

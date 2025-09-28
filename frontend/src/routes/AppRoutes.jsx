@@ -28,10 +28,10 @@ import ArtistInviteRequestsPage from '../pages/ArtistInviteRequestsPage';
 import ProfilePage from "../pages/ProfilePage";
 import AccountSetupPage from '../pages/AccountSetupPage';
 import AdminRoleRequestsPage from '../pages/AdminRoleRequestsPage';
-//import UploadFile from '../pages/UploadFile';
+import UploadFile from '../pages/UploadFile';
 import NotificationsPage from '../pages/Notifications';
-// ✅ เพจใหม่ (ตัวเดียวใช้ได้ทั้งสร้าง/แก้ไข)
-import VenueEditor from '../pages/VenueEditor';
+// เพจใหม่ (ตัวเดียวใช้ได้ทั้งสร้าง/แก้ไข)
+// import VenueEditor from '../pages/VenueEditor';
 
 /** เช็คว่าตั้งค่าโปรไฟล์ขั้นต่ำหรือยัง */
 function RequireProfile({ children }) {
@@ -97,7 +97,7 @@ export default function AppRoutes() {
       <Routes>
         
         {/* just for testing purpose */}
-        {/* <Route path="/uploadfile" element={<UploadFile />} /> */}
+        <Route path="/uploadfile" element={<UploadFile />} />
 
 
         {/* กลุ่ม public: login / signup / logout / accountsetup */}
@@ -147,7 +147,7 @@ export default function AppRoutes() {
             path="/venue/edit"
             element={
               <ProtectedRoute allow={['ORGANIZE', 'ADMIN']}>
-                <VenueEditor />
+                {/* <VenueEditor /> */}
               </ProtectedRoute>
             }
           />
