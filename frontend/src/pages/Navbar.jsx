@@ -18,7 +18,60 @@ export default function Navbar() {
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-  // Dropdown เปลี่ยนภาษา
+  // Mobile Auth Menu (Role dropdown)
+  function MobileAuthMenu({ user, loading }) {
+    const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+
+    if (loading) return <span>กำลังตรวจสอบ…</span>;
+    if (!user) {
+      return (
+        <>
+          <a href="/login" onClick={closeMobileMenu}>LOGIN</a>
+          <a href="/signup" onClick={closeMobileMenu}>SIGN UP</a>
+        </>
+      );
+    }
+
+    return (
+      <>
+        {/* Role menu toggle */}
+        <a
+          href="#"
+          className="mobile-menu-link"
+          onClick={(e) => {
+            e.preventDefault();
+            setRoleMenuOpen(!roleMenuOpen);
+          }}
+        >
+          Role: {user.role}{' '}
+          <span style={{ fontSize: '0.6em', lineHeight: 1 }}>
+            {roleMenuOpen ? '▲' : '▼'}
+          </span>
+        </a>
+
+        {/* Submenu */}
+        {roleMenuOpen && (
+          <div className="mobile-submenu" style={{ paddingLeft: '15px' }}>
+            <a href="/me/profile" onClick={closeMobileMenu}>Profile</a>
+            {(user.role === 'ARTIST' || user.role === 'ADMIN') && (
+              <a href="/artist/inviterequests" onClick={closeMobileMenu}>Artist Pending Invite</a>
+            )}
+            {(user.role === 'ORGANIZE' || user.role === 'ADMIN') && (
+              <>
+                <a href={`/venues/${user.id}`} onClick={closeMobileMenu}>My Venue</a>
+                <a href="/me/event" onClick={closeMobileMenu}>Create Event</a>
+                <a href="/myevents" onClick={closeMobileMenu}>My Event</a>
+              </>
+            )}
+            <a href="/logout" onClick={closeMobileMenu}>Logout</a>
+          </div>
+        )}
+      </>
+    );
+  }
+
+
+  // LanguageDropdown (เหมือนเดิม)
   function LanguageDropdown() {
     const [language, setLanguage] = useState('th');
     const handleSelect = (lang) => {
@@ -27,7 +80,7 @@ export default function Navbar() {
     };
 
     return (
-      <div className="dropdown ml-4">
+      <div className="dropdown">
         <button
           className="language-dropdown-btn navbar-menu-link w-inline-block d-flex align-items-center"
           type="button"
@@ -62,19 +115,18 @@ export default function Navbar() {
     );
   }
 
-  // ปุ่ม Login/Signup หรือ Account Dropdown
+  // Desktop Auth Buttons (เดิม)
   function AuthButtons({ user, loading }) {
     if (loading) return <span className="nav-item nav-link">กำลังตรวจสอบ…</span>;
 
     if (!user) {
       return (
         <>
-          <a href="/login" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
+          <a href="/login" className="navbar-menu-wrapper navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
             <div className="navbar-menu-text">LOGIN</div>
             <div className="navbar-menu-text">LOGIN</div>
           </a>
-
-          <a href="/signup" className="navbar-menu-link w-inline-block" id="nav-signup-btn" onClick={closeMobileMenu}>
+          <a href="/signup" className="navbar-menu-wrapper navbar-menu-link w-inline-block" id="nav-signup-btn" onClick={closeMobileMenu}>
             SIGN UP
           </a>
         </>
@@ -84,20 +136,18 @@ export default function Navbar() {
     return (
       <div className="dropdown">
         <button
-          className="navbar-menu-link w-inline-block dropdown-toggle"
+          className="dropdown-toggle"
           type="button"
           id="accountDropdown"
           data-bs-toggle="dropdown"
           aria-expanded="false"
         >
-          <img src="/img/users-circles-freepik.png" alt="profile" className="navbar-menu-link profile-icon" />
+          <img src="/img/profile-user.png" alt="profile" className="profile-icon" />
         </button>
 
         <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
           <li className="dropdown-item-text">Role: {user.role}</li>
           <li><hr className="dropdown-divider" /></li>
-
-          {/*  ไปหน้าโปรไฟล์ก่อน */}
           <li>
             <Link className="dropdown-item" to="/me/profile" onClick={closeMobileMenu}>
               Profile
@@ -114,17 +164,11 @@ export default function Navbar() {
 
           {(user.role === 'ORGANIZE' || user.role === 'ADMIN') && (
             <>
-              {/* ✅ My Venue → ไปหน้า “รายละเอียดร้านของฉัน” โดยอิง user.id (= performerId) */}
               <li>
-                <Link
-                  className="dropdown-item"
-                  to={user ? `/venues/${user.id}` : '/venues'}
-                  onClick={closeMobileMenu}
-                >
+                <Link className="dropdown-item" to={`/venues/${user.id}`} onClick={closeMobileMenu}>
                   My Venue
                 </Link>
               </li>
-
               <li>
                 <Link className="dropdown-item" to="/me/event" onClick={closeMobileMenu}>
                   Create Event
@@ -152,47 +196,58 @@ export default function Navbar() {
   return (
     <nav className={`navbar navbar-expand-lg navbar-dark full-width-navbar ${isScrolled ? 'navbar-small shadow' : ''}`}>
       <div className="container-fluid navbar-container">
-        {/* Logo and mobile menu toggle */}
-        <div className="d-flex justify-content-between w-50 align-items-center">
-          <Link to="/" className="navbar-brand" onClick={closeMobileMenu}>
-            <img src="/img/logo_black.png" className="logo" alt="logo" />
-          </Link>
 
-          {/* Hamburger menu for mobile with black icon */}
+        {/* Logo + Hamburger */}
+        <div className="d-flex justify-content-between w-100 align-items-center">
+          <Link to="/" className="navbar-brand" onClick={closeMobileMenu}>
+            <img src="/img/logo_black.png" className="logo-navbar" alt="logo" />
+          </Link>
           <button
-            className="navbar-toggler custom-toggler"
+            className="navbar-toggler custom-toggler d-lg-none"
             type="button"
             onClick={toggleMobileMenu}
-            aria-label="Toggle navigation"
           >
             <span className="navbar-toggler-icon"></span>
           </button>
         </div>
 
-        {/* Collapsible menu */}
-        <div className={`collapse navbar-collapse ${isMobileMenuOpen ? 'show' : ''}`}>
+        {/* Mobile Slide Menu */}
+        {isMobileMenuOpen && (
+          <div className="mobile-slide-overlay d-lg-none" onClick={closeMobileMenu}>
+            <div className="mobile-slide-menu" onClick={(e) => e.stopPropagation()}>
+              <MobileAuthMenu user={user} loading={loading} />
+
+              {/* Mobile Notification Link – แสดงเฉพาะตอนมี user */}
+              {user && <NotificationBell mobileMode={true} />}
+
+              <a href="/artists" onClick={closeMobileMenu}>ARTISTS</a>
+              <a href="/events" onClick={closeMobileMenu}>EVENTS</a>
+              <a href="/venues/map" onClick={closeMobileMenu}>VENUES</a>
+              {/* <LanguageDropdown /> */}
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Menu */}
+        <div className="d-none d-lg-block">
           <div className="navbar-menu-wrapper">
-            <a href="/artists" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
+            <a href="/artists" className="navbar-menu-link w-inline-block">
               <div className="navbar-menu-text">ARTISTS</div>
               <div className="navbar-menu-text">ARTISTS</div>
             </a>
-
-            <a href="/events" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
+            <a href="/events" className="navbar-menu-link w-inline-block">
               <div className="navbar-menu-text">EVENTS</div>
               <div className="navbar-menu-text">EVENTS</div>
             </a>
-
-            {/* 🔁 เหลือเมนู VENUE อย่างเดียว (รวม list + map) */}
-            <a href="/venues/map" className="navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
+            <a href="/venues/map" className="navbar-menu-link w-inline-block">
               <div className="navbar-menu-text">VENUES</div>
               <div className="navbar-menu-text">VENUES</div>
             </a>
-
             <div className="navbar-auth-section">
               {user ? (
                 <>
                   <LanguageDropdown />
-                  <NotificationBell />
+                  <NotificationBell /> {/* 🔔 Desktop dropdown */}
                   <AuthButtons user={user} loading={loading} />
                 </>
               ) : (
@@ -204,6 +259,8 @@ export default function Navbar() {
             </div>
           </div>
         </div>
+
+
       </div>
     </nav>
   );

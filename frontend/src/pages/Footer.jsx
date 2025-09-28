@@ -8,7 +8,7 @@ export default function Footer() {
         {/* Logo + Social */}
         <div className="footer-section">
           <div className="footer-logo">
-            <img src="/img/logonavbar.png" alt="Chiangmai Original" className="logo"/>
+            <img src="/img/logocnx.png" alt="Chiangmai Original" className="logo"/>
             {/* <p className="brand-text">It is about sound & crowd in Chiang Mai Town</p> */}
           </div>
           <div className="social-icons">
