@@ -31,7 +31,7 @@ import AdminRoleRequestsPage from '../pages/AdminRoleRequestsPage';
 import UploadFile from '../pages/UploadFile';
 import NotificationsPage from '../pages/Notifications';
 // เพจใหม่ (ตัวเดียวใช้ได้ทั้งสร้าง/แก้ไข)
-// import VenueEditor from '../pages/VenueEditor';
+import VenueEditor from '../pages/VenueEditor';
 
 /** เช็คว่าตั้งค่าโปรไฟล์ขั้นต่ำหรือยัง */
 function RequireProfile({ children }) {
@@ -144,10 +144,7 @@ export default function AppRoutes() {
 
           {/* ✅ แก้ไข/สร้าง venue ใช้หน้าเดียว */}
           <Route
-            path="/venue/edit"
-            element={
-              <ProtectedRoute allow={['ORGANIZE', 'ADMIN']}>
-                {/* <VenueEditor /> */}
+            path="/venue/edit"element={<ProtectedRoute allow={['ORGANIZE', 'ADMIN']}><VenueEditor />
               </ProtectedRoute>
             }
           />

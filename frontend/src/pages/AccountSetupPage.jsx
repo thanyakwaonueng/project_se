@@ -398,7 +398,7 @@ export default function AccountSetupPage() {
     <div className="acc-page">
       <div className="acc-container">
         <div className="container-heading">
-          <h1 className="acc-title">Account setup</h1>
+          <h1 className="acc-title">ACCOUNT SETUP</h1>
         </div>
         <div className="a-line"></div>
 

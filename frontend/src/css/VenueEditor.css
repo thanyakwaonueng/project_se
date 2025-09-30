@@ -1,0 +1,506 @@
+/* ╔══════════════════════════════════════════════════════════════════════╗
+   ║  VENUE EDITOR — FULL PAGE STYLES (ve-*)                             ║
+   ║  โครงรวม: กริด 2/3 คอลัมน์, เส้นใต้ input, กล่องสรุป, สื่อ/พรีวิว  ║
+   ╚══════════════════════════════════════════════════════════════════════╝ */
+
+
+/* =========================================================================
+   0) BASE / WRAPPER
+   ========================================================================= */
+.ve-page {
+  color: #111111;
+  background: #ffffff;
+  padding: 0;
+  min-height: 100dvh;
+}
+
+.ve-container {
+  width: 100%;
+  margin: 0 auto;
+}
+
+
+/* =========================================================================
+   1) HEADER / TITLE / DIVIDER
+   ========================================================================= */
+.ve-header {
+  width: 80%;
+  margin: 16px auto 10px;
+  display: grid;               /* จัดกึ่งกลางง่าย */
+  place-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.ve-title {                    /* หัวเรื่องปกติ (ถ้าไม่ได้ใช้ hero) */
+  color: #111111;
+  margin: 0 0 8px 0;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.ve-title-hero {               /* หัวเรื่องใหญ่พิเศษ */
+  font-size: 120px;
+}
+
+.ve-subtitle {
+  font-size: 14px;
+  color: #5b5b63;
+  margin: 0;
+}
+
+.ve-line {                     /* เส้นคั่นกลางหน้า */
+  margin-inline: auto;
+  width: 80%;
+  height: 1px;
+  background: #000000;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+
+/* =========================================================================
+   2) ALERT / MESSAGE
+   ========================================================================= */
+.ve-alert {
+  width: 80%;
+  margin: 0 auto 12px;
+  background: #ffefef;
+  border: 1px solid #ffd0d0;
+  color: #981b1b;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+
+/* =========================================================================
+   3) SECTION / CARD CONTAINER
+   ========================================================================= */
+.ve-section {
+  width: 80%;
+  margin-inline: auto;
+  padding: 16px;
+  margin-bottom: 18px;
+  background: #ffffff;
+}
+
+.ve-section-title {            /* หัวข้อระดับ section (SOCIAL & CONTACT, ฯลฯ) */
+  font-weight: 700;
+  font-size: 40px;
+  letter-spacing: .5px;
+  color: #111111;
+  margin: 0 0 16px 0;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.ve-form {
+  /* border: 1px solid #e9e9ee;  ← เปิดเมื่ออยากได้กรอบรวมทั้งบล็อก */
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+
+/* =========================================================================
+   4) GRID LAYOUTS
+   - .ve-grid-2: กริด 2 คอลัมน์ (ค่าเริ่มต้นที่ใช้บ่อย)
+   - .ve-grid-3: กริด 3 คอลัมน์ (เช่น Capacity / Age / Alcohol)
+   - .ve-col-span-2: ให้บล็อกกินเต็มแถวในกริด
+   ========================================================================= */
+
+/* กริด 2 คอลัมน์ (ซ้าย/ขวากว้างเท่ากัน) */
+.ve-grid,
+.ve-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 28px;
+  row-gap: 28px;
+}
+
+/* กริด 3 คอลัมน์ */
+.ve-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  column-gap: 28px;
+  row-gap: 28px;
+}
+
+/* กินเต็มแถว */
+.ve-col-span-2 { grid-column: 1 / -1; }
+
+/* Responsive: มือถือ/แท็บเล็ตเล็ก → 1 คอลัมน์ */
+@media (max-width: 720px) {
+  .ve-grid,
+  .ve-grid-2 { grid-template-columns: 1fr; }
+  .ve-grid-3 { grid-template-columns: 1fr; }
+}
+
+
+/* =========================================================================
+   5) FIELDS / LABELS
+   ========================================================================= */
+.ve-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;         /* ระยะระหว่าง label กับช่องกรอก */
+  min-width: 0;
+}
+
+.ve-label {
+  font-size: 16px;
+  color: #111111;
+  margin: 0;         /* ใช้ gap เป็นตัวคุมระยะ */
+  font-weight: 700;
+  display: block;
+}
+
+.ve-help {
+  color: #5b5b63;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+
+/* =========================================================================
+   6) INPUTS — UNDERLINE STYLE (ยาวเต็มคอลัมน์)
+   ========================================================================= */
+/* NOTE:
+   - เดิมเคยมี width: min(825px, 100%); ให้ลบทิ้งเพื่อให้เส้นใต้ยาวเท่าคอลัมน์เสมอ
+*/
+.ve-input,
+.ve-textarea,
+.ve-select {
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  color: #111111;
+  font: inherit;
+  border: none;
+  border-bottom: 2px solid #11111133;  /* เทาโปร่ง */
+  border-radius: 0;
+  padding: 12px 4px 10px;
+  outline: none;
+  box-shadow: none;
+  transition: border-color .2s ease, border-bottom-color .2s ease;
+}
+
+/* Hover / Focus */
+.ve-input:hover,
+.ve-textarea:hover,
+.ve-select:hover {
+  border-bottom-color: #11111180;
+}
+.ve-input:focus, .ve-input:active,
+.ve-textarea:focus, .ve-textarea:active,
+.ve-select:focus, .ve-select:active {
+  border-bottom-color: #000000;
+}
+
+/* Placeholder */
+.ve-input::placeholder,
+.ve-textarea::placeholder {
+  color: #9a9a9a;
+}
+
+/* Textarea (เผื่อยังมีใช้จุดอื่น) */
+.ve-textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+/* Date input look */
+.ve-inputDate {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: transparent;
+  color: #111111;
+}
+.ve-inputDate::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: grayscale(1) brightness(0.2);
+  opacity: .8;
+}
+.ve-inputDate:hover::-webkit-calendar-picker-indicator { opacity: 1; }
+
+/* Select look */
+.ve-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-clip: padding-box;
+  padding-right: 18px;
+}
+
+
+/* =========================================================================
+   7) AVATAR CARD (อัปโหลดรูปโปรไฟล์) — ถ้าไม่ใช้สามารถลบทิ้งได้
+   ========================================================================= */
+.ve-avatarCard {
+  width: 325px;
+  aspect-ratio: 1 / 1;
+  border: 1px dashed #111111;
+  border-radius: 12px;
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+}
+.ve-avatarCard:hover { background: #f9f9f9; }
+.ve-avatarCard img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.ve-avatarHint {
+  font-size: 12px;
+  color: #666666;
+  text-align: center;
+  padding: 6px 8px;
+}
+.ve-avatarEdit {
+  position: absolute;
+  left: 6px; right: 6px; bottom: 6px;
+  background: rgba(0,0,0,.55);
+  color: #ffffff;
+  font-size: 12px;
+  text-align: center;
+  padding: 4px 6px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+
+/* =========================================================================
+   8) GENRE CHIPS (single-select) — เดสก์ท็อป 5 ต่อแถว
+   ========================================================================= */
+.ve-chips {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);   /* เดสก์ท็อป = 5 ต่อแถว */
+  gap: 12px;
+}
+.ve-chip {
+  width: 100%;
+  text-align: center;
+  border: 1px solid #111111;
+  background: #ffffff;
+  color: #111111;
+  border-radius: 8px;                   /* โค้งกำลังดี */
+  padding: 10px 10px;                   /* ขนาดปุ่ม */
+  cursor: pointer;
+  transition: background-color .25s ease, color .25s ease, border-color .25s ease;
+}
+.ve-chip:hover { background: #f0f0f0; }
+.ve-chip.is-selected,
+.ve-chip[aria-pressed="true"],
+.ve-chip[data-selected="true"] {
+  background: #111111;
+  color: #ffffff;
+}
+
+/* Responsive จำนวนคอลัมน์ของ chips */
+@media (max-width: 1200px) { .ve-chips { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 900px)  { .ve-chips { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px)  { .ve-chips { grid-template-columns: repeat(2, 1fr); } }
+
+
+/* =========================================================================
+   9) FILE PICKERS & MEDIA PREVIEW (สำหรับ Images & Videos)
+   ========================================================================= */
+.ve-fileRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* ปุ่มเลือกไฟล์ */
+.ve-fileBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .15s ease;
+}
+.ve-fileBtn:hover {
+  background: #000000;
+  box-shadow: 0 4px 14px rgba(0,0,0,.08);
+}
+.ve-fileBtn.ve-fileBtn-secondary {
+  background: #ffffff;
+  color: #111111;
+  border-color: #111111;
+}
+.ve-fileBtn.ve-fileBtn-secondary:hover { background: #f5f5f5; }
+
+.ve-fileList {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 14px;
+  color: #333333;
+}
+
+/* กริดพรีวิวสื่อ */
+.ve-mediaGrid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+/* การ์ดพรีวิวรายไฟล์ */
+.ve-mediaThumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid #e9e9ee;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fafafa;
+  display: grid;
+  place-items: center;
+}
+.ve-mediaThumb img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+.ve-videoThumb {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  background: #000000;
+}
+
+
+/* =========================================================================
+   10) IMAGES & VIDEOS — BOXED FIELDS (การ์ดตีกรอบ)
+   - ครอบคอลัมน์ Images/Videos ให้เป็นกล่อง
+   - รองรับทั้ง .ve-field และ .ve-field-1 (เพื่อความเข้ากันได้)
+   ========================================================================= */
+/* ===== Boxed fields apply ONLY to .ve-field-1 ===== */
+.ve-section .ve-grid > .ve-field-1 {
+  border: 1px solid #e9e9ee;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 14px;
+  box-sizing: border-box;
+  transition: box-shadow .18s ease, border-color .18s ease;
+}
+
+.ve-section .ve-grid > .ve-field-1:hover {
+  border-color: #dcdce2;
+  box-shadow: 0 6px 16px rgba(0,0,0,.06);
+}
+
+.ve-section .ve-grid > .ve-field-1 > .ve-label {
+  font-weight: 600;
+  font-size: 18px;
+  margin: 0 0 10px 0;
+}
+
+.ve-section .ve-grid > .ve-field-1 .ve-mediaGrid {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.ve-section .ve-grid > .ve-field-1 .ve-mediaThumb {
+  border: 1px solid #e2e2e8;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fafafa;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .06s ease;
+}
+
+.ve-section .ve-grid > .ve-field-1 .ve-mediaThumb:hover {
+  border-color: #cfcfd6;
+  box-shadow: 0 4px 12px rgba(0,0,0,.06);
+}
+
+
+
+/* =========================================================================
+   11) ACTIONS (BOTTOM BUTTONS)
+   ========================================================================= */
+.ve-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.ve-actions-bottom { margin-top: 8px; }
+
+.ve-btn {
+  min-height: 20px;
+  border: 1px solid #111111;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #ffffff;
+  color: #111111;
+  cursor: pointer;
+  font-weight: 600;
+  transition:
+    background-color .2s ease,
+    color .2s ease,
+    border-color .2s ease,
+    box-shadow .15s ease,
+    opacity .2s ease;
+  appearance: none;
+}
+.ve-btn:hover {
+  background: #f5f5f5;
+  box-shadow: 0 4px 14px rgba(0,0,0,.08);
+}
+.ve-btn:active { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.ve-btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.ve-btn-primary {
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
+}
+.ve-btn-primary:hover {
+  background: #000000;
+  box-shadow: 0 6px 16px rgba(0,0,0,.15);
+}
+
+.ve-btn-secondary {
+  border-color: #e9e9ee;
+  color: #444444;
+}
+.ve-btn-secondary:hover {
+  border-color: #111111;
+  color: #111111;
+}
+
+
+/* =========================================================================
+   12) MAP BLOCK
+   ========================================================================= */
+.ve-map {
+  margin-top: 10px;
+  border: 1px dashed #111111;
+  border-radius: 12px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+
+/* =========================================================================
+   13) OLD STYLES TO REMOVE (ถ้าไม่ใช้แล้ว)
+   - สไตล์ input URL ของภาพเก่า (เช่น #profilePhotoUrl, #photoUrls)
+   - กฎเก่าที่ fix ความกว้าง input: .ve-input/.ve-textarea/.ve-select { width: min(825px, 100%); }
+   ========================================================================= */
+/* (ไม่มีโค้ด — รายการเพื่อการ house-keeping) */
+
+

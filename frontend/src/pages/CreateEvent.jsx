@@ -3,8 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
+// ✅ ใหม่: แยกไฟล์ CSS สำหรับหน้านี้โดยเฉพาะ (prefix: ee- = Event Editor)
+import "../css/CreateEvent.css";
+
 export default function CreateEvent() {
   const { eventId } = useParams(); // /me/event/:eventId
+
+  // ===== state จากไฟล์เดิม (ไม่ตัด/ไม่เพิ่มฟิลด์) =====
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [posterUrl, setPosterUrl] = useState('');
@@ -29,7 +34,7 @@ export default function CreateEvent() {
     if (eventId) setHasEvent(true);
   }, [eventId]);
 
-  // โหลดข้อมูลเดิม (โหมดแก้ไข)
+  // โหลดข้อมูลเดิม (โหมดแก้ไข) — เหมือนไฟล์เดิม
   useEffect(() => {
     const fetchEvent = async () => {
       if (!eventId) return;
@@ -44,7 +49,7 @@ export default function CreateEvent() {
         setTicketing(ev.ticketing || 'FREE');
         setTicketLink(ev.ticketLink || '');
         setAlcoholPolicy(ev.alcoholPolicy || 'SERVE');
-        setAgeRestriction(ev.ageRestriction || 'ALL'); // ✅ ใช้ ev.*
+        setAgeRestriction(ev.ageRestriction || 'ALL');
         setDate(ev.date ? ev.date.split('T')[0] : '');
         setDoorOpenTime(ev.doorOpenTime || '');
         setEndTime(ev.endTime || '');
@@ -72,12 +77,12 @@ export default function CreateEvent() {
         ticketing,
         ticketLink: ticketLink.trim() || undefined,
         alcoholPolicy,
-        ageRestriction, // 'ALL' | 'E18' | 'E20'
+        ageRestriction,
         date: date ? new Date(date).toISOString() : undefined,
         doorOpenTime: doorOpenTime.trim() || undefined,
         endTime: endTime.trim() || undefined,
         genre: genre.trim() || undefined,
-        id: eventId ? parseInt(eventId, 10) : undefined, // ส่ง id ถ้าแก้ไข
+        id: eventId ? parseInt(eventId, 10) : undefined, // แก้ไข = ส่ง id ด้วย
       };
 
       const payload = Object.fromEntries(
@@ -90,8 +95,7 @@ export default function CreateEvent() {
       });
 
       setLoading(false);
-      // ✅ กลับไปหน้า UI ของงานนั้น
-      navigate(`/events/${res.data.id}`);
+      navigate(`/events/${res.data.id}`); // กลับไปหน้ารายละเอียดงาน
     } catch (err) {
       setLoading(false);
       setError(err.response?.data?.error || err.message || 'Failed to save event');
@@ -99,110 +103,209 @@ export default function CreateEvent() {
   };
 
   return (
-    <div style={{ maxWidth: 720, margin: '24px auto', padding: 16 }}>
-      <h2 style={{ marginBottom: 12 }}>{hasEvent ? 'Edit Event' : 'Create Event'}</h2>
+    <div className="ee-page" aria-busy={loading ? "true" : "false"}>
+      {/* ===== Header ===== */}
+      <header className="ee-header">
+        <h1 className="ee-title">{hasEvent ? 'EDIT EVENT' : 'Create Event'}</h1>
+        {/* <p className="ee-subtitle">
+          Fill out event details and ticketing information.
+        </p> */}
+      </header>
+
+      <div className="ve-line" />
 
       {error && (
-        <div style={{ background: '#ffeef0', color: '#86181d', padding: 12, borderRadius: 8, marginBottom: 16 }}>
-          {error}
-        </div>
+        <div className="ee-alert" role="alert">{error}</div>
       )}
 
-      <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
-        <div>
-          <label>Name *</label>
-          <input value={name} onChange={e => setName(e.target.value)} required className="form-control" />
-        </div>
+      {/* ===== Form ===== */}
+      <form className="ee-form" onSubmit={submit}>
+        {/* Section: Event Details */}
+        <section className="ee-section">
+          <h2 className="ee-section-title">Details</h2>
 
-        <div>
-          <label>Description</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} className="form-control" rows={4} />
-        </div>
+          <div className="ee-grid-2">
+            {/* แถว 1: Name (เต็มแถว) */}
+            <div className="ee-field ee-col-span-2">
+              <label className="ee-label" htmlFor="name">Name *</label>
+              <input
+                id="name"
+                className="ee-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder="Event name"
+              />
+            </div>
 
-        <div>
-          <label>Poster URL</label>
-          <input value={posterUrl} onChange={e => setPosterUrl(e.target.value)} className="form-control" />
-        </div>
+            {/* แถว 2: Description (เต็มแถว, textarea) */}
+            <div className="ee-field ee-col-span-2">
+              <label className="ee-label" htmlFor="description">Description</label>
+              <textarea
+                id="description"
+                className="ee-textarea"
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Short description of your event"
+              />
+            </div>
 
-        <div>
-          <label>Conditions</label>
-          <input value={conditions} onChange={e => setConditions(e.target.value)} className="form-control" />
-        </div>
+            {/* แถว 3: Poster URL / Conditions */}
+            <div className="ee-field">
+              <label className="ee-label" htmlFor="posterUrl">Poster URL</label>
+              <input
+                id="posterUrl"
+                className="ee-input"
+                value={posterUrl}
+                onChange={(e) => setPosterUrl(e.target.value)}
+                placeholder="https://…"
+              />
+            </div>
 
-        <div>
-          <label>Event Type *</label>
-          <select value={eventType} onChange={e => setEventType(e.target.value)} className="form-select">
-            <option value="OUTDOOR">OUTDOOR</option>
-            <option value="INDOOR">INDOOR</option>
-            <option value="HYBRID">HYBRID</option>
-          </select>
-        </div>
+            <div className="ee-field">
+              <label className="ee-label" htmlFor="conditions">Conditions</label>
+              <input
+                id="conditions"
+                className="ee-input"
+                value={conditions}
+                onChange={(e) => setConditions(e.target.value)}
+                placeholder="Additional conditions (if any)"
+              />
+            </div>
 
-        <div>
-          <label>Ticketing *</label>
-          <select value={ticketing} onChange={e => setTicketing(e.target.value)} className="form-select">
-            <option value="FREE">FREE</option>
-            <option value="DONATION">DONATION</option>
-            <option value="TICKET_MELON">TICKET_MELON</option>
-            <option value="DIRECT_CONTACT">DIRECT_CONTACT</option>
-            <option value="ONSITE_SALES">ONSITE_SALES</option>
-          </select>
-        </div>
+            {/* แถว 4: Event Type / Ticketing */}
+            <div className="ee-field">
+              <label className="ee-label" htmlFor="eventType">Event Type *</label>
+              <select
+                id="eventType"
+                className="ee-select"
+                value={eventType}
+                onChange={(e) => setEventType(e.target.value)}
+              >
+                <option value="OUTDOOR">OUTDOOR</option>
+                <option value="INDOOR">INDOOR</option>
+                <option value="HYBRID">HYBRID</option>
+              </select>
+            </div>
 
-        <div>
-          <label>Ticket Link</label>
-          <input value={ticketLink} onChange={e => setTicketLink(e.target.value)} className="form-control" />
-        </div>
+            <div className="ee-field">
+              <label className="ee-label" htmlFor="ticketing">Ticketing *</label>
+              <select
+                id="ticketing"
+                className="ee-select"
+                value={ticketing}
+                onChange={(e) => setTicketing(e.target.value)}
+              >
+                <option value="FREE">FREE</option>
+                <option value="DONATION">DONATION</option>
+                <option value="TICKET_MELON">TICKET_MELON</option>
+                <option value="DIRECT_CONTACT">DIRECT_CONTACT</option>
+                <option value="ONSITE_SALES">ONSITE_SALES</option>
+              </select>
+            </div>
 
-        <div>
-          <label>Alcohol Policy *</label>
-          <select value={alcoholPolicy} onChange={e => setAlcoholPolicy(e.target.value)} className="form-select">
-            <option value="SERVE">SERVE</option>
-            <option value="NONE">NONE</option>
-            <option value="BYOB">BYOB</option>
-          </select>
-        </div>
+            {/* แถว 5: Ticket Link (เต็มแถว) */}
+            <div className="ee-field ee-col-span-2">
+              <label className="ee-label" htmlFor="ticketLink">Ticket Link</label>
+              <input
+                id="ticketLink"
+                className="ee-input"
+                value={ticketLink}
+                onChange={(e) => setTicketLink(e.target.value)}
+                placeholder="https://…"
+              />
+            </div>
 
-        {/* Age Restriction enum */}
-        <div>
-          <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Age Restriction</label>
-          <select
-            className="form-select"
-            value={ageRestriction}
-            onChange={(e) => setAgeRestriction(e.target.value)}
-          >
-            <option value="ALL">ทุกวัย</option>
-            <option value="E18">18+</option>
-            <option value="E20">20+</option>
-          </select>
-        </div>
+            {/* แถว 6: Alcohol / Age (2 ช่อง) */}
+            <div className="ee-field">
+              <label className="ee-label" htmlFor="alcoholPolicy">Alcohol Policy *</label>
+              <select
+                id="alcoholPolicy"
+                className="ee-select"
+                value={alcoholPolicy}
+                onChange={(e) => setAlcoholPolicy(e.target.value)}
+              >
+                <option value="SERVE">SERVE</option>
+                <option value="NONE">NONE</option>
+                <option value="BYOB">BYOB</option>
+              </select>
+            </div>
 
-        <div>
-          <label>Date *</label>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} required className="form-control" />
-        </div>
+            <div className="ee-field">
+              <label className="ee-label" htmlFor="ageRestriction">Age Restriction</label>
+              <select
+                id="ageRestriction"
+                className="ee-select"
+                value={ageRestriction}
+                onChange={(e) => setAgeRestriction(e.target.value)}
+              >
+                <option value="ALL">All ages</option>
+                <option value="E18">18+</option>
+                <option value="E20">20+</option>
+              </select>
+            </div>
 
-        <div>
-          <label>Door Open Time</label>
-          <input type="time" value={doorOpenTime} onChange={e => setDoorOpenTime(e.target.value)} className="form-control" />
-        </div>
+            {/* แถว 7: Date / Door open / End time (3 คอลัมน์) */}
+            <div className="ee-col-span-2">
+              <div className="ee-grid-3">
+                <div className="ee-field">
+                  <label className="ee-label" htmlFor="date">Date *</label>
+                  <input
+                    id="date"
+                    type="date"
+                    className="ee-input ee-inputDate"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    required
+                  />
+                </div>
 
-        <div>
-          <label>End Time</label>
-          <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="form-control" />
-        </div>
+                <div className="ee-field">
+                  <label className="ee-label" htmlFor="doorOpenTime">Door Open</label>
+                  <input
+                    id="doorOpenTime"
+                    type="time"
+                    className="ee-input"
+                    value={doorOpenTime}
+                    onChange={(e) => setDoorOpenTime(e.target.value)}
+                  />
+                </div>
 
-        <div>
-          <label>Genre</label>
-          <input value={genre} onChange={e => setGenre(e.target.value)} className="form-control" />
-        </div>
+                <div className="ee-field">
+                  <label className="ee-label" htmlFor="endTime">End Time</label>
+                  <input
+                    id="endTime"
+                    type="time"
+                    className="ee-input"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
 
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button type="submit" disabled={loading} className="btn btn-primary">
-            {loading ? (hasEvent ? 'Updating…' : 'Creating…') : (hasEvent ? 'Update Event' : 'Create Event')}
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>
+            {/* แถว 8: Genre (เต็มแถว) */}
+            <div className="ee-field ee-col-span-2">
+              <label className="ee-label" htmlFor="genre">Genre</label>
+              <input
+                id="genre"
+                className="ee-input"
+                value={genre}
+                onChange={(e) => setGenre(e.target.value)}
+                placeholder="Pop / Rock / Indie"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Actions (bottom) */}
+        <div className="ee-actions ee-actions-bottom">
+          <button type="button" className="ee-btn ee-btn-secondary" onClick={() => navigate(-1)} disabled={loading}>
             Cancel
+          </button>
+          <button type="submit" className="ee-btn ee-btn-primary" disabled={loading}>
+            {loading ? (hasEvent ? 'Updating…' : 'Creating…') : (hasEvent ? 'Update Event' : 'Create Event')}
           </button>
         </div>
       </form>

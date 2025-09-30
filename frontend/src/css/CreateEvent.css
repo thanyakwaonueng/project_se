@@ -1,0 +1,221 @@
+/* ╔══════════════════════════════════════════════════════════════╗
+   ║  CREATE EVENT — FORM STYLES (ee-*)                          ║
+   ║  โทนเดียวกับ VenueEditor: เส้นใต้ input, กริด 2/3 คอลัมน์  ║
+   ╚══════════════════════════════════════════════════════════════╝ */
+
+
+/* ==============================================================
+   0) PAGE / BASE
+   ============================================================== */
+.ee-page {
+  color: #111;
+  background: #fff;
+  min-height: 100dvh;
+}
+
+.ee-header {
+  width: 80%;
+  margin: 16px auto 10px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.ee-title {
+  font-weight: 700;
+  font-size: 110px;
+  margin: 0;
+  letter-spacing: .3px;
+}
+
+.ee-subtitle {
+  margin: 0;
+  color: #5b5b63;
+  font-size: 14px;
+}
+
+.ee-alert {
+  width: 80%;
+  margin: 0 auto 12px;
+  background: #ffeef0;
+  color: #86181d;
+  border: 1px solid #ffd0d0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+
+/* ==============================================================
+   1) FORM / SECTION / TITLES
+   ============================================================== */
+.ee-form {
+  width: 80%;
+  margin-inline: auto;
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.ee-section { margin-bottom: 18px; }
+
+.ee-section-title {
+  font-weight: 700;
+  font-size: 28px;
+  margin: 0 0 12px 0;
+  letter-spacing: .4px;
+  color: #111;
+}
+
+
+/* ==============================================================
+   2) GRID LAYOUTS
+   ============================================================== */
+.ee-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 28px;
+  row-gap: 24px;
+}
+
+.ee-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  column-gap: 28px;
+  row-gap: 24px;
+}
+
+.ee-col-span-2 { grid-column: 1 / -1; }
+
+@media (max-width: 720px) {
+  .ee-grid-2 { grid-template-columns: 1fr; }
+  .ee-grid-3 { grid-template-columns: 1fr; }
+}
+
+
+/* ==============================================================
+   3) FIELDS / LABELS
+   ============================================================== */
+.ee-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;            /* ระยะระหว่าง label กับ input */
+  min-width: 0;
+}
+
+.ee-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+  margin: 0;
+}
+
+
+/* ==============================================================
+   4) INPUTS — Underline look
+   ============================================================== */
+.ee-input,
+.ee-textarea,
+.ee-select {
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  border: none;
+  border-bottom: 2px solid #11111133;  /* เทาโปร่ง */
+  border-radius: 0;
+  padding: 12px 4px 10px;
+  outline: none;
+  box-shadow: none;
+  transition: border-color .2s ease, border-bottom-color .2s ease;
+}
+
+.ee-input:hover,
+.ee-textarea:hover,
+.ee-select:hover {
+  border-bottom-color: #11111180;
+}
+
+.ee-input:focus, .ee-input:active,
+.ee-textarea:focus, .ee-textarea:active,
+.ee-select:focus, .ee-select:active {
+  border-bottom-color: #000;
+}
+
+.ee-input::placeholder,
+.ee-textarea::placeholder {
+  color: #9a9a9a;
+}
+
+/* date input */
+.ee-inputDate {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+.ee-inputDate::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: grayscale(1) brightness(0.2);
+  opacity: .8;
+}
+.ee-inputDate:hover::-webkit-calendar-picker-indicator { opacity: 1; }
+
+/* select look */
+.ee-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-clip: padding-box;
+  padding-right: 18px;
+}
+
+
+/* ==============================================================
+   5) ACTIONS (BOTTOM BUTTONS)
+   ============================================================== */
+.ee-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.ee-btn {
+  border: 1px solid #111;
+  background: #fff;
+  color: #111;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: background .2s ease, color .2s ease, border-color .2s ease, box-shadow .15s ease;
+}
+
+.ee-btn:hover {
+  background: #f5f5f5;
+  box-shadow: 0 4px 14px rgba(0,0,0,.08);
+}
+
+.ee-btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.ee-btn-primary {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+.ee-btn-primary:hover { background: #000; }
+
+.ee-btn-secondary {
+  border-color: #e8e8ea;
+  color: #444;
+}
+.ee-btn-secondary:hover {
+  border-color: #111;
+  color: #111;
+}
