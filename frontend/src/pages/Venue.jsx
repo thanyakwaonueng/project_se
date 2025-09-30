@@ -200,15 +200,11 @@ export default function Venue() {
 
             {/* 🔧 ปุ่มแก้ไข → กลับไป route เดิม /venue/edit */}
             {canEdit && (
-              <Link
-                to={`/venue/edit`}
-                className="vn-btn-ghost"
-                style={{ background: "#1f6feb", color: "#fff", borderColor: "#1f6feb" }}
-                title="แก้ไขสถานที่นี้"
-              >
-                EDIT
+              <Link to={`/venue/edit`} className="vn-btn-img">
+                <img src="/img/edit-text.png" alt="Edit"/>
               </Link>
             )}
+
           </div>
 
           {venueData.description && (
@@ -304,10 +300,16 @@ export default function Venue() {
               </div>
             </div>
 
+
+          </div>
+
+          <div className="vn-info-block">
+            <div className="vn-info-title">Hours & Dates</div>
+
             {(venueData.timeOpen ||
               venueData.timeClose ||
               venueData.dateOpen ||
-              venueData.dateClose) && (
+              venueData.dateClose) ? (
               <div className="vn-hours">
                 <div className="vn-kv">
                   <div>Open</div>
@@ -326,11 +328,14 @@ export default function Venue() {
                   <div>{fmtDate(venueData.dateClose)}</div>
                 </div>
               </div>
+            ) : (
+              <div className="vn-kv">No schedule available</div>
             )}
           </div>
 
+
           {/* Basics */}
-          <div className="vn-info-block">
+          {/* <div className="vn-info-block">
             <div className="vn-info-title">Basics</div>
             <div className="vn-kv">
               <div>Genre</div>
@@ -348,7 +353,7 @@ export default function Venue() {
               <div>Age Restriction</div>
               <div>{venueData.ageRestriction || "—"}</div>
             </div>
-          </div>
+          </div> */}
 
           {/* Links / Socials */}
           <div className="vn-info-block">
@@ -397,26 +402,6 @@ export default function Venue() {
         </div>
       </section>
 
-      {/* ===== GALLERY ===== */}
-      {gallery.length > 0 && (
-        <section className="vn-section">
-          <div className="vn-section-title">Gallery</div>
-          <div className="vn-gallery">
-            {gallery.map((src, i) => (
-              <div key={i} className="vn-thumb">
-                <img
-                  src={src}
-                  alt={`photo ${i + 1}`}
-                  loading="lazy"
-                  onError={(e) => {
-                    e.currentTarget.style.opacity = 0;
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* ===== UPCOMING ===== */}
       <section className="vn-section">
@@ -464,6 +449,28 @@ export default function Venue() {
           </ul>
         </div>
       </section>
+
+      {/* ===== GALLERY ===== */}
+      {gallery.length > 0 && (
+        <section className="vn-section">
+          <div className="vn-section-title">Gallery</div>
+          <div className="vn-gallery">
+            {gallery.map((src, i) => (
+              <div key={i} className="vn-thumb">
+                <img
+                  src={src}
+                  alt={`photo ${i + 1}`}
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.style.opacity = 0;
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
     </div>
   );
 }

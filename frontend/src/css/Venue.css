@@ -82,7 +82,7 @@
 .vn-hero-body {
   width: 100%;
   height: 300px; 
-  border-top: 1px solid #000000; 
+  /* border-top: 1px solid #000000;  */
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -101,9 +101,6 @@
 }
 
 .vn-btn-img {
-  position: absolute; /* ให้อยู่ทับบนรูป */
-  top: 10px;
-  right: 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -114,8 +111,8 @@
 }
 
 .vn-btn-img img {
-  width: 24px;
-  height: 24px;
+  width: 40px;
+  height: 40px;
   display: block;
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
               filter 0.25s cubic-bezier(0.4, 0, 0.2, 1),
@@ -125,7 +122,7 @@
 
 .vn-btn-img:hover img {
   transform: scale(1.15);
-  filter: brightness(0) saturate(100%) invert(73%) sepia(29%) saturate(3745%) hue-rotate(176deg) brightness(97%) contrast(97%);
+  /* filter: brightness(0) saturate(100%) invert(73%) sepia(29%) saturate(3745%) hue-rotate(176deg) brightness(97%) contrast(97%); */
   opacity: 0.95;
 }
 
@@ -174,17 +171,39 @@
 }
 
 .vn-btn, .vn-btn-ghost {
-  display: inline-flex; align-items: center; justify-content: center;
-  height: 38px; padding: 0 14px;
-  border-radius: 999px; font-weight: 700; letter-spacing: .2px;
-  border: 1px solid var(--c-accent); text-decoration: none;
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center;
+  height: 38px; 
+  padding: 0 14px;
+  border-radius: 999px; 
+  font-weight: 700; 
+  letter-spacing: .2px;
+  border: 1px solid var(--c-accent); 
+  text-decoration: none;
   transition: transform .12s ease, background .16s ease, color .16s ease, border-color .16s ease;
   user-select: none;
 }
-.vn-btn { background: var(--c-accent); color: #fff; }
-.vn-btn:hover { transform: translateY(-1px); }
-.vn-btn-ghost { background: #fff; color: var(--c-accent); border-color: var(--c-line); }
-.vn-btn-ghost:hover { background: var(--c-accent-ghost); border-color: var(--c-accent); }
+
+.vn-btn { 
+  background: var(--c-accent); 
+  color: #fff; 
+}
+
+.vn-btn:hover { 
+  transform: translateY(-1px); 
+}
+
+.vn-btn-ghost { 
+  background: #fff; 
+  color: var(--c-accent); 
+  border-color: var(--c-line); 
+}
+
+.vn-btn-ghost:hover { 
+  background: var(--c-accent-ghost);
+  border-color: var(--c-accent); 
+}
 
 
 .vn-hero-side {
@@ -235,16 +254,15 @@
    ========================================================================== */
 .vn-section { 
   width: 85%;
-  margin-top: 16px;
-
+  margin-top: 45px;
 }
 
 .vn-section-title {
   font-weight: 600;
-  font-size: 16px;
-  letter-spacing: .3px;
+  font-size: 24px;
   margin-bottom: 10px;
   text-transform: uppercase;
+  font-weight: bold;
 }
 
 .vn-info-grid {
@@ -255,13 +273,20 @@
 
 .vn-info-block {
   background: var(--c-surface);
-  border-top: 1px solid #000000; 
+  border-top: 5px solid #000000; 
   padding: 20px 14px 12px;
+  background-color: #f6f6f6;
 }
 
 .vn-info-title {
+  font-size: 24px;
   font-weight: bold;
   margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.vn-info-title-divider {
+  border-top: 1px solid #a0a0a0; 
 }
 
 .vn-text { 
