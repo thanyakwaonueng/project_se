@@ -344,7 +344,7 @@ export default function AccountSetupPage() {
     if (!avatarFile) return null;
     const form = new FormData();
     form.append("file", avatarFile);
-    const { data } = await api.post("/api/uploads/avatar", form, {
+    const { data } = await api.post("/api/upload", form, {
       withCredentials: true,
       headers: { "Content-Type": "multipart/form-data" },
     });
