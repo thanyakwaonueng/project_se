@@ -549,3 +549,37 @@
     border-radius: 2px;
   }
 }
+
+
+
+
+
+
+
+
+
+/* ----------------Calendar layout -------------*/
+.cal-nav{ display:flex; gap:8px; align-items:center; }
+.cal-month{ font-weight:600; min-width:180px; text-align:center; }
+.calendar{ margin-top:8px; }
+.cal-row{ display:grid; grid-template-columns: repeat(7, 1fr); }
+.cal-header{ margin-bottom:4px; }
+.cal-headcell{ padding:8px 6px; font-size:12px; text-align:center; opacity:.7; }
+
+.cal-grid{ display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; }
+.cal-cell{ background:#fafafa; border:1px solid #eee; border-radius:10px; min-height:84px; padding:6px; }
+.cal-empty{ background:transparent; border:none; }
+.cal-day{ cursor:pointer; text-align:left; position:relative; }
+.cal-day.is-today{ outline:2px solid #ddd; }
+.cal-day.is-selected{ border-color:#c7d2fe; box-shadow: 0 0 0 2px #c7d2fe55 inset; }
+.cal-date{ font-weight:600; font-size:13px; }
+.cal-dots{ position:absolute; bottom:6px; left:6px; display:flex; gap:4px; align-items:center; }
+.dot{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+.dot-acc{ background:#22c55e; }
+.dot-pen{ background:#f59e0b; }
+.dot-dec{ background:#ef4444; }
+.more{ font-size:11px; opacity:.7; margin-left:2px; }
+.cal-legend{ margin-left:auto; display:flex; align-items:center; gap:10px; font-size:12px; opacity:.9; }
+.badge-accepted{ color:#22c55e; }
+.badge-pending{ color:#f59e0b; }
+.badge-declined{ color:#ef4444; }

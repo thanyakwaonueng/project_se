@@ -11,19 +11,25 @@ export default function ProfilePage() {
 
   const [tab, setTab] = useState("artists");
 
-  // Artists
+  // Following: artists/events
   const [allGroups, setAllGroups] = useState([]);
   const [mutatingArtistIds, setMutatingArtistIds] = useState(new Set());
-
-  // Events
   const [allEvents, setAllEvents] = useState([]);
   const [mutatingEventIds, setMutatingEventIds] = useState(new Set());
 
-  // paging (artists)
+  // Artist schedule
+  const [aePending, setAePending] = useState([]);
+  const [aeAccepted, setAeAccepted] = useState([]);
+  const [aeDeclined, setAeDeclined] = useState([]);
+
+  // Organizer schedule (raw /myevents)
+  const [orgEvents, setOrgEvents] = useState([]);
+
+  // paging (following artists)
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 8;
 
-  /* me */
+  /* ===== me ===== */
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -40,7 +46,7 @@ export default function ProfilePage() {
     return () => { alive = false; };
   }, []);
 
-  /* groups (artists) */
+  /* ===== groups (artists) ===== */
   useEffect(() => {
     if (!me) return;
     let alive = true;
@@ -55,7 +61,7 @@ export default function ProfilePage() {
     return () => { alive = false; };
   }, [me]);
 
-  /* events */
+  /* ===== events (following) ===== */
   useEffect(() => {
     if (!me) return;
     let alive = true;
@@ -71,27 +77,65 @@ export default function ProfilePage() {
   }, [me]);
 
   const u = me || {};
-  const performer = u.performerInfo || null;
+  const performer  = u.performerInfo || null;
   const artistInfo = performer?.artistInfo || null;
-  const venue  = performer?.venueInfo  || null;
+  const venue      = performer?.venueInfo  || null;
 
   const displayName = u.name || (me?.email ? me.email.split("@")[0] : "User");
   const avatar = u.profilePhotoUrl || "/img/default-avatar.png";
   const favGenres = (u.favoriteGenres || []).slice(0, 5).join(" • ");
-  const myArtistId = me?.id;
+  const myId = me?.id;
 
   const isArtistApproved = me?.role === "ARTIST";
+  const isOrganizer = me?.role === "ORGANIZE"; // ✅ ตรง backend
 
-  // followers ของศิลปิน (นับเฉพาะตอนเราเป็น ARTIST)
+  /* ===== Artist schedule load ===== */
+  useEffect(() => {
+    if (!isArtistApproved || !myId) return;
+    let alive = true;
+    (async () => {
+      try {
+        const [p, a, d] = await Promise.all([
+          axios.get(`/api/artist-events/pending/${myId}`,  { withCredentials: true }),
+          axios.get(`/api/artist-events/accepted/${myId}`, { withCredentials: true }),
+          axios.get(`/api/artist-events/declined/${myId}`, { withCredentials: true }),
+        ]);
+        if (!alive) return;
+        setAePending(Array.isArray(p.data) ? p.data : []);
+        setAeAccepted(Array.isArray(a.data) ? a.data : []);
+        setAeDeclined(Array.isArray(d.data) ? d.data : []);
+      } catch (e) {
+        console.error("Load my artist schedule error:", e);
+      }
+    })();
+    return () => { alive = false; };
+  }, [isArtistApproved, myId]);
+
+  /* ===== Organizer schedule load (/myevents) ===== */
+  useEffect(() => {
+    if (!isOrganizer) return;
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await axios.get("/api/myevents", { withCredentials: true });
+        if (!alive) return;
+        setOrgEvents(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error("GET /api/myevents error:", e);
+      }
+    })();
+    return () => { alive = false; };
+  }, [isOrganizer]);
+
+  /* ===== following artists/events ===== */
   const myFollowersCount = useMemo(() => {
     if (!isArtistApproved) return 0;
     const rows = performer?.likedBy;
     return Array.isArray(rows) ? rows.length : 0;
   }, [isArtistApproved, performer?.likedBy]);
 
-  // ===== Artists following =====
   const followingArtists = useMemo(
-    () => (allGroups || []).filter(g => g.likedByMe),
+    () => (allGroups || []).filter((g) => g.likedByMe),
     [allGroups]
   );
   const artistsCount = followingArtists.length;
@@ -103,83 +147,105 @@ export default function ProfilePage() {
 
   async function followArtist(artistId) {
     if (!artistId || mutatingArtistIds.has(artistId)) return;
-    setMutatingArtistIds(prev => new Set(prev).add(artistId));
+    setMutatingArtistIds((prev) => new Set(prev).add(artistId));
     try {
       await axios.post(`/api/artists/${artistId}/like`, {}, { withCredentials: true });
-      setAllGroups(prev => prev.map(g => g.id === artistId
-        ? { ...g, likedByMe: true, followersCount: (g.followersCount || 0) + 1 }
-        : g
-      ));
+      setAllGroups((prev) =>
+        prev.map((g) =>
+          g.id === artistId ? { ...g, likedByMe: true, followersCount: (g.followersCount || 0) + 1 } : g
+        )
+      );
     } catch (e) {
       console.error("followArtist error:", e);
     } finally {
-      setMutatingArtistIds(prev => { const n = new Set(prev); n.delete(artistId); return n; });
+      setMutatingArtistIds((prev) => { const n = new Set(prev); n.delete(artistId); return n; });
     }
   }
   async function unfollowArtist(artistId) {
     if (!artistId || mutatingArtistIds.has(artistId)) return;
-    setMutatingArtistIds(prev => new Set(prev).add(artistId));
+    setMutatingArtistIds((prev) => new Set(prev).add(artistId));
     try {
       await axios.delete(`/api/artists/${artistId}/like`, { withCredentials: true });
-      setAllGroups(prev => prev.map(g => g.id === artistId
-        ? { ...g, likedByMe: false, followersCount: Math.max(0, (g.followersCount || 0) - 1) }
-        : g
-      ));
+      setAllGroups((prev) =>
+        prev.map((g) =>
+          g.id === artistId ? { ...g, likedByMe: false, followersCount: Math.max(0, (g.followersCount || 0) - 1) } : g
+        )
+      );
     } catch (e) {
       console.error("unfollowArtist error:", e);
     } finally {
-      setMutatingArtistIds(prev => { const n = new Set(prev); n.delete(artistId); return n; });
+      setMutatingArtistIds((prev) => { const n = new Set(prev); n.delete(artistId); return n; });
     }
   }
 
-  // ===== Events following =====
   const followingEvents = useMemo(
-    () => (allEvents || []).filter(ev => ev.likedByMe),
+    () => (allEvents || []).filter((ev) => ev.likedByMe),
     [allEvents]
   );
 
   async function followEvent(eventId) {
     if (!eventId || mutatingEventIds.has(eventId)) return;
-    setMutatingEventIds(prev => new Set(prev).add(eventId));
+    setMutatingEventIds((prev) => new Set(prev).add(eventId));
     try {
       await axios.post(`/api/events/${eventId}/like`, {}, { withCredentials: true });
-      setAllEvents(prev => prev.map(e => e.id === eventId
-        ? { ...e, likedByMe: true, followersCount: (e.followersCount || 0) + 1 }
-        : e
-      ));
+      setAllEvents((prev) =>
+        prev.map((e) => (e.id === eventId ? { ...e, likedByMe: true, followersCount: (e.followersCount || 0) + 1 } : e))
+      );
     } catch (e) {
       console.error("followEvent error:", e);
     } finally {
-      setMutatingEventIds(prev => { const n = new Set(prev); n.delete(eventId); return n; });
+      setMutatingEventIds((prev) => { const n = new Set(prev); n.delete(eventId); return n; });
     }
   }
   async function unfollowEvent(eventId) {
     if (!eventId || mutatingEventIds.has(eventId)) return;
-    setMutatingEventIds(prev => new Set(prev).add(eventId));
+    setMutatingEventIds((prev) => new Set(prev).add(eventId));
     try {
       await axios.delete(`/api/events/${eventId}/like`, { withCredentials: true });
-      setAllEvents(prev => prev.map(e => e.id === eventId
-        ? { ...e, likedByMe: false, followersCount: Math.max(0, (e.followersCount || 0) - 1) }
-        : e
-      ));
+      setAllEvents((prev) =>
+        prev.map((e) =>
+          e.id === eventId ? { ...e, likedByMe: false, followersCount: Math.max(0, (e.followersCount || 0) - 1) } : e
+        )
+      );
     } catch (e) {
       console.error("unfollowEvent error:", e);
     } finally {
-      setMutatingEventIds(prev => { const n = new Set(prev); n.delete(eventId); return n; });
+      setMutatingEventIds((prev) => { const n = new Set(prev); n.delete(eventId); return n; });
     }
   }
 
-  // ====== Info Row ======
-  function InfoRow({ label, value }) {
-    return (
-      <div className="info-row">
-        <div className="info-label">{label}</div>
-        <div className="info-value">{value || "—"}</div>
-      </div>
-    );
-  }
+  /* ===== Organizer datasets mapping — put BEFORE any early return ===== */
+  const oeAccepted = useMemo(() => {
+    return (orgEvents || [])
+      .filter(e => e?.date)
+      .filter(e => e.isPublished)
+      .map(e => ({
+        id: e.id,
+        status: "ACCEPTED",
+        event: { id: e.id, name: e.name, date: e.date },
+        slotStartAt: null,
+        slotEndAt: null,
+        slotStage: null,
+      }));
+  }, [orgEvents]);
 
-  // ===== Format Date ======
+  const oePending = useMemo(() => {
+    return (orgEvents || [])
+      .filter(e => e?.date)
+      .filter(e => !e.isPublished)
+      .map(e => ({
+        id: e.id,
+        status: "PENDING",
+        event: { id: e.id, name: e.name, date: e.date },
+        slotStartAt: null,
+        slotEndAt: null,
+        slotStage: null,
+      }));
+  }, [orgEvents]);
+
+  const oeDeclined = useMemo(() => [], []); // ผู้จัดไม่มีสถานะนี้ แต่คง hook order คงที่
+
+  /* ===== helpers (not hooks) ===== */
   function fmtDate(iso) {
     if (!iso) return "—";
     try {
@@ -192,89 +258,56 @@ export default function ProfilePage() {
       return iso;
     }
   }
+  const fmtTimeHM = (d) => d ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
 
+  /* ===== early returns AFTER all hooks declared ===== */
   if (loading) return <div className="stack">Loading…</div>;
   if (err) return <div className="stack alert alert-danger">{err}</div>;
   if (!me) return <div className="stack">No profile.</div>;
 
-  // const Pager = () => (
-  //   <div className="pf-pager">
-  //     <button className="pf-page-btn" onClick={() => setPage(p => Math.max(1, p-1))} disabled={page===1}>← Prev</button>
-  //     {Array.from({length: totalPages}).map((_,i)=> {
-  //       const n = i+1;
-  //       return (
-  //         <button key={n} className={`pf-page-btn ${page===n?'active':''}`} onClick={()=>setPage(n)}>
-  //           {n}
-  //         </button>
-  //       );
-  //     })}
-  //     <button className="pf-page-btn" onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page===totalPages}>Next →</button>
-  //   </div>
-  // );
-
   return (
     <div className="profile-page-wrap">
       <div className="stack">
-
-        {/* Profile Content */}
+        {/* Profile Card */}
         <div className="profile-card">
           <div className="profile-cover-wrap">
-
-            {/* Cover image */}
             <img
               className="profile-cover"
               src={avatar || "/img/default-avatar.png"}
               alt="Profile cover"
-              onError={(e) => {
-                e.currentTarget.src = "/img/default-avatar.png";
-              }}
+              onError={(e) => { e.currentTarget.src = "/img/default-avatar.png"; }}
             />
           </div>
 
-            {/* Avatar overlapping */}
-            <div className="profile-avatar-wrap">
-              <img
-                className="profile-avatar"
-                src={avatar || "/img/default-avatar.png"}
-                alt={displayName}
-                onError={(e) => {
-                  e.currentTarget.src = "/img/default-avatar.png";
-                }}
-              />
-            </div>
+          <div className="profile-avatar-wrap">
+            <img
+              className="profile-avatar"
+              src={avatar || "/img/default-avatar.png"}
+              alt={displayName}
+              onError={(e) => { e.currentTarget.src = "/img/default-avatar.png"; }}
+            />
+          </div>
 
-            {/* Name and Email */}
-            <div className="profile-head">
-              <div className="profile-name">
-                {displayName}
-                {isArtistApproved && (
-                  <span className="badge-verified" title="Verified artist">
-                    ✔
-                  </span>
-                )}
-              </div>
+          <div className="profile-head">
+            <div className="profile-name">
+              {displayName}
+              {isArtistApproved && <span className="badge-verified" title="Verified artist">✔</span>}
+            </div>
             <div className="profile-email">{me.email}</div>
           </div>
 
-
           <hr className="profile-sep" />
 
-          {/* Info */}
           <div className="info-grid">
             <InfoRow label="Role" value={me.role} />
             {favGenres && <InfoRow label="Fav genres" value={favGenres} />}
-            {u.birthday && (
-              <InfoRow label="Birthday" value={fmtDate(u.birthday, "en-GB")} />
-            )}
-
+            {u.birthday && <InfoRow label="Birthday" value={fmtDate(u.birthday, "en-GB")} />}
 
             {isArtistApproved && artistInfo && (
               <>
-                {/* <InfoRow label="Artist" value={displayName} /> */}
                 <InfoRow
                   label="Followers"
                   value={`${Number(myFollowersCount || 0).toLocaleString()} followers`}
-                
                 />
                 <InfoRow
                   label="Type"
@@ -289,25 +322,22 @@ export default function ProfilePage() {
             )}
 
             {venue && (
-              <>
-                {/* <InfoRow label="Venue" value={displayName} /> */}
-                <InfoRow
-                  label="Type"
-                  value={
-                    <>
-                      {venue.genre && <span className="chip-normal">{venue.genre}</span>}
-                      <span className="chip-transparent">{venue.alcoholPolicy}</span>
-                    </>
-                  }
-                />
-              </>
+              <InfoRow
+                label="Type"
+                value={
+                  <>
+                    {venue.genre && <span className="chip-normal">{venue.genre}</span>}
+                    <span className="chip-transparent">{venue.alcoholPolicy}</span>
+                  </>
+                }
+              />
             )}
           </div>
 
           <div className="profile-actions">
             <Link to="/accountsetup?edit=1" className="btn-editprofile">Edit profile</Link>
             {isArtistApproved && artistInfo && (
-              <Link to={`/artists/${myArtistId}`} className="btn-ghost">View public artist</Link>
+              <Link to={`/artists/${myId}`} className="btn-ghost">View public artist</Link>
             )}
             {venue && (
               <Link to={`/venues/${venue.performerId}`} className="btn-ghost">Manage venue</Link>
@@ -315,94 +345,329 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Calendar: Artist */}
+        {isArtistApproved && (
+          <CalendarSection
+            title="My Artist Schedule"
+            datasets={[
+              { rows: aeAccepted, status: "accepted" },
+              { rows: aePending,  status: "pending"  },
+              { rows: aeDeclined, status: "declined" },
+            ]}
+            fmtDate={fmtDate}
+            fmtTimeHM={fmtTimeHM}
+          />
+        )}
+
+        {/* Calendar: Organizer */}
+        {isOrganizer && (
+          <CalendarSection
+            title="My Event Schedule (Organizer)"
+            datasets={[
+              { rows: oeAccepted, status: "accepted" }, // published
+              { rows: oePending,  status: "pending"  }, // draft
+              { rows: oeDeclined, status: "declined" },
+            ]}
+            fmtDate={fmtDate}
+            fmtTimeHM={fmtTimeHM}
+          />
+        )}
+
         {/* Following Content */}
         <div className="following-card">
           <div className="following-head">
             <div className="following-title">Following</div>
             <div className="tabs" role="tablist" aria-label="following tabs">
-              <button className={`tab-btn ${tab==='artists'?'active':''}`} onClick={()=>setTab('artists')} role="tab" aria-selected={tab==='artists'}>
-                Artists {artistsCount ? `(${artistsCount})` : ''}
+              <button
+                className={`tab-btn ${tab === "artists" ? "active" : ""}`}
+                onClick={() => setTab("artists")}
+                role="tab"
+                aria-selected={tab === "artists"}
+              >
+                Artists {artistsCount ? `(${artistsCount})` : ""}
               </button>
-              <button className={`tab-btn ${tab==='events'?'active':''}`} onClick={()=>setTab('events')} role="tab" aria-selected={tab==='events'}>
-                Events {followingEvents.length ? `(${followingEvents.length})` : ''}
+              <button
+                className={`tab-btn ${tab === "events" ? "active" : ""}`}
+                onClick={() => setTab("events")}
+                role="tab"
+                aria-selected={tab === "events"}
+              >
+                Events {followingEvents.length ? `(${followingEvents.length})` : ""}
               </button>
             </div>
           </div>
 
           <div className="following-body">
-            {tab === 'artists' ? (
+            {tab === "artists" ? (
               artistsCount ? (
-                <>
-                  <div className="pf-list">
-                    {pageItems.map(a => (
-                      <div key={a.id} className="pf-card">
-                        <img className="pf-thumb" src={a.image} alt={a.name} onError={(e)=>{e.currentTarget.src="/img/fallback.jpg";}} />
-                        <div className="pf-main">
-                          <div className="pf-name"><Link to={`/artists/${a.id}`}>{a.name}</Link></div>
-                          <div className="pf-sub">
-                            <span>{a.details || a.description || '—'}</span>
-                            <span className="pf-separator">{Number(a.followersCount||0).toLocaleString()} followers</span>
-                          </div>
-                        </div>
-                        <div className="pf-actions">
-                          <button
-                            className={`btn-follow ${a.likedByMe ? 'is-following' : ''}`}
-                            onClick={()=> a.likedByMe ? unfollowArtist(a.id) : followArtist(a.id)}
-                            disabled={mutatingArtistIds.has(a.id)}
-                            title={a.likedByMe ? "Following" : "Follow"}
-                          >
-                            {a.likedByMe ? "Unfollow" : "Follow"}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {totalPages > 1 && <Pager />}
-                </>
-              ) : (
-                <div className="empty">You haven’t followed any artists</div>
-              )
-            ) : (
-              followingEvents.length ? (
                 <div className="pf-list">
-                  {followingEvents.map(ev => (
-                    <div key={ev.id} className="pf-card">
+                  {pageItems.map((a) => (
+                    <div key={a.id} className="pf-card">
                       <img
                         className="pf-thumb"
-                        src={ev.posterUrl || ev.coverImage || ev.bannerUrl || "/img/fallback.jpg"}
-                        alt={ev.name || ev.title}
-                        onError={(e)=>{e.currentTarget.src="/img/fallback.jpg";}}
+                        src={a.image}
+                        alt={a.name}
+                        onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
                       />
                       <div className="pf-main">
-                        <div className="pf-name">
-                          <Link to={`/events/${ev.id}`}>{ev.name || ev.title || `Event #${ev.id}`}</Link>
-                        </div>
+                        <div className="pf-name"><Link to={`/artists/${a.id}`}>{a.name}</Link></div>
                         <div className="pf-sub">
-                          <span>{fmtDate(ev.date, "en-GB")}</span>
-                          {ev.venue?.name && <span className="pf-separator">{ev.venue.name}</span>}
-                          <span className="pf-separator">{Number(ev.followersCount||0).toLocaleString()} likes</span>
+                          <span>{a.details || a.description || "—"}</span>
+                          <span className="pf-separator">{Number(a.followersCount || 0).toLocaleString()} followers</span>
                         </div>
                       </div>
                       <div className="pf-actions">
                         <button
-                          className={`btn-follow ${ev.likedByMe ? 'is-following' : ''}`}
-                          onClick={()=> ev.likedByMe ? unfollowEvent(ev.id) : followEvent(ev.id)}
-                          disabled={mutatingEventIds.has(ev.id)}
-                          title={ev.likedByMe ? "Following" : "Follow"}
+                          className={`btn-follow ${a.likedByMe ? "is-following" : ""}`}
+                          onClick={() => (a.likedByMe ? unfollowArtist(a.id) : followArtist(a.id))}
+                          disabled={mutatingArtistIds.has(a.id)}
+                          title={a.likedByMe ? "Following" : "Follow"}
                         >
-                          {ev.likedByMe ? "Unfollow" : "Follow"}
+                          {a.likedByMe ? "Unfollow" : "Follow"}
                         </button>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="empty">You haven’t followed any events</div>
+                <div className="empty">You haven’t followed any artists</div>
               )
+            ) : followingEvents.length ? (
+              <div className="pf-list">
+                {followingEvents.map((ev) => (
+                  <div key={ev.id} className="pf-card">
+                    <img
+                      className="pf-thumb"
+                      src={ev.posterUrl || ev.coverImage || ev.bannerUrl || "/img/fallback.jpg"}
+                      alt={ev.name || ev.title}
+                      onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
+                    />
+                    <div className="pf-main">
+                      <div className="pf-name">
+                        <Link to={`/events/${ev.id}`}>{ev.name || ev.title || `Event #${ev.id}`}</Link>
+                      </div>
+                      <div className="pf-sub">
+                        <span>{fmtDate(ev.date, "en-GB")}</span>
+                        {ev.venue?.name && <span className="pf-separator">{ev.venue.name}</span>}
+                        <span className="pf-separator">{Number(ev.followersCount || 0).toLocaleString()} likes</span>
+                      </div>
+                    </div>
+                    <div className="pf-actions">
+                      <button
+                        className={`btn-follow ${ev.likedByMe ? "is-following" : ""}`}
+                        onClick={() => (ev.likedByMe ? unfollowEvent(ev.id) : followEvent(ev.id))}
+                        disabled={mutatingEventIds.has(ev.id)}
+                        title={ev.likedByMe ? "Following" : "Follow"}
+                      >
+                        {ev.likedByMe ? "Unfollow" : "Follow"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty">You haven’t followed any events</div>
             )}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ===== Reusable Calendar Section ===== */
+function CalendarSection({ title, datasets, fmtDate, fmtTimeHM }) {
+  const [calMonth, setCalMonth] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [selectedDate, setSelectedDate] = useState(null);
+  const onlyUpcoming = true;
+
+  const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
+  const endOfMonth   = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  const addMonths    = (d, n) => new Date(d.getFullYear(), d.getMonth() + n, 1);
+  const sameDay = (a, b) =>
+    a && b &&
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+  const fmtMonthYear = (d) => d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+  const calendarEvents = useMemo(() => {
+    const pack = (rows, status) =>
+      (rows || [])
+        .filter((x) => x?.event?.date)
+        .map((x) => ({
+          id: x.id,
+          status,
+          date:  new Date(x.event.date),
+          start: x.slotStartAt ? new Date(x.slotStartAt) : null,
+          end:   x.slotEndAt   ? new Date(x.slotEndAt)   : null,
+          stage: x.slotStage || null,
+          eventId: x.event?.id,
+          title: x.event?.name || `Event #${x.event?.id || "?"}`,
+        }));
+    const merged = [];
+    for (const ds of datasets) merged.push(...pack(ds.rows, ds.status));
+    return merged;
+  }, [datasets]);
+
+  const byDate = useMemo(() => {
+    const m = new Map();
+    for (const ev of calendarEvents) {
+      const key = ev.date.toISOString().slice(0, 10);
+      if (!m.has(key)) m.set(key, []);
+      m.get(key).push(ev);
+    }
+    for (const [, arr] of m) {
+      arr.sort((a, b) => (a.start?.getTime() || 0) - (b.start?.getTime() || 0));
+    }
+    return m;
+  }, [calendarEvents]);
+
+  const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const daysInThisMonth = () => {
+    const s = startOfMonth(calMonth);
+    const e = endOfMonth(calMonth);
+    const padStart = s.getDay();
+    const totalDays = e.getDate();
+    const cells = [];
+    for (let i = 0; i < padStart; i++) cells.push(null);
+    for (let d = 1; d <= totalDays; d++) {
+      cells.push(new Date(calMonth.getFullYear(), calMonth.getMonth(), d));
+    }
+    return cells;
+  };
+
+  return (
+    <div className="following-card">
+      <div className="following-head">
+        <div className="following-title">{title}</div>
+        <div className="cal-nav">
+          <button className="btn-ghost" onClick={() => setCalMonth((m) => addMonths(m, -1))}>← Prev</button>
+          <div className="cal-month">{fmtMonthYear(calMonth)}</div>
+          <button className="btn-ghost" onClick={() => setCalMonth((m) => addMonths(m, 1))}>Next →</button>
+        </div>
+      </div>
+
+      <div className="following-subbar">
+        <div className="cal-legend">
+          <span className="dot dot-acc" /> Accepted
+          <span className="dot dot-pen" /> Pending
+          <span className="dot dot-dec" /> Declined
+        </div>
+      </div>
+
+      <div className="calendar">
+        <div className="cal-row cal-header">
+          {dayNames.map((d) => <div key={d} className="cal-cell cal-headcell">{d}</div>)}
+        </div>
+
+        <div className="cal-grid">
+          {daysInThisMonth().map((cell, idx) => {
+            if (!cell) return <div key={`pad-${idx}`} className="cal-cell cal-empty" />;
+            const key = cell.toISOString().slice(0, 10);
+
+            let items = byDate.get(key) || [];
+            if (onlyUpcoming) {
+              const now = new Date();
+              const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              items = items.filter((it) => it.date >= today);
+            }
+
+            const hasToday = sameDay(cell, new Date());
+            const isSelected = selectedDate && sameDay(cell, selectedDate);
+
+            return (
+              <button
+                key={key}
+                type="button"
+                className={`cal-cell cal-day ${hasToday ? "is-today" : ""} ${isSelected ? "is-selected" : ""}`}
+                onClick={() => setSelectedDate(cell)}
+                title={`${cell.toDateString()}`}
+              >
+                <div className="cal-date">{cell.getDate()}</div>
+                <div className="cal-dots">
+                  {items.slice(0, 4).map((ev) => (
+                    <span
+                      key={`${ev.status}-${ev.id}`}
+                      className={`dot ${
+                        String(ev.status).toLowerCase() === "accepted" ? "dot-acc"
+                        : String(ev.status).toLowerCase() === "pending" ? "dot-pen"
+                        : "dot-dec"
+                      }`}
+                      title={`${ev.title}${ev.start ? " • " + fmtTimeHM(ev.start) : ""}`}
+                    />
+                  ))}
+                  {items.length > 4 && <span className="more">+{items.length - 4}</span>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="following-body" style={{ marginTop: 12 }}>
+        <div className="pf-list">
+          {(() => {
+            const key = selectedDate ? selectedDate.toISOString().slice(0, 10) : null;
+            let list = key ? (byDate.get(key) || []) : [];
+            if (onlyUpcoming) {
+              const now = new Date();
+              const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              list = list.filter((it) => it.date >= today);
+            }
+            if (!list.length) {
+              return (
+                <div className="empty">
+                  {selectedDate ? "No shows in this day" : "Pick a date to see details"}
+                </div>
+              );
+            }
+            return list.map((ev) => (
+              <div key={`ev-${ev.id}`} className="pf-card">
+                <img
+                  className="pf-thumb"
+                  src={"/img/fallback.jpg"}
+                  alt={ev.title}
+                  onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
+                />
+                <div className="pf-main">
+                  <div className="pf-name">
+                    {ev.eventId ? <Link to={`/events/${ev.eventId}`}>{ev.title}</Link> : ev.title}
+                  </div>
+                  <div className="pf-sub">
+                    <span>{fmtDate(ev.date)}</span>
+                    {(ev.start || ev.end) && (
+                      <span className="pf-separator">
+                        {fmtTimeHM(ev.start)}–{fmtTimeHM(ev.end)}
+                      </span>
+                    )}
+                    {ev.stage && <span className="pf-separator">{ev.stage}</span>}
+                    <span className={`pf-separator badge-${String(ev.status).toLowerCase()}`}>
+                      {String(ev.status).toLowerCase()}
+                    </span>
+                  </div>
+                </div>
+                <div className="pf-actions">
+                  {ev.eventId && <Link className="btn-ghost" to={`/events/${ev.eventId}`}>Detail</Link>}
+                </div>
+              </div>
+            ));
+          })()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== Small presentational helper ===== */
+function InfoRow({ label, value }) {
+  return (
+    <div className="info-row">
+      <div className="info-label">{label}</div>
+      <div className="info-value">{value || "—"}</div>
     </div>
   );
 }
