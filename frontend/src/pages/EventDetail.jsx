@@ -63,6 +63,10 @@ function InviteModal({
   const [selectedId, setSelectedId] = useState(initial?.artistId ?? null);
   const [warn, setWarn] = useState('');
 
+  // โหมด "แทนที่ศิลปินที่ปฏิเสธ"
+  const replaceDeclinedId = (initial?.status === 'DECLINED' && initial?.aeId) ? initial.aeId : null;
+  const isReplaceMode = !!replaceDeclinedId;
+
   const [form, setForm] = useState({
     startTime: normTime(initial?.start) || '',
     endTime: normTime(initial?.end) || '',
@@ -130,7 +134,7 @@ function InviteModal({
       || '/img/graphic-3.png';
   };
 
-  const filtered = useMemo(() => {
+  const filtered = React.useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return artists;
     return artists.filter(a => displayName(a).toLowerCase().includes(s));
@@ -139,9 +143,14 @@ function InviteModal({
   const alreadyInvited = (id) => invitedIds?.includes?.(Number(id));
 
   const validate = () => {
+    // ถ้าเป็นโหมดแทนที่ และเลือกเป็นคนเดิม ให้อนุญาต (re-invite/เวลาใหม่)
     if (selectedId && alreadyInvited(selectedId)) {
-      return 'ศิลปินคนนี้อยู่ในไลน์อัปของงานนี้อยู่แล้ว';
+      const isSameDeclinedArtist = isReplaceMode && Number(selectedId) === Number(initial?.artistId);
+      if (!isSameDeclinedArtist) {
+        return 'ศิลปินคนนี้อยู่ในไลน์อัปของงานนี้อยู่แล้ว';
+      }
     }
+
     const st = normTime(form.startTime);
     const et = normTime(form.endTime);
     if (!st || !et) return 'กรอกเวลาเริ่มและเวลาจบให้ครบ';
@@ -173,6 +182,7 @@ function InviteModal({
       eventId: Number(eventId),
       startTime: normTime(form.startTime),
       endTime: normTime(form.endTime),
+      ...(isReplaceMode ? { replaceDeclinedOf: replaceDeclinedId } : {}),
     };
     await api.post('/artist-events/invite', payload, { withCredentials: true });
     onSaved?.();
@@ -183,7 +193,9 @@ function InviteModal({
   return (
     <div className="mdl-backdrop" onClick={onClose}>
       <div className="mdl" onClick={(e)=>e.stopPropagation()}>
-        <h3 style={{marginTop:0}}>เชิญศิลปิน/จัดตาราง</h3>
+        <h3 style={{marginTop:0}}>
+          {isReplaceMode ? 'แทนที่ศิลปินที่ปฏิเสธ' : 'เชิญศิลปิน/จัดตาราง'}
+        </h3>
 
         {(windowStartHHMM || windowEndHHMM) && (
           <div className="note" style={{marginBottom:8, fontSize:13}}>
@@ -213,7 +225,9 @@ function InviteModal({
             {filtered.map(a => {
               const id = a.performerId;
               const sel = Number(selectedId) === Number(id);
-              const disabled = alreadyInvited(id);
+              const disabled =
+                alreadyInvited(id) &&
+                !(isReplaceMode && Number(id) === Number(initial?.artistId)); // อนุญาตถ้าเป็นคนเดิมในโหมดแทนที่
               return (
                 <div
                   key={id}
@@ -315,7 +329,9 @@ function InviteModal({
           {/* ปุ่ม */}
           <div className="act">
             <button type="button" className="btn" onClick={onClose}>ยกเลิก</button>
-            <button type="submit" className="btn primary" disabled={!selectedId || !!warn}>เชิญศิลปิน</button>
+            <button type="submit" className="btn primary" disabled={!selectedId || !!warn}>
+              {isReplaceMode ? 'แทนที่ศิลปิน' : 'เชิญศิลปิน'}
+            </button>
           </div>
         </form>
       </div>
@@ -334,6 +350,7 @@ export default function EventDetail() {
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -384,12 +401,29 @@ export default function EventDetail() {
     } finally { setBusy(false); }
   };
 
+  // แก้ได้เฉพาะตอนยังไม่ publish และเป็นเจ้าของ/แอดมิน
   const canEdit = useMemo(() => {
     if (!me || !ev?.venue) return false;
     const isOrg = me.role === 'ORGANIZE' || me.role === 'ADMIN';
     const owns = Number(me.id) === Number(ev.venue.performerId);
-    return isOrg && owns;
+    return isOrg && owns && !ev.isPublished;
   }, [me, ev]);
+
+  // ปุ่ม Publish (แสดงเฉพาะ HERO)
+  const canPublish = !!(ev?._isOwner) && !ev?.isPublished;
+  const isReady = !!(ev?._ready?.isReady);
+  const onPublish = async () => {
+    if (!canPublish || !isReady || publishing) return;
+    setPublishing(true);
+    try {
+      await api.post(`/events/${ev.id}/publish`, {}, { withCredentials: true });
+      await fetchEvent();
+    } catch (e) {
+      alert(e?.response?.data?.error || 'Publish failed');
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   // แปลง artistEvents + scheduleSlots เป็นแถว
   const scheduleRows = useMemo(() => {
@@ -402,6 +436,7 @@ export default function EventDetail() {
         `Artist ${ae?.artistId ?? ''}`;
       rows.push({
         key: `${ae.artistId}-${ae.eventId}`,
+        aeId: ae.id,            // ✅ เก็บ id ของ artistEvent ไว้ใช้ตอนแทนที่
         artistId: ae.artistId,
         name,
         status: ae?.status || 'PENDING',
@@ -422,6 +457,7 @@ export default function EventDetail() {
           `Artist ${s.artistId}`;
         rows.push({
           key: `slot-${s.id}`,
+          aeId: null,
           artistId: s.artistId,
           name,
           status: 'PENDING',
@@ -493,7 +529,25 @@ export default function EventDetail() {
       {/* HERO */}
       <div className="hero">
         <div className="heroL">
-          <h1 className="title">{ev.name || `Event #${ev.id}`}</h1>
+          <div className="d-flex" style={{display:'flex', alignItems:'center', gap:8}}>
+            <h1 className="title">{ev.name || `Event #${ev.id}`}</h1>
+            {ev.isPublished ? (
+              <span className="badge bg-success" style={badgeCss}>Published</span>
+            ) : (
+              <span className="badge bg-secondary" style={badgeCss}>Draft</span>
+            )}
+            {canPublish && (
+              <button
+                className="btn primary"
+                onClick={onPublish}
+                disabled={!isReady || publishing}
+                title={!isReady ? 'All invited artists must accept first' : 'Publish this event'}
+              >
+                {publishing ? 'Publishing…' : 'Publish'}
+              </button>
+            )}
+          </div>
+
           <div className="kv"><b>วันเวลา</b><span>{formatDT(ev.date)}</span></div>
           {(ev.doorOpenTime || ev.endTime) && (
             <div className="kv"><b>ช่วงงาน</b><span>{normTime(ev.doorOpenTime)||'—'} – {normTime(ev.endTime)||'—'}</span></div>
@@ -529,11 +583,12 @@ export default function EventDetail() {
         ) : <div className="empty">—</div>}
       </section>
 
-      {/* SCHEDULE */}
+      {/* ===== SCHEDULE ===== */}
       <section className="sec">
         <div className="secHead">
           <h2 className="h2" style={{margin:0}}>ตารางศิลปิน</h2>
           <div style={{display:'flex', gap:8}}>
+            {/* ปุ่มเชิญ/แก้ตาราง: เฉพาะตอนยังไม่ publish */}
             {canEdit && (
               <button className="btn primary" onClick={()=>{ setEditing(null); setModalOpen(true); }}>
                 จัดตาราง/เชิญศิลปิน
@@ -545,6 +600,23 @@ export default function EventDetail() {
           </div>
         </div>
 
+        {/* แถบสถานะรวม */}
+        {ev?.isPublished ? (
+          <div
+            className="note"
+            style={{ background: '#eef6ff', border: '1px solid #bfdbfe', color: '#1e40af', marginBottom: 10 }}
+          >
+            งานนี้เผยแพร่แล้ว (read-only) — ไม่สามารถเชิญศิลปินเพิ่มหรือแก้ไลน์อัปได้
+          </div>
+        ) : ev?._ready ? (
+          <div style={{margin:'6px 0 10px', fontSize:13, color: (ev._ready?.isReady ? '#0a7' : '#b35')}}>
+            {ev._ready?.isReady
+              ? (ev._isOwner ? 'Ready: ศิลปินตอบรับครบแล้ว — กด Publish ได้เลย' : 'Ready: ศิลปินตอบรับครบแล้ว')
+              : `Pending: ${ev._ready.accepted}/${ev._ready.totalInvited} accepted`}
+          </div>
+        ) : null}
+
+        {/* ตารางเวลา */}
         {scheduleRows.length === 0 ? (
           <div className="empty">—</div>
         ) : (
@@ -555,19 +627,19 @@ export default function EventDetail() {
             onBarClick={canEdit ? (row)=>{ setEditing(row); setModalOpen(true); } : undefined}
           />
         )}
-      </section>
 
-      {/* MODAL */}
-      <InviteModal
-        open={modalOpen}
-        onClose={()=>setModalOpen(false)}
-        eventId={ev.id}
-        initial={editing}
-        onSaved={fetchEvent}
-        windowStartHHMM={windowRange.rawStart || null}
-        windowEndHHMM={windowRange.rawEnd || null}
-        invitedIds={invitedIds}
-      />
+        {/* MODAL: ปิดอัตโนมัติเมื่อ publish แล้ว */}
+        <InviteModal
+          open={modalOpen && !ev.isPublished}
+          onClose={()=>setModalOpen(false)}
+          eventId={ev.id}
+          initial={editing}
+          onSaved={fetchEvent}
+          windowStartHHMM={windowRange.rawStart || null}
+          windowEndHHMM={windowRange.rawEnd || null}
+          invitedIds={invitedIds}
+        />
+      </section>
 
       {/* ===== CSS ===== */}
       <style>{`
@@ -691,6 +763,15 @@ export default function EventDetail() {
     </div>
   );
 }
+
+/* ===== helpers (ภายในไฟล์) ===== */
+const badgeCss = {
+  display:'inline-block',
+  padding:'4px 8px',
+  borderRadius: '999px',
+  fontSize: 12,
+  height: 'fit-content'
+};
 
 /* ===== Schedule component ===== */
 function BasicSchedule({ rows, minM, maxM, onBarClick }) {

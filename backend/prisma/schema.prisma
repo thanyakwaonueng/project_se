@@ -218,6 +218,12 @@ model Event {
 
   // ← NEW: ตารางย่อยของ schedule
   scheduleSlots ScheduleSlot[]
+
+  isPublished  Boolean   @default(false)
+  publishedAt  DateTime?
+
+
+
 }
 
 
