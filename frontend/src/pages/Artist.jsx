@@ -229,13 +229,16 @@ export default function Artist() {
   const [scheduleTab, setScheduleTab] = useState("upcoming");
 
   // genres: กลุ่มเดิมไม่มี `genres[]` ให้แตกมาจาก `details` ถ้ามี
-  const groupGenres = useMemo(() => {
-    if (!selectedGroup) return [];
-    if (Array.isArray(selectedGroup.genres) && selectedGroup.genres.length) return selectedGroup.genres;
-    const d = (selectedGroup.details || "").trim();
-    if (!d) return [];
-    return d.split(/[\/,|•]+/).map(s => s.trim()).filter(Boolean);
-  }, [selectedGroup]);
+ const groupGenres = useMemo(() => {
+   if (!selectedGroup) return [];
+   const list = [];
+   if (selectedGroup.genre) list.push(selectedGroup.genre);
+   if (selectedGroup.subGenre) list.push(selectedGroup.subGenre);
+   if (Array.isArray(selectedGroup.genres)) list.push(...selectedGroup.genres);
+   // กันไว้ก่อน fallback สำหรับเวอร์ชันเดิมที่ BE ส่งมาเป็น details อย่างเดียว
+   if (!list.length && selectedGroup.details) list.push(selectedGroup.details);
+   return Array.from(new Set(list.filter(Boolean))); // กันซ้ำ
+ }, [selectedGroup]);
 
   const fmtCompact = (n) => {
     const num = Number(n || 0);
@@ -390,7 +393,7 @@ export default function Artist() {
             {/* ซ้าย: ชื่อ/คำบรรยาย/EPK */}
             <div className="left-box">
               <h1 className="title">{selectedGroup?.name || "Artist"}</h1>
-              <p className="desc">{selectedGroup?.details || selectedGroup?.description || "No description."}</p>
+              <p className="desc">{(selectedGroup?.description || "").trim() || "No description."}</p>
 
               {/* ปุ่ม EPK => ใช้ techRider.downloadUrl ถ้ามี */}
               {selectedGroup?.techRider?.downloadUrl && (

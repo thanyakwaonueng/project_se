@@ -116,13 +116,6 @@ export default function MyEvents() {
                 >
                   View
                 </button>
-
-                <button
-                  className="btn btn-sm btn-primary"
-                  onClick={() => navigate(`/me/invite_to_event/${ev.id}`)}
-                >
-                  invite
-                </button>
               </div>
             </div>
           ))}

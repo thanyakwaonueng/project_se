@@ -19,6 +19,7 @@ services:
       - /app/node_modules
     ports:
       - "4000:4000"
+      - "5555:5555"
     depends_on:
       - db
     env_file:

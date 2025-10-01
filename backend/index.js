@@ -105,13 +105,23 @@ async function getAudienceForEventUpdate(prismaClient, eventId) {
   ]);
 }
 
-async function fanout(prismaClient, userIds, type, message, data) {
+// ───────────────── Fanout (no nested $transaction, safe for prisma or tx) ─────────────────
+async function fanout(db, userIds, type, message, data) {
   if (!userIds?.length) return;
-  await prismaClient.$transaction(
-    userIds.map(uid => prismaClient.notification.create({
-      data: { userId: uid, type, message, data },
-    }))
-  );
+
+  // รองรับทั้ง prisma และ tx (transaction client)
+  const notificationModel = db?.notification || prisma.notification;
+
+  // ใช้ createMany ทีเดียว ไม่ต้องพึ่ง $transaction
+  await notificationModel.createMany({
+    data: userIds.map((uid) => ({
+      userId: uid,
+      type,
+      message,
+      data: data ?? null,
+    })),
+    skipDuplicates: true, // เผื่อมีซ้ำจากการยิงซ้อน
+  });
 }
 
 // ช็อตคัตยิง event.updated
@@ -166,6 +176,39 @@ function summarizeReadiness(artistEvents = []) {
     isReady: totalInvited > 0 && pending === 0,
   };
 }
+
+
+
+/* ---------- Enum normalizers ---------- */
+const AGE_ALLOWED = ['ALL', 'E18', 'E20'];
+function normalizeAgeRestriction(v) {
+  if (v == null) return null;
+  const s = String(v).trim().toUpperCase();
+  if (s === '18+') return 'E18';
+  if (s === '20+') return 'E20';
+  return AGE_ALLOWED.includes(s) ? s : null;
+}
+
+const ALCOHOL_ALLOWED = ['SERVE', 'NONE', 'BYOB'];
+function normalizeAlcoholPolicy(v) {
+  if (v == null) return null;
+  const s = String(v).trim().toUpperCase();
+  return ALCOHOL_ALLOWED.includes(s) ? s : null;
+}
+
+// ถ้า priceRate เป็น enum ด้วย ให้ระบุชุดค่าที่แท้จริง
+const PRICE_ALLOWED = ['BUDGET', 'STANDARD', 'PREMIUM', 'VIP'];
+function normalizePriceRate(v) {
+  if (v == null) return null;
+  const s = String(v).trim().toUpperCase();
+  return PRICE_ALLOWED.includes(s) ? s : null;
+}
+
+
+
+
+
+
 
 /* ───────────────────────────── AUTH MIDDLEWARE ───────────────────────────── */
 async function authMiddleware(req, res, next) {
@@ -711,6 +754,9 @@ app.get('/groups', async (req, res) => {
 
         description: a.description ?? "",
         details: a.genre ?? "",
+        genre: a.genre ?? null,
+        subGenre: a.subGenre ?? null,
+        genres: [a.genre, a.subGenre].filter(Boolean), // เผื่อ FE อยากใช้เป็นอาเรย์
         stats: {
           members: a.memberCount ?? 1,
           debut: a.foundingYear ? String(a.foundingYear) : "N/A",
@@ -771,21 +817,21 @@ app.post('/venues', authMiddleware, async (req, res) => {
     };
 
     const venueData = {
-      description: data.description,
-      genre: data.genre,
-      capacity: data.capacity,
-      dateOpen: data.dateOpen,
-      dateClose: data.dateClose,
-      priceRate: data.priceRate,
-      timeOpen: data.timeOpen,
-      timeClose: data.timeClose,
-      alcoholPolicy: data.alcoholPolicy,
-      ageRestriction: data.ageRestriction,
-      photoUrls: data.photoUrls,
-      websiteUrl: data.websiteUrl,
-      shazamUrl: data.shazamUrl,
-      bandcampUrl: data.bandcampUrl,
-    };
+  description: data.description ?? null,
+  genre: data.genre ?? null,
+  capacity: Number.isFinite(+data.capacity) ? Math.trunc(+data.capacity) : null,
+  dateOpen: data.dateOpen ? new Date(data.dateOpen) : null,
+  dateClose: data.dateClose ? new Date(data.dateClose) : null,
+  priceRate: normalizePriceRate(data.priceRate),
+  timeOpen: data.timeOpen ?? null,
+  timeClose: data.timeClose ?? null,
+  alcoholPolicy: normalizeAlcoholPolicy(data.alcoholPolicy),
+  ageRestriction: normalizeAgeRestriction(data.ageRestriction),
+  photoUrls: Array.isArray(data.photoUrls) ? data.photoUrls : [],
+  websiteUrl: data.websiteUrl ?? null,
+  shazamUrl: data.shazamUrl ?? null,
+  bandcampUrl: data.bandcampUrl ?? null,
+};
 
     const venueLocationData = {
       latitude: data.latitude,
@@ -935,23 +981,23 @@ app.put('/venues/:id', authMiddleware, async (req, res) => {
     };
 
     const venueData = {
-      description: body.description ?? null,
-      genre: body.genre ?? null,
-      capacity: toInt(body.capacity),
-      dateOpen: body.dateOpen ? new Date(body.dateOpen) : null,
-      dateClose: body.dateClose ? new Date(body.dateClose) : null,
-      priceRate: body.priceRate ?? null,
-      timeOpen: body.timeOpen ?? null,
-      timeClose: body.timeClose ?? null,
-      alcoholPolicy: body.alcoholPolicy ?? null,
-      ageRestriction: toInt(body.ageRestriction),
-      websiteUrl: body.websiteUrl ?? null,
-      photoUrls: Array.isArray(body.photoUrls)
-        ? body.photoUrls
-        : (typeof body.photoUrls === 'string'
-            ? body.photoUrls.split(',').map(s => s.trim()).filter(Boolean)
-            : []),
-    };
+  description: body.description ?? null,
+  genre: body.genre ?? null,
+  capacity: toInt(body.capacity),
+  dateOpen: body.dateOpen ? new Date(body.dateOpen) : null,
+  dateClose: body.dateClose ? new Date(body.dateClose) : null,
+  priceRate: normalizePriceRate(body.priceRate),
+  timeOpen: body.timeOpen ?? null,
+  timeClose: body.timeClose ?? null,
+  alcoholPolicy: normalizeAlcoholPolicy(body.alcoholPolicy),
+  ageRestriction: normalizeAgeRestriction(body.ageRestriction),
+  websiteUrl: body.websiteUrl ?? null,
+  photoUrls: Array.isArray(body.photoUrls)
+    ? body.photoUrls
+    : (typeof body.photoUrls === 'string'
+        ? body.photoUrls.split(',').map(s => s.trim()).filter(Boolean)
+        : []),
+};
 
     const locationData = {
       latitude: toFloat(body.latitude),
@@ -1579,6 +1625,251 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
   }
 });
 
+
+// ───────── ยกเลิก "คำเชิญศิลปิน" (เฉพาะตอนยังไม่ publish และสถานะ PENDING) ─────────
+app.delete('/events/:id/invites/:artistId', authMiddleware, async (req, res) => {
+  try {
+    const eventId = Number(req.params.id);
+    const artistId = Number(req.params.artistId);
+    if (!Number.isFinite(eventId) || !Number.isFinite(artistId)) {
+      return res.status(400).json({ error: 'Invalid id' });
+    }
+
+    const ev = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true, name: true, venueId: true, isPublished: true },
+    });
+    if (!ev) return res.status(404).json({ error: 'Event not found' });
+
+    // สิทธิ์: ADMIN หรือ ORGANIZE เจ้าของ venue
+    const allowed = req.user.role === 'ADMIN' || (req.user.role === 'ORGANIZE' && ev.venueId === req.user.id);
+    if (!allowed) return res.sendStatus(403);
+
+    // ต้องยังไม่ publish
+    if (ev.isPublished) {
+      return res.status(400).json({ error: 'Event has been published. Uninvite is not allowed.' });
+    }
+
+    // ต้องเป็นคำเชิญสถานะ PENDING เท่านั้น
+    const ae = await prisma.artistEvent.findUnique({
+      where: { artistId_eventId: { artistId, eventId } },
+      select: { artistId: true, eventId: true, status: true },
+    });
+    if (!ae) return res.status(404).json({ error: 'Invite not found' });
+    if (ae.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Only PENDING invites can be cancelled' });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // ลบ slot ของศิลปินในงานนี้ (ถ้ามี)
+      await tx.scheduleSlot.deleteMany({ where: { eventId, artistId } });
+      // ลบแถวคำเชิญ
+      await tx.artistEvent.delete({ where: { artistId_eventId: { artistId, eventId } } });
+
+      // แจ้งเตือนศิลปินว่า organizer ยกเลิกคำเชิญ
+      try {
+        await notify(
+          tx,
+          artistId, // artistId == performerId == userId
+          'artist_event.uninvited',
+          `คำเชิญแสดงในงาน "${ev.name}" ถูกยกเลิกโดยผู้จัด`,
+          { eventId, artistId }
+        );
+      } catch (e) { console.error('UNINVITE_NOTIFY_ERROR', e); }
+    });
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('DELETE /events/:id/invites/:artistId error', e);
+    return res.status(500).json({ error: 'Uninvite failed' });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ───────────────────────────── CANCEL EVENT (HARD DELETE, RESPOND FIRST) ───────────────────────────── */
+app.post('/events/:id/cancel', authMiddleware, async (req, res) => {
+  const id = Number(req.params.id);
+  const reason = (req.body?.reason || '').trim() || null;
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid event id' });
+
+  try {
+    // 1) โหลด event เพื่อเช็คสิทธิ์ + เก็บข้อมูลไว้ใช้แจ้งเตือน “ล่วงหน้า”
+    const ev = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        artistEvents: { select: { artistId: true } },
+        _count: { select: { likedBy: true } },
+      },
+    });
+    if (!ev) return res.status(404).json({ error: 'Event not found' });
+
+    const canCancel = (req.user.role === 'ADMIN') || (req.user.role === 'ORGANIZE' && ev.venueId === req.user.id);
+    if (!canCancel) return res.sendStatus(403);
+
+    // 2) ลบทั้งหมดให้ “หายจริง” (ใน transaction เดียว)
+    await prisma.$transaction([
+      prisma.scheduleSlot.deleteMany({ where: { eventId: ev.id } }),
+      prisma.artistEvent.deleteMany({ where: { eventId: ev.id } }),
+      prisma.likeEvent.deleteMany({ where: { eventId: ev.id } }),
+      prisma.event.delete({ where: { id: ev.id } }),
+    ]);
+
+    // 3) ตอบกลับ “สำเร็จ” ให้ FE ทันที
+    res.json({ ok: true, deleted: true });
+
+    // 4) ทำแจ้งเตือนแบบ async (ไม่กระทบ HTTP response อีกแล้ว)
+    setImmediate(async () => {
+      try {
+        const invitedArtistIds = Array.from(new Set(ev.artistEvents.map(ae => ae.artistId)));
+        if (invitedArtistIds.length) {
+          await fanout(
+            prisma,
+            invitedArtistIds,
+            'event.canceled',
+            `คำเชิญงาน "${ev.name}" ถูกยกเลิกแล้ว${reason ? `: ${reason}` : ''}`,
+            { eventId: id, reason }
+          );
+        }
+        if (ev.isPublished) {
+          const likers = await prisma.likeEvent.findMany({ where: { eventId: id }, select: { userId: true } });
+          const audienceIds = Array.from(new Set(likers.map(l => l.userId)));
+          if (audienceIds.length) {
+            await fanout(
+              prisma,
+              audienceIds,
+              'event.canceled',
+              `งาน "${ev.name}" ถูกยกเลิกแล้ว${reason ? `: ${reason}` : ''}`,
+              { eventId: id, reason }
+            );
+          }
+        }
+      } catch (bgErr) {
+        console.error('FANOUT_cancel_async_error', bgErr);
+        // กลืน error ไว้ ไม่ให้มีผลกับ response ที่ส่งไปแล้ว
+      }
+    });
+
+  } catch (e) {
+    console.error('POST /events/:id/cancel error', e);
+    // ตรงนี้จะเหลือเฉพาะกรณีล้มเหลวก่อนหรือระหว่างลบเท่านั้น
+    res.status(500).json({ error: 'Cancel failed' });
+  }
+});
+
+
+
+// ───────── เลื่อนงาน (reschedule) ─────────
+app.post('/events/:id/reschedule', authMiddleware, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { date, doorOpenTime, endTime } = req.body || {};
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid event id' });
+
+    const ev = await prisma.event.findUnique({ where: { id } });
+    if (!ev) return res.status(404).json({ error: 'Event not found' });
+
+    // สิทธิ์: ADMIN หรือ ORGANIZE เจ้าของ venue เท่านั้น
+    const allowed = req.user.role === 'ADMIN' || (req.user.role === 'ORGANIZE' && ev.venueId === req.user.id);
+    if (!allowed) return res.sendStatus(403);
+
+    // เตรียมค่าที่จะอัปเดต
+    const updateData = {
+      // fields ที่สามารถเลื่อน/แก้ได้
+      date: date ? new Date(date) : ev.date,
+      doorOpenTime: doorOpenTime ?? ev.doorOpenTime ?? null,
+      endTime: endTime ?? ev.endTime ?? null,
+    };
+
+    // ถ้าเคย publish แล้ว ให้ดราฟท์กลับและบังคับ re-approve
+    const wasPublished = !!ev.isPublished;
+    if (wasPublished) {
+      updateData.isPublished = false;
+      updateData.publishedAt = null;
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1) อัปเดตอีเวนต์
+      const updated = await tx.event.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // 2) ถ้าเคย publish มาก่อน → รีเซ็ตคำเชิญศิลปินทั้งหมดให้ยืนยันใหม่
+      //    (ยกเว้นรายที่ DECLINED แล้วคงเดิม)
+      if (wasPublished) {
+        await tx.artistEvent.updateMany({
+          where: { eventId: id, status: { in: ['ACCEPTED', 'PENDING'] } },
+          data: { status: 'PENDING' },
+        });
+      }
+
+      // 3) แจ้งเตือน
+      //    - ไม่ publish: แจ้งเฉพาะศิลปินที่ถูกเชิญ (ให้รับทราบและกดยืนยันใหม่)
+      //    - เคย publish: แจ้งทั้งศิลปิน & ผู้ชมที่ติดตามงาน ว่ามีการเลื่อน (และตอนนี้งานกลับเป็น Draft)
+      try {
+        // ศิลปินทุกคนที่เคยถูกเชิญ
+        const artistIds = await tx.artistEvent.findMany({
+          where: { eventId: id },
+          select: { artistId: true },
+        }).then(rows => Array.from(new Set(rows.map(r => r.artistId))));
+
+        if (artistIds.length) {
+          await fanout(
+            tx,
+            artistIds, // ส่งเป็น userId ของ artist (artistId=performerId=userId)
+            'event.rescheduled',
+            `งาน "${updated.name}" มีการเลื่อนกำหนดเวลา กรุณาตรวจสอบและยืนยันใหม่`,
+            { eventId: updated.id, date: updated.date, doorOpenTime: updated.doorOpenTime, endTime: updated.endTime, republishRequired: !!wasPublished }
+          );
+        }
+
+        // ถ้าเคย publish แล้ว → แจ้งผู้ชมที่ติดตามงานด้วย
+        if (wasPublished) {
+          const likers = await tx.likeEvent.findMany({
+            where: { eventId: id },
+            select: { userId: true },
+          });
+          const audienceIds = Array.from(new Set(likers.map(l => l.userId)));
+          if (audienceIds.length) {
+            await fanout(
+              tx,
+              audienceIds,
+              'event.rescheduled',
+              `งานที่คุณติดตาม "${updated.name}" มีการเลื่อนกำหนดเวลา`,
+              { eventId: updated.id, date: updated.date, doorOpenTime: updated.doorOpenTime, endTime: updated.endTime, nowDraft: true }
+            );
+          }
+        }
+      } catch (e) {
+        console.error('RESCHEDULE_NOTIFY_ERROR', e);
+      }
+
+      return updated;
+    });
+
+    return res.json({ ok: true, event: result });
+  } catch (e) {
+    console.error('POST /events/:id/reschedule error', e);
+    return res.status(500).json({ error: 'Reschedule failed' });
+  }
+});
 
 
 /* ───────────────────────────── ARTIST RESPOND ─────────── */

@@ -8,8 +8,11 @@ function formatDT(iso) {
   if (!iso) return '—';
   try {
     const dt = new Date(iso);
-    return new Intl.DateTimeFormat('th-TH', { dateStyle: 'long', timeStyle: 'short' }).format(dt);
-  } catch { return iso; }
+    // แสดงเฉพาะวันที่ ไม่เอาเวลา
+    return new Intl.DateTimeFormat('th-TH', { dateStyle: 'long' }).format(dt);
+  } catch {
+    return iso;
+  }
 }
 // รองรับ 19:30, 19.30, 19-30, 1930 → 19:30
 function normTime(t) {
@@ -44,7 +47,108 @@ function dtToHHMM(x) {
   } catch { return null; }
 }
 
-/* ========== invite/edit modal ========== */
+/* ========== Reschedule modal ========== */
+function RescheduleModal({ open, onClose, eventId, initialDateISO, initialDoor, initialEnd, onSaved }) {
+  const [busy, setBusy] = useState(false);
+  const [warn, setWarn] = useState('');
+  const [form, setForm] = useState({
+    date: initialDateISO ? String(initialDateISO).split('T')[0] : '',
+    doorOpenTime: normTime(initialDoor) || '',
+    endTime: normTime(initialEnd) || ''
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    setWarn('');
+    setBusy(false);
+    setForm({
+      date: initialDateISO ? String(initialDateISO).split('T')[0] : '',
+      doorOpenTime: normTime(initialDoor) || '',
+      endTime: normTime(initialEnd) || ''
+    });
+  }, [open, initialDateISO, initialDoor, initialEnd]);
+
+  const validate = () => {
+    if (!form.date) return 'กรุณาเลือกวันที่ใหม่';
+    if (!form.doorOpenTime || !form.endTime) return 'กรุณากรอกเวลาเปิดประตูและเวลาสิ้นสุด';
+    const s = toMin(normTime(form.doorOpenTime));
+    const e = toMin(normTime(form.endTime));
+    if (s == null || e == null) return 'รูปแบบเวลาไม่ถูกต้อง (เช่น 19:30)';
+    if (s >= e) return 'เวลาเปิดต้องน้อยกว่าเวลาสิ้นสุด';
+    return '';
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const msg = validate();
+    if (msg) { setWarn(msg); return; }
+    setBusy(true);
+    try {
+      const payload = {
+        date: new Date(form.date).toISOString(),
+        doorOpenTime: normTime(form.doorOpenTime),
+        endTime: normTime(form.endTime),
+      };
+      await api.post(`/events/${eventId}/reschedule`, payload, { withCredentials: true });
+      onSaved?.();     // ← refetch event จากหน้าแม่
+      onClose?.();     // ปิด modal
+    } catch (err) {
+      setWarn(extractErrorMessage?.(err, 'เลื่อนงานไม่สำเร็จ') || 'เลื่อนงานไม่สำเร็จ');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!open) return null;
+  return (
+    <div className="mdl-backdrop" onClick={onClose}>
+      <div className="mdl" onClick={(e)=>e.stopPropagation()}>
+        <h3 style={{marginTop:0}}>เลื่อนวัน/เวลา งาน</h3>
+
+        <form onSubmit={submit} className="frm" style={{ position:'static', borderTop:'none' }}>
+          <div className="grid2">
+            <label>วันที่ใหม่
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e)=>setForm(v=>({ ...v, date: e.target.value }))}
+                required
+              />
+            </label>
+            <span />
+            <label>เวลาเปิดประตู
+              <input
+                type="time"
+                value={form.doorOpenTime}
+                onChange={(e)=>setForm(v=>({ ...v, doorOpenTime: normTime(e.target.value) }))}
+                required
+              />
+            </label>
+            <label>เวลาสิ้นสุด
+              <input
+                type="time"
+                value={form.endTime}
+                onChange={(e)=>setForm(v=>({ ...v, endTime: normTime(e.target.value) }))}
+                required
+              />
+            </label>
+          </div>
+
+          {warn && <div className="warn" style={{marginTop:8}}>{warn}</div>}
+
+          <div className="act" style={{marginTop:12}}>
+            <button type="button" className="btn" onClick={onClose}>ยกเลิก</button>
+            <button type="submit" className="btn primary" disabled={busy}>
+              {busy ? 'Saving…' : 'ยืนยันการเลื่อน'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ========== invite/edit modal (เดิม) ========== */
 function InviteModal({
   open,
   onClose,
@@ -53,9 +157,9 @@ function InviteModal({
   onSaved,
   windowStartHHMM,   // HH:MM ของ doorOpenTime (อาจว่าง)
   windowEndHHMM,     // HH:MM ของ endTime (อาจว่าง)
-  invitedIds = [],   // รายชื่อ artistId ที่ถูกเชิญแล้ว
+  invitedIds = [],
 }) {
-  const DURATIONS = [15, 30, 45, 60, 90, 120]; // นาที
+  const DURATIONS = [15, 30, 45, 60, 90, 120];
 
   const [loadingArtists, setLoadingArtists] = useState(false);
   const [artists, setArtists] = useState([]);
@@ -63,7 +167,6 @@ function InviteModal({
   const [selectedId, setSelectedId] = useState(initial?.artistId ?? null);
   const [warn, setWarn] = useState('');
 
-  // โหมด "แทนที่ศิลปินที่ปฏิเสธ"
   const replaceDeclinedId = (initial?.status === 'DECLINED' && initial?.aeId) ? initial.aeId : null;
   const isReplaceMode = !!replaceDeclinedId;
 
@@ -75,11 +178,10 @@ function InviteModal({
       const et = normTime(initial?.end);
       const sm = toMin(st || '');
       const em = toMin(et || '');
-      return (sm!=null && em!=null && em>sm) ? (em-sm) : 60; // default 60 นาที
+      return (sm!=null && em!=null && em>sm) ? (em-sm) : 60;
     })(),
   });
 
-  // เมื่อเปลี่ยน initial ให้รีเซ็ต
   useEffect(() => {
     const st = normTime(initial?.start) || '';
     const et = normTime(initial?.end) || '';
@@ -94,7 +196,6 @@ function InviteModal({
     setWarn('');
   }, [initial]);
 
-  // โหลดรายชื่อศิลปิน
   useEffect(() => {
     if (!open) return;
     let alive = true;
@@ -110,7 +211,6 @@ function InviteModal({
     return () => { alive = false; };
   }, [open]);
 
-  // คำนวณ endTime อัตโนมัติเมื่อ startTime/duration เปลี่ยน และ clamp ด้วยกรอบงาน
   useEffect(() => {
     if (!open) return;
     const sm = toMin(form.startTime || '');
@@ -143,14 +243,12 @@ function InviteModal({
   const alreadyInvited = (id) => invitedIds?.includes?.(Number(id));
 
   const validate = () => {
-    // ถ้าเป็นโหมดแทนที่ และเลือกเป็นคนเดิม ให้อนุญาต (re-invite/เวลาใหม่)
     if (selectedId && alreadyInvited(selectedId)) {
       const isSameDeclinedArtist = isReplaceMode && Number(selectedId) === Number(initial?.artistId);
       if (!isSameDeclinedArtist) {
         return 'ศิลปินคนนี้อยู่ในไลน์อัปของงานนี้อยู่แล้ว';
       }
     }
-
     const st = normTime(form.startTime);
     const et = normTime(form.endTime);
     if (!st || !et) return 'กรอกเวลาเริ่มและเวลาจบให้ครบ';
@@ -227,7 +325,7 @@ function InviteModal({
               const sel = Number(selectedId) === Number(id);
               const disabled =
                 alreadyInvited(id) &&
-                !(isReplaceMode && Number(id) === Number(initial?.artistId)); // อนุญาตถ้าเป็นคนเดิมในโหมดแทนที่
+                !(isReplaceMode && Number(id) === Number(initial?.artistId));
               return (
                 <div
                   key={id}
@@ -262,10 +360,10 @@ function InviteModal({
 
         {/* เวลา (Start + Duration) */}
         <form onSubmit={submit} className="frm" style={{marginTop:12}}>
-          {/* Quick slots ภายในกรอบงาน */}
+          {/* Quick slots */}
           {(() => {
             const slots = [];
-            const step = 30; // ทุก 30 นาที
+            const step = 30;
             const d = Number(form.duration) || 60;
             const minM = windowStartHHMM ? toMin(windowStartHHMM) : 18*60;
             const maxM = windowEndHHMM   ? toMin(windowEndHHMM)   : 24*60;
@@ -286,7 +384,6 @@ function InviteModal({
           })()}
 
           <div className="grid2">
-            {/* เวลาเริ่ม */}
             <label>เวลาเริ่ม
               <input
                 type="time"
@@ -299,17 +396,15 @@ function InviteModal({
                 placeholder="19:30"
               />
             </label>
-
-            {/* ระยะเวลา */}
             <label>ระยะเวลา
               <div className="duration-wrap">
                 <select
                   value={form.duration}
                   onChange={(e)=>setForm(v=>({ ...v, duration: Number(e.target.value) || 60 }))}>
-                  {DURATIONS.map(d=><option key={d} value={d}>{d} นาที</option>)}
+                  {[15,30,45,60,90,120].map(d=><option key={d} value={d}>{d} นาที</option>)}
                 </select>
                 <div className="duration-chips">
-                  {DURATIONS.slice(0,5).map(d=>(
+                  {[15,30,45,60,90].map(d=>(
                     <button key={d} type="button"
                       className={`chip ${Number(form.duration)===d?'on':''}`}
                       onClick={()=>setForm(v=>({ ...v, duration:d }))}>
@@ -321,12 +416,10 @@ function InviteModal({
             </label>
           </div>
 
-          {/* Preview เวลาจบ */}
           <div className="kv" style={{marginTop:4}}>
             <b>เวลาจบ</b><span>{form.endTime || '—'}</span>
           </div>
 
-          {/* ปุ่ม */}
           <div className="act">
             <button type="button" className="btn" onClick={onClose}>ยกเลิก</button>
             <button type="submit" className="btn primary" disabled={!selectedId || !!warn}>
@@ -354,6 +447,9 @@ export default function EventDetail() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+
+  // NEW: reschedule modal state
+  const [resModalOpen, setResModalOpen] = useState(false);
 
   const fetchEvent = async () => {
     const { data } = await api.get(`/events/${id}`, { withCredentials: true });
@@ -425,6 +521,9 @@ export default function EventDetail() {
     }
   };
 
+  // NEW: show reschedule button only when owner/admin AND event is already published
+  const canReschedule = !!(ev?._isOwner) && !!ev?.isPublished;
+
   // แปลง artistEvents + scheduleSlots เป็นแถว
   const scheduleRows = useMemo(() => {
     const rows = [];
@@ -436,7 +535,7 @@ export default function EventDetail() {
         `Artist ${ae?.artistId ?? ''}`;
       rows.push({
         key: `${ae.artistId}-${ae.eventId}`,
-        aeId: ae.id,            // ✅ เก็บ id ของ artistEvent ไว้ใช้ตอนแทนที่
+        aeId: ae.id,
         artistId: ae.artistId,
         name,
         status: ae?.status || 'PENDING',
@@ -546,6 +645,16 @@ export default function EventDetail() {
                 {publishing ? 'Publishing…' : 'Publish'}
               </button>
             )}
+            {/* NEW: Reschedule button (owner/admin only AND already published) */}
+            {canReschedule && (
+              <button
+                className="btn"
+                onClick={()=>setResModalOpen(true)}
+                title="เลื่อนกำหนดวัน/เวลา (จะ unpublish และให้ศิลปินยืนยันใหม่)"
+              >
+                เลื่อนงาน
+              </button>
+            )}
           </div>
 
           <div className="kv"><b>วันเวลา</b><span>{formatDT(ev.date)}</span></div>
@@ -628,7 +737,7 @@ export default function EventDetail() {
           />
         )}
 
-        {/* MODAL: ปิดอัตโนมัติเมื่อ publish แล้ว */}
+        {/* INVITE MODAL */}
         <InviteModal
           open={modalOpen && !ev.isPublished}
           onClose={()=>setModalOpen(false)}
@@ -638,6 +747,17 @@ export default function EventDetail() {
           windowStartHHMM={windowRange.rawStart || null}
           windowEndHHMM={windowRange.rawEnd || null}
           invitedIds={invitedIds}
+        />
+
+        {/* RESCHEDULE MODAL */}
+        <RescheduleModal
+          open={resModalOpen}
+          onClose={()=>setResModalOpen(false)}
+          eventId={ev.id}
+          initialDateISO={ev.date}
+          initialDoor={ev.doorOpenTime}
+          initialEnd={ev.endTime}
+          onSaved={fetchEvent}
         />
       </section>
 
@@ -686,7 +806,7 @@ export default function EventDetail() {
   .bs-sub .st.wait{background:#fff7e6;border-color:#ffe0a3;color:#7a5200}
   .bs-sub .st.no{background:#fde8ea;border-color:#f5b5bd;color:#842029}
 
-  /* ===== Modal / Artist selector ===== */
+  /* ===== Modal ===== */
   .mdl-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50}
   .mdl{
     background:#fff;
@@ -700,20 +820,11 @@ export default function EventDetail() {
     overflow:hidden;
     box-shadow:0 18px 36px rgba(0,0,0,.12)
   }
-
-  /* ฟอร์มเวลาอยู่ล่างติดเสมอ */
-  .frm{
-    position:sticky; bottom:0;
-    background:#fff;
-    padding-top:10px;
-    margin-top:12px;
-    border-top:1px solid #eee;
-    display:grid; gap:12px
-  }
-  .frm input{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px}
+  .frm{display:grid; gap:12px}
+  .frm input, .frm select{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px}
   .act{display:flex;gap:8px;justify-content:flex-end}
 
-  /* ส่วนหัวค้นหา */
+  /* ส่วนหัวค้นหา (modal เชิญศิลปิน) */
   .artist-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:6px 2px 10px}
   .search-wrap{position:relative;flex:1}
   .search-input{width:100%;padding:10px 34px 10px 40px;border:1px solid #e5e7eb;border-radius:999px;background:#f8fafc;outline:none}
@@ -721,15 +832,7 @@ export default function EventDetail() {
   .search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.65}
   .search-meta{font-size:12px;color:#6b7280}
 
-  /* ลิสต์ศิลปินให้เตี้ยลง + เป็นตัวสกรอลล์หลัก */
-  .artist-list{
-    flex:1;
-    max-height:38vh;
-    overflow:auto;
-    padding-right:6px;
-    margin-bottom:8px;
-    scrollbar-width:thin
-  }
+  .artist-list{flex:1;max-height:38vh;overflow:auto;padding-right:6px;margin-bottom:8px;scrollbar-width:thin}
   .artist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
   .artist-card{display:flex;gap:10px;border:1px solid #e5e7eb;border-radius:14px;padding:8px 10px;align-items:center;background:#fff;cursor:pointer;transition:box-shadow .15s,border-color .15s}
   .artist-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.06)}
@@ -743,7 +846,6 @@ export default function EventDetail() {
   .pill.on{background:#1f6feb;color:#fff;border-color:#1f6feb}
   .warn{margin:6px 2px 0;background:#fff7e6;border:1px solid #ffe0a3;color:#7a5200;padding:8px 10px;border-radius:10px;font-size:13px}
 
-  /* Duration & quick slots */
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
   .chip{padding:6px 10px;border-radius:999px;border:1px solid #d0d7de;background:#f8fafc;font-size:12px;cursor:pointer}
   .chip:hover{background:#eef2ff;border-color:#cfe1ff}

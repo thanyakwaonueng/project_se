@@ -28,13 +28,20 @@ export default function CreateEvent() {
   const [loading, setLoading] = useState(false);
   const [hasEvent, setHasEvent] = useState(false);
 
+  // ✅ เก็บค่าเดิมไว้เทียบ ถ้าแก้ “กำหนดการ” จะเรียก /reschedule แทนการเซฟปกติ
+  const [orig, setOrig] = useState({
+    date: '',
+    doorOpenTime: '',
+    endTime: '',
+  });
+
   const navigate = useNavigate();
 
   useEffect(() => {
     if (eventId) setHasEvent(true);
   }, [eventId]);
 
-  // โหลดข้อมูลเดิม (โหมดแก้ไข) — เหมือนไฟล์เดิม
+  // โหลดข้อมูลเดิม (โหมดแก้ไข) — เหมือนไฟล์เดิม + เก็บ orig
   useEffect(() => {
     const fetchEvent = async () => {
       if (!eventId) return;
@@ -54,6 +61,13 @@ export default function CreateEvent() {
         setDoorOpenTime(ev.doorOpenTime || '');
         setEndTime(ev.endTime || '');
         setGenre(ev.genre || '');
+
+        // ✅ เก็บค่าเดิมไว้เทียบ “แก้กำหนดการไหม”
+        setOrig({
+          date: ev.date ? ev.date.split('T')[0] : '',
+          doorOpenTime: ev.doorOpenTime || '',
+          endTime: ev.endTime || '',
+        });
       } catch (err) {
         console.error('Failed to fetch event:', err);
         setError(err.response?.data?.error || 'Could not load event details');
@@ -62,12 +76,39 @@ export default function CreateEvent() {
     fetchEvent();
   }, [eventId]);
 
+  // ✅ helper: ตรวจว่ามีการแก้ไข “กำหนดการ” (วัน/เวลา) หรือไม่
+  const isScheduleChanged = () =>
+    !!eventId && (
+      date !== orig.date ||
+      doorOpenTime !== orig.doorOpenTime ||
+      endTime !== orig.endTime
+    );
+
   const submit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
+      // ✅ ถ้าเป็นโหมดแก้ไข + เปลี่ยนวัน/เวลา ⇒ เรียก /reschedule
+      if (eventId && isScheduleChanged()) {
+        const payload = {
+          ...(date ? { newDate: new Date(date).toISOString() } : {}),
+          ...(doorOpenTime ? { newDoorOpenTime: doorOpenTime.trim() } : {}),
+          ...(endTime ? { newEndTime: endTime.trim() } : {}),
+        };
+
+        await axios.post(`/api/events/${eventId}/reschedule`, payload, {
+          withCredentials: true,
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        setLoading(false);
+        navigate(`/events/${eventId}`); // กลับไปหน้ารายละเอียดงาน
+        return;
+      }
+
+      // เดิม: เซฟปกติ
       const raw = {
         name: name.trim(),
         description: description.trim() || undefined,
