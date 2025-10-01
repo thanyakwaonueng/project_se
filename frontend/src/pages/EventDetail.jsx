@@ -1,19 +1,30 @@
-// src/ev-detail-pages/EventDetail.jsx
+// src/pages/EventDetail.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import api, { extractErrorMessage } from '../lib/api';
-import "../css/EventDetail.css";
+import '../css/EventDetail.css';
+
+
+// en-US date like "october 21, 2025" (lowercase month)
+function formatDateEN(iso) {
+  if (!iso) return '—';
+  try {
+    const s = new Intl.DateTimeFormat('en-US', {
+      month: 'long', day: 'numeric', year: 'numeric'
+    }).format(new Date(iso));
+    return s.toLowerCase(); // ตามตัวอย่างผู้ใช้: october 21, 2025
+  } catch { return '—'; }
+}
+
+
 
 /* ========== helpers ========== */
 function formatDT(iso) {
   if (!iso) return '—';
   try {
     const dt = new Date(iso);
-    // แสดงเฉพาะวันที่ ไม่เอาเวลา
-    return new Intl.DateTimeFormat('th-TH', { dateStyle: 'long' }).format(dt);
-  } catch {
-    return iso;
-  }
+    return new Intl.DateTimeFormat('th-TH', { dateStyle: 'long', timeStyle: 'short' }).format(dt);
+  } catch { return iso; }
 }
 // รองรับ 19:30, 19.30, 19-30, 1930 → 19:30
 function normTime(t) {
@@ -48,119 +59,18 @@ function dtToHHMM(x) {
   } catch { return null; }
 }
 
-/* ========== Reschedule modal ========== */
-function RescheduleModal({ open, onClose, eventId, initialDateISO, initialDoor, initialEnd, onSaved }) {
-  const [busy, setBusy] = useState(false);
-  const [warn, setWarn] = useState('');
-  const [form, setForm] = useState({
-    date: initialDateISO ? String(initialDateISO).split('T')[0] : '',
-    doorOpenTime: normTime(initialDoor) || '',
-    endTime: normTime(initialEnd) || ''
-  });
-
-  useEffect(() => {
-    if (!open) return;
-    setWarn('');
-    setBusy(false);
-    setForm({
-      date: initialDateISO ? String(initialDateISO).split('T')[0] : '',
-      doorOpenTime: normTime(initialDoor) || '',
-      endTime: normTime(initialEnd) || ''
-    });
-  }, [open, initialDateISO, initialDoor, initialEnd]);
-
-  const validate = () => {
-    if (!form.date) return 'กรุณาเลือกวันที่ใหม่';
-    if (!form.doorOpenTime || !form.endTime) return 'กรุณากรอกเวลาเปิดประตูและเวลาสิ้นสุด';
-    const s = toMin(normTime(form.doorOpenTime));
-    const e = toMin(normTime(form.endTime));
-    if (s == null || e == null) return 'รูปแบบเวลาไม่ถูกต้อง (เช่น 19:30)';
-    if (s >= e) return 'เวลาเปิดต้องน้อยกว่าเวลาสิ้นสุด';
-    return '';
-  };
-
-  const submit = async (e) => {
-    e.preventDefault();
-    const msg = validate();
-    if (msg) { setWarn(msg); return; }
-    setBusy(true);
-    try {
-      const payload = {
-        date: new Date(form.date).toISOString(),
-        doorOpenTime: normTime(form.doorOpenTime),
-        endTime: normTime(form.endTime),
-      };
-      await api.post(`/events/${eventId}/reschedule`, payload, { withCredentials: true });
-      onSaved?.();     // ← refetch event จากหน้าแม่
-      onClose?.();     // ปิด modal
-    } catch (err) {
-      setWarn(extractErrorMessage?.(err, 'เลื่อนงานไม่สำเร็จ') || 'เลื่อนงานไม่สำเร็จ');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (!open) return null;
-  return (
-    <div className="mdl-backdrop" onClick={onClose}>
-      <div className="mdl" onClick={(e)=>e.stopPropagation()}>
-        <h3 style={{marginTop:0}}>เลื่อนวัน/เวลา งาน</h3>
-
-        <form onSubmit={submit} className="frm" style={{ position:'static', borderTop:'none' }}>
-          <div className="grid2">
-            <label>วันที่ใหม่
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e)=>setForm(v=>({ ...v, date: e.target.value }))}
-                required
-              />
-            </label>
-            <span />
-            <label>เวลาเปิดประตู
-              <input
-                type="time"
-                value={form.doorOpenTime}
-                onChange={(e)=>setForm(v=>({ ...v, doorOpenTime: normTime(e.target.value) }))}
-                required
-              />
-            </label>
-            <label>เวลาสิ้นสุด
-              <input
-                type="time"
-                value={form.endTime}
-                onChange={(e)=>setForm(v=>({ ...v, endTime: normTime(e.target.value) }))}
-                required
-              />
-            </label>
-          </div>
-
-          {warn && <div className="warn" style={{marginTop:8}}>{warn}</div>}
-
-          <div className="act" style={{marginTop:12}}>
-            <button type="button" className="btn" onClick={onClose}>ยกเลิก</button>
-            <button type="submit" className="btn primary" disabled={busy}>
-              {busy ? 'Saving…' : 'ยืนยันการเลื่อน'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-/* ========== invite/edit modal (เดิม) ========== */
+/* ========== invite/edit modal (EN) ========== */
 function InviteModal({
   open,
   onClose,
   eventId,
   initial,
   onSaved,
-  windowStartHHMM,   // HH:MM ของ doorOpenTime (อาจว่าง)
-  windowEndHHMM,     // HH:MM ของ endTime (อาจว่าง)
-  invitedIds = [],
+  windowStartHHMM,   // HH:MM of doorOpenTime (optional)
+  windowEndHHMM,     // HH:MM of endTime (optional)
+  invitedIds = [],   // already invited artistIds
 }) {
-  const DURATIONS = [15, 30, 45, 60, 90, 120];
+  const DURATIONS = [15, 30, 45, 60, 90, 120]; // minutes
 
   const [loadingArtists, setLoadingArtists] = useState(false);
   const [artists, setArtists] = useState([]);
@@ -168,6 +78,7 @@ function InviteModal({
   const [selectedId, setSelectedId] = useState(initial?.artistId ?? null);
   const [warn, setWarn] = useState('');
 
+  // replace declined mode
   const replaceDeclinedId = (initial?.status === 'DECLINED' && initial?.aeId) ? initial.aeId : null;
   const isReplaceMode = !!replaceDeclinedId;
 
@@ -235,7 +146,7 @@ function InviteModal({
       || '/img/graphic-3.png';
   };
 
-  const filtered = React.useMemo(() => {
+  const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return artists;
     return artists.filter(a => displayName(a).toLowerCase().includes(s));
@@ -247,20 +158,21 @@ function InviteModal({
     if (selectedId && alreadyInvited(selectedId)) {
       const isSameDeclinedArtist = isReplaceMode && Number(selectedId) === Number(initial?.artistId);
       if (!isSameDeclinedArtist) {
-        return 'ศิลปินคนนี้อยู่ในไลน์อัปของงานนี้อยู่แล้ว';
+        return 'This artist is already in the lineup.';
       }
     }
+
     const st = normTime(form.startTime);
     const et = normTime(form.endTime);
-    if (!st || !et) return 'กรอกเวลาเริ่มและเวลาจบให้ครบ';
+    if (!st || !et) return 'Please fill start time and end time.';
     const sm = toMin(st), em = toMin(et);
-    if (sm==null || em==null) return 'รูปแบบเวลาไม่ถูกต้อง (เช่น 19:30)';
-    if (sm >= em) return 'เวลาเริ่มต้องน้อยกว่าเวลาจบ';
+    if (sm==null || em==null) return 'Invalid time format (e.g., 19:30).';
+    if (sm >= em) return 'Start time must be earlier than end time.';
 
     const wmS = windowStartHHMM ? toMin(windowStartHHMM) : null;
     const wmE = windowEndHHMM ? toMin(windowEndHHMM) : null;
-    if (wmS!=null && sm < wmS) return `เวลาเริ่มก่อนเวลาเปิดงาน (${windowStartHHMM})`;
-    if (wmE!=null && em > wmE) return `เวลาจบเกินเวลาสิ้นสุดงาน (${windowEndHHMM})`;
+    if (wmS!=null && sm < wmS) return `Start time is before event window (${windowStartHHMM}).`;
+    if (wmE!=null && em > wmE) return `End time exceeds event window (${windowEndHHMM}).`;
 
     return '';
   };
@@ -293,32 +205,32 @@ function InviteModal({
     <div className="mdl-backdrop" onClick={onClose}>
       <div className="mdl" onClick={(e)=>e.stopPropagation()}>
         <h3 style={{marginTop:0}}>
-          {isReplaceMode ? 'แทนที่ศิลปินที่ปฏิเสธ' : 'เชิญศิลปิน/จัดตาราง'}
+          {isReplaceMode ? 'Replace Declined Artist' : 'Invite / Schedule Artist'}
         </h3>
 
         {(windowStartHHMM || windowEndHHMM) && (
           <div className="note" style={{marginBottom:8, fontSize:13}}>
-            ช่วงเวลางาน: {windowStartHHMM || '—'} – {windowEndHHMM || '—'}
+            Event window: {windowStartHHMM || '—'} – {windowEndHHMM || '—'}
           </div>
         )}
 
-        {/* ค้นหา */}
+        {/* Search */}
         <div className="artist-header">
           <label className="search-wrap">
             <input
               className="search-input"
               value={q}
               onChange={(e)=>setQ(e.target.value)}
-              placeholder="ค้นหาด้วยชื่อศิลปิน…"
+              placeholder="Search artists…"
             />
             <span className="search-ico" aria-hidden>🔎</span>
           </label>
           <div className="search-meta">
-            {loadingArtists ? 'กำลังโหลด…' : `พบ ${filtered.length} ศิลปิน`}
+            {loadingArtists ? 'Loading…' : `Found ${filtered.length} artist(s)`}
           </div>
         </div>
 
-        {/* รายการศิลปิน */}
+        {/* Artist list */}
         <div className="artist-list">
           <div className="artist-grid">
             {filtered.map(a => {
@@ -333,7 +245,7 @@ function InviteModal({
                   className={`artist-card ${sel ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
                   onClick={()=>{ if (!disabled) setSelectedId(id); }}
                   role="button"
-                  title={disabled ? 'ศิลปินอยู่ในไลน์อัปแล้ว' : displayName(a)}
+                  title={disabled ? 'Already in lineup' : displayName(a)}
                 >
                   <img className="artist-thumb" src={displayThumb(a)} alt={displayName(a)}
                        onError={(e)=>{e.currentTarget.src='/img/graphic-3.png';}} />
@@ -351,20 +263,22 @@ function InviteModal({
               );
             })}
             {!loadingArtists && filtered.length === 0 && (
-              <div style={{gridColumn:'1 / -1', color:'#6b7280', padding:'8px 2px'}}>ไม่พบศิลปินที่ชื่อ “{q}”</div>
+              <div style={{gridColumn:'1 / -1', color:'#6b7280', padding:'8px 2px'}}>
+                No artists found for “{q}”
+              </div>
             )}
           </div>
         </div>
 
-        {/* เตือน validate */}
+        {/* Validation warning */}
         {warn && <div className="warn">{warn}</div>}
 
-        {/* เวลา (Start + Duration) */}
+        {/* Time form */}
         <form onSubmit={submit} className="frm" style={{marginTop:12}}>
           {/* Quick slots */}
           {(() => {
             const slots = [];
-            const step = 30;
+            const step = 30; // every 30 min
             const d = Number(form.duration) || 60;
             const minM = windowStartHHMM ? toMin(windowStartHHMM) : 18*60;
             const maxM = windowEndHHMM   ? toMin(windowEndHHMM)   : 24*60;
@@ -385,7 +299,8 @@ function InviteModal({
           })()}
 
           <div className="grid2">
-            <label>เวลาเริ่ม
+            {/* Start time */}
+            <label>Start time
               <input
                 type="time"
                 step="300"
@@ -397,15 +312,17 @@ function InviteModal({
                 placeholder="19:30"
               />
             </label>
-            <label>ระยะเวลา
+
+            {/* Duration */}
+            <label>Duration
               <div className="duration-wrap">
                 <select
                   value={form.duration}
                   onChange={(e)=>setForm(v=>({ ...v, duration: Number(e.target.value) || 60 }))}>
-                  {[15,30,45,60,90,120].map(d=><option key={d} value={d}>{d} นาที</option>)}
+                  {DURATIONS.map(d=><option key={d} value={d}>{d} min</option>)}
                 </select>
                 <div className="duration-chips">
-                  {[15,30,45,60,90].map(d=>(
+                  {DURATIONS.slice(0,5).map(d=>(
                     <button key={d} type="button"
                       className={`chip ${Number(form.duration)===d?'on':''}`}
                       onClick={()=>setForm(v=>({ ...v, duration:d }))}>
@@ -417,14 +334,16 @@ function InviteModal({
             </label>
           </div>
 
+          {/* End time preview */}
           <div className="kv" style={{marginTop:4}}>
-            <b>เวลาจบ</b><span>{form.endTime || '—'}</span>
+            <b>End time</b><span>{form.endTime || '—'}</span>
           </div>
 
+          {/* Actions */}
           <div className="act">
-            <button type="button" className="btn" onClick={onClose}>ยกเลิก</button>
+            <button type="button" className="btn" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn primary" disabled={!selectedId || !!warn}>
-              {isReplaceMode ? 'แทนที่ศิลปิน' : 'เชิญศิลปิน'}
+              {isReplaceMode ? 'Replace Artist' : 'Invite Artist'}
             </button>
           </div>
         </form>
@@ -433,7 +352,99 @@ function InviteModal({
   );
 }
 
-/* ========== main ev-detail-page ========== */
+
+/* ===== helpers (ภายในไฟล์) ===== */
+const badgeCss = {
+  display:'inline-block',
+  padding:'4px 8px',
+  borderRadius: '999px',
+  fontSize: 12,
+  height: 'fit-content'
+};
+
+/* ===== Schedule component (EN labels) ===== */
+function BasicSchedule({ rows, minM, maxM, onBarClick }) {
+  const total = Math.max(1, maxM - minM);
+  const percent = (m) => ((m - minM) / total) * 100;
+
+  const numCols = Math.max(1, Math.ceil((maxM - minM) / 60));
+  const ticks = [];
+  for (let m = minM; m <= maxM; m += 60) ticks.push(m);
+
+  return (
+    <div className="bs-wrap">
+      <div className="bs-head">
+        <div className="bs-colname">Artists</div>
+        <div>
+          <div
+            className="bs-scale"
+            style={{ gridTemplateColumns: `repeat(${numCols}, 1fr)` }}
+          >
+            {ticks.map((t, i) => {
+              const isLast = i === ticks.length - 1;
+              return (
+                <span
+                  key={t}
+                  style={isLast ? { gridColumnStart: numCols, justifySelf: 'end', whiteSpace:'nowrap' } : {whiteSpace:'nowrap'}}
+                >
+                  {minToHHMM(t)}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {rows.map(r => {
+        const s = toMin(r.start), e = toMin(r.end);
+        const ok = s!=null && e!=null && e>s;
+        const left = ok ? percent(s) : 0;
+        const width = ok ? (percent(e) - percent(s)) : 0;
+
+        const st = String(r.status || 'PENDING').toUpperCase();
+        const cls = st === 'ACCEPTED' ? 'ok' : (st === 'DECLINED' ? 'no' : 'wait');
+
+        const endsAtRight = ok && Math.abs(e - maxM) < 0.0001;
+        const styleObj = endsAtRight
+          ? { left: `${left}%`, right: 0 }
+          : { left: `${left}%`, width: `${width}%` };
+
+        return (
+          <div key={r.key} className="bs-row">
+            <div>
+              <div className="bs-name">{r.name}</div>
+              
+              <div className="bs-sub">
+                <span className={`st ${cls}`}>{st}</span>
+                <button className="btn-xs cancel">CANCEL INVITE</button>
+              </div>
+            </div>
+            <div className="bs-track">
+              {ok ? (
+                <button
+                  className={`bs-bar ${cls}`}
+                  style={styleObj}
+                  onClick={onBarClick?()=>onBarClick(r):undefined}
+                  title={`${r.start} – ${r.end}`}
+                >
+                  {r.start} – {r.end}
+                </button>
+              ) : (
+                <div className="bs-bar tbd" style={{ left: 0, right: 0 }}>
+                  TBD
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+
+/* ========== main page ========== */
 export default function EventDetail() {
   const { id } = useParams();
   const location = useLocation();
@@ -448,9 +459,6 @@ export default function EventDetail() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-
-  // NEW: reschedule modal state
-  const [resModalOpen, setResModalOpen] = useState(false);
 
   const fetchEvent = async () => {
     const { data } = await api.get(`/events/${id}`, { withCredentials: true });
@@ -522,9 +530,6 @@ export default function EventDetail() {
     }
   };
 
-  // NEW: show reschedule button only when owner/admin AND event is already published
-  const canReschedule = !!(ev?._isOwner) && !!ev?.isPublished;
-
   // แปลง artistEvents + scheduleSlots เป็นแถว
   const scheduleRows = useMemo(() => {
     const rows = [];
@@ -536,7 +541,7 @@ export default function EventDetail() {
         `Artist ${ae?.artistId ?? ''}`;
       rows.push({
         key: `${ae.artistId}-${ae.eventId}`,
-        aeId: ae.id,
+        aeId: ae.id,            // ✅ เก็บ id ของ artistEvent ไว้ใช้ตอนแทนที่
         artistId: ae.artistId,
         name,
         status: ae?.status || 'PENDING',
@@ -605,9 +610,9 @@ export default function EventDetail() {
     return { minM, maxM, startHH: minToHHMM(minM), endHH: minToHHMM(maxM), rawStart: eventStart, rawEnd: eventEnd };
   }, [ev, scheduleRows]);
 
-  if (loading) return <div className="ev-detail-page"><div className="note">กำลังโหลด…</div></div>;
+  if (loading) return <div className="page"><div className="note">กำลังโหลด…</div></div>;
   if (err) return (
-    <div className="ev-detail-page">
+    <div className="page">
       <div className="note err">{err}</div>
       <div style={{ marginTop: 8 }}>
         <button className="btn" onClick={() => navigate(-1)}>← กลับ</button>
@@ -616,8 +621,16 @@ export default function EventDetail() {
   );
   if (!ev) return null;
 
+  /* ================= HERO ใหม่ (พื้นหลังภาพเข้ม + โปสเตอร์ขวา) ================= */
+  const poster = ev?.posterUrl || '/img/graphic-3.png';
+  const venueName = ev?.venue?.performer?.user?.name || ev?.venue?.name || '—';
+  const locationUrl = ev?.venue?.location?.locationUrl || null;
+  const scheduleRange = (ev.doorOpenTime || ev.endTime)
+    ? `${normTime(ev.doorOpenTime) || '—'} – ${normTime(ev.endTime) || '—'}`
+    : '—';
+
   return (
-    <div className="ev-detail-page">
+    <div className="page">
       {/* แจ้งเตือนเจ้าของ/แอดมิน */}
       {ev?._isOwner && ev?._ready && !ev._ready.isReady && (
         <div className="note" style={{ background:'#fff3cd', border:'1px solid #ffe69c', color:'#664d03', marginBottom:12 }}>
@@ -626,16 +639,112 @@ export default function EventDetail() {
         </div>
       )}
 
-      {/* HERO */}
-      <div className="hero">
-        <div className="heroL">
-          <div className="d-flex" style={{display:'flex', alignItems:'center', gap:8}}>
-            <h1 className="title">{ev.name || `Event #${ev.id}`}</h1>
-            {ev.isPublished ? (
-              <span className="badge bg-success" style={badgeCss}>Published</span>
-            ) : (
-              <span className="badge bg-secondary" style={badgeCss}>Draft</span>
+      {/* ===== HERO (ภาพพื้นหลัง + ขวาโปสเตอร์) ===== */}
+      <div className="ed-hero" style={{ backgroundImage: `url(${poster})` }}>
+        <div className="ed-hero-inner">
+          {/* ซ้าย: ชื่อ + meta + ปุ่ม */}
+          <div className="ed-hero-left">
+            <div className="ed-title-row">
+              <h1 className="ed-title">{ev.name || `Event #${ev.id}`}</h1>
+              {ev.isPublished ? (
+                <span className="badge" style={{background:'#16a34a',color:'#fff'}}>Published</span>
+              ) : (
+                <span className="badge" style={{background:'#6b7280',color:'#fff'}}>Draft</span>
+              )}
+            </div>
+
+            <div className="ed-meta">
+              <span className="ed-k">Date</span>
+              <span className="ed-v">{formatDateEN(ev.date)}</span>
+            </div>
+
+            <div className="ed-meta">
+              <span className="ed-k">Hours</span>
+              <span className="ed-v">{scheduleRange}</span>
+            </div>
+
+            <div className="ed-meta">
+              <span className="ed-k">Event Type</span>
+              <span className="ed-v">{ev?.eventType || '—'}</span>
+            </div>
+
+            <div className="ed-meta">
+              <span className="ed-k">Location</span>
+              <span className="ed-v">
+                {venueName}{' '}
+              </span>
+            </div>
+
+
+            {/* <div className="ed-actions">
+              <button
+                className={`like ${ev.likedByMe ? 'on' : ''}`}
+                onClick={toggleFollow}
+                aria-label="follow"
+                title={ev.likedByMe ? 'Unfollow' : 'Follow'}
+              />
+              <span className="ed-followers">👥 {ev.followersCount || 0}</span>
+            </div> */}
+          </div>
+
+          {/* ขวา: โปสเตอร์ซ้ำ */}
+          <div className="ed-hero-right">
+            <img
+              src={poster}
+              alt={ev.name || `Event #${ev.id}`}
+              onError={(e)=>{ e.currentTarget.src='/img/graphic-3.png'; }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ===== INFO GRID 3 คอลัมน์ ===== */}
+      <section className="ed-info">
+        <div className="ed-info-grid">
+          {/* CONTACT */}
+          <div className="ed-info-block">
+            <h3 className="ed-info-title">CONTACT</h3>
+            <div className="ed-kv"><div>Email</div><div>—</div></div>
+            <div className="ed-kv"><div>Phone</div><div>—</div></div>
+            <div className="ed-kv">
+              <div>Location</div>
+              <div>
+                {locationUrl
+                  ? <a className="alink" href={locationUrl} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>
+                  : '—'}
+              </div>
+            </div>
+          </div>
+
+          {/* DESCRIPTION */}
+          <div className="ed-info-block">
+            <h3 className="ed-info-title">DESCRIPTION</h3>
+            <p className="ed-text">{ev?.description || '—'}</p>
+          </div>
+
+          {/* LINKS */}
+          <div className="ed-info-block">
+            <h3 className="ed-info-title">LINKS</h3>
+            <p className="ed-text">
+              {ev?.ticketLink
+                ? <a className="alink" href={ev.ticketLink} target="_blank" rel="noreferrer">Tickets ↗</a>
+                : '—'}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== SCHEDULE (EN + styled like info blocks) ===== */}
+      <section className="ed-schedule">
+        <div className="ed-schedule-head">
+          <h2 className="h2">Artist Schedule</h2>
+          <div style={{display:'flex', gap:8}}>
+            {canEdit && (
+              <button className="btn primary" onClick={()=>{ setEditing(null); setModalOpen(true); }}>
+                Schedule / Invite Artists
+              </button>
             )}
+            {/* ⬇️ ย้าย Publish มาตรงนี้ */}
             {canPublish && (
               <button
                 className="btn primary"
@@ -646,87 +755,26 @@ export default function EventDetail() {
                 {publishing ? 'Publishing…' : 'Publish'}
               </button>
             )}
-            {/* NEW: Reschedule button (owner/admin only AND already published) */}
-            {canReschedule && (
-              <button
-                className="btn"
-                onClick={()=>setResModalOpen(true)}
-                title="เลื่อนกำหนดวัน/เวลา (จะ unpublish และให้ศิลปินยืนยันใหม่)"
-              >
-                เลื่อนงาน
-              </button>
-            )}
-          </div>
 
-          <div className="kv"><b>วันเวลา</b><span>{formatDT(ev.date)}</span></div>
-          {(ev.doorOpenTime || ev.endTime) && (
-            <div className="kv"><b>ช่วงงาน</b><span>{normTime(ev.doorOpenTime)||'—'} – {normTime(ev.endTime)||'—'}</span></div>
-          )}
-          <div className="kv"><b>ประเภท</b><span>{ev.eventType||'—'}</span></div>
-          <div className="kv"><b>แนวเพลง</b><span>{ev.genre||'—'}</span></div>
-          <div className="kv"><b>บัตร</b><span>{ev.ticketing||'—'}</span></div>
-          <div className="kv"><b>ผู้ติดตาม</b>
-            <span>👥 {ev.followersCount||0} <button className={`like ${ev.likedByMe?'on':''}`} onClick={toggleFollow} aria-label="follow" /></span>
-          </div>
-          {ev.ticketLink && (
-            <div className="kv"><b>ลิงก์บัตร</b><a className="alink" href={ev.ticketLink} target="_blank" rel="noreferrer">เปิดลิงก์</a></div>
-          )}
-        </div>
-        <div className="heroR">
-          {ev.posterUrl
-            ? <img src={ev.posterUrl} alt={ev.name||`Event #${ev.id}`} onError={(e)=>{ e.currentTarget.style.display='none'; }} />
-            : <div className="ph">ไม่มีโปสเตอร์</div>}
-        </div>
-      </div>
-
-      {/* VENUE */}
-      <section className="sec">
-        <h2 className="h2">สถานที่จัด</h2>
-        {ev.venue ? (
-          <div className="grid2">
-            <div className="kv"><b>ชื่อสถานที่</b><span>{ev.venue?.performer?.user?.name || ev.venue?.name || '—'}</span></div>
-            <div className="kv"><b>แนวถนัด</b><span>{ev.venue.genre || '—'}</span></div>
-            <div className="kv"><b>ความจุ</b><span>{typeof ev.venue.capacity==='number'?ev.venue.capacity:'—'}</span></div>
-            <div className="kv"><b>แผนที่</b><span>{ev.venue.location?.locationUrl
-              ? <a className="alink" href={ev.venue.location.locationUrl} target="_blank" rel="noreferrer">เปิดแผนที่</a> : '—'}</span></div>
-          </div>
-        ) : <div className="empty">—</div>}
-      </section>
-
-      {/* ===== SCHEDULE ===== */}
-      <section className="sec">
-        <div className="secHead">
-          <h2 className="h2" style={{margin:0}}>ตารางศิลปิน</h2>
-          <div style={{display:'flex', gap:8}}>
-            {/* ปุ่มเชิญ/แก้ตาราง: เฉพาะตอนยังไม่ publish */}
-            {canEdit && (
-              <button className="btn primary" onClick={()=>{ setEditing(null); setModalOpen(true); }}>
-                จัดตาราง/เชิญศิลปิน
-              </button>
-            )}
-            {location.pathname.startsWith('/myevents')
-              ? <Link to="/myevents" className="btn">ไปหน้าเมื่อกี้</Link>
-              : <Link to="/events" className="btn">กลับไปหน้า Events</Link>}
+            <button className="btn primary">Postpone</button>
+            <button className="btn primary">Delete Event</button>
           </div>
         </div>
 
-        {/* แถบสถานะรวม */}
+        {/* Status strip */}
         {ev?.isPublished ? (
-          <div
-            className="note"
-            style={{ background: '#eef6ff', border: '1px solid #bfdbfe', color: '#1e40af', marginBottom: 10 }}
-          >
-            งานนี้เผยแพร่แล้ว (read-only) — ไม่สามารถเชิญศิลปินเพิ่มหรือแก้ไลน์อัปได้
+          <div className="note" style={{ background: '#eef6ff', border: '1px solid #bfdbfe', color: '#1e40af', marginBottom: 10 }}>
+            This event is published (read-only). You can’t modify the lineup.
           </div>
         ) : ev?._ready ? (
           <div style={{margin:'6px 0 10px', fontSize:13, color: (ev._ready?.isReady ? '#0a7' : '#b35')}}>
             {ev._ready?.isReady
-              ? (ev._isOwner ? 'Ready: ศิลปินตอบรับครบแล้ว — กด Publish ได้เลย' : 'Ready: ศิลปินตอบรับครบแล้ว')
+              ? (ev._isOwner ? 'Ready: All artists accepted — you can Publish now.' : 'Ready: All artists accepted.')
               : `Pending: ${ev._ready.accepted}/${ev._ready.totalInvited} accepted`}
           </div>
         ) : null}
 
-        {/* ตารางเวลา */}
+        {/* Timeline */}
         {scheduleRows.length === 0 ? (
           <div className="empty">—</div>
         ) : (
@@ -738,7 +786,7 @@ export default function EventDetail() {
           />
         )}
 
-        {/* INVITE MODAL */}
+        {/* Modal */}
         <InviteModal
           open={modalOpen && !ev.isPublished}
           onClose={()=>setModalOpen(false)}
@@ -749,88 +797,7 @@ export default function EventDetail() {
           windowEndHHMM={windowRange.rawEnd || null}
           invitedIds={invitedIds}
         />
-
-        {/* RESCHEDULE MODAL */}
-        <RescheduleModal
-          open={resModalOpen}
-          onClose={()=>setResModalOpen(false)}
-          eventId={ev.id}
-          initialDateISO={ev.date}
-          initialDoor={ev.doorOpenTime}
-          initialEnd={ev.endTime}
-          onSaved={fetchEvent}
-        />
       </section>
-
-
-    </div>
-  );
-}
-
-/* ===== helpers (ภายในไฟล์) ===== */
-const badgeCss = {
-  display:'inline-block',
-  padding:'4px 8px',
-  borderRadius: '999px',
-  fontSize: 12,
-  height: 'fit-content'
-};
-
-/* ===== Schedule component ===== */
-function BasicSchedule({ rows, minM, maxM, onBarClick }) {
-  const total = Math.max(1, maxM - minM);
-  const percent = (m) => ((m - minM) / total) * 100;
-
-  const hours = [];
-  for (let m = minM; m <= maxM; m += 60) hours.push(m);
-
-  return (
-    <div className="bs-wrap">
-      <div className="bs-head">
-        <div className="bs-colname">ศิลปิน</div>
-        <div>
-          <div className="bs-scale">
-            {hours.map(h => <span key={h}>{minToHHMM(h)}</span>)}
-          </div>
-        </div>
-      </div>
-
-      {rows.map(r => {
-        const s = toMin(r.start), e = toMin(r.end);
-        const ok = s!=null && e!=null && e>s;
-        const left = ok ? percent(s) : 0;
-        const width = ok ? (percent(e) - percent(s)) : 0;
-
-        const st = String(r.status || 'PENDING').toUpperCase();
-        const cls = st === 'ACCEPTED' ? 'ok' : (st === 'DECLINED' ? 'no' : 'wait');
-
-        return (
-          <div key={r.key} className="bs-row">
-            <div>
-              <div className="bs-name">{r.name}</div>
-              <div className="bs-sub">
-                <span className={`st ${cls}`}>{st}</span>
-              </div>
-            </div>
-            <div className="bs-track">
-              {ok ? (
-                <button
-                  className={`bs-bar ${cls}`}
-                  style={{ left: `${left}%`, width: `${width}%` }}
-                  onClick={onBarClick?()=>onBarClick(r):undefined}
-                  title={`${r.start} – ${r.end}`}
-                >
-                  {r.start} – {r.end}
-                </button>
-              ) : (
-                <div className="bs-bar tbd" style={{ left:'2%', width:'96%' }}>
-                  TBD
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
