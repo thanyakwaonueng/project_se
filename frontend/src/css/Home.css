@@ -1,9 +1,9 @@
 body {
-      /* font-family: 'Anton', sans-serif; */
-      /* font-family: 'Noto Serif', serif; */
-    /* font-family: 'Inter', sans-serif; */
-    font-family: 'Poppins', sans-serif;
-    background-color: #f7f7f7;
+  /* font-family: 'Anton', sans-serif; */
+  /* font-family: 'Inter', sans-serif; */
+  /* font-family: 'Poppins', sans-serif; */
+  font-family: 'Poppins', 'Mitr', sans-serif;
+  background-color: #f7f7f7;
 }
 
 
@@ -23,7 +23,6 @@ body {
 }
 
 .topic-1 {
-  font-family: 'Poppins', sans-serif;
   font-size: 140px;
   font-weight: bold; 
   text-align: center;
@@ -799,7 +798,6 @@ body {
   border-radius: 999px;
   padding: 10px 20px;
   font-size: 16px;
-  font-family: 'Noto Serif', serif;
   font-weight: 500;
   cursor: pointer;
   margin-top: 20px;

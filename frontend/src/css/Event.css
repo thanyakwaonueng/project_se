@@ -9,7 +9,6 @@
 }
 
 .sound-agenda {
-  font-family: 'Poppins', sans-serif;
   font-size: 150px;
   font-weight: bold; 
   text-align: center;
@@ -127,7 +126,7 @@
 .month-picker-container {
   position: relative;
   display: inline-block;
-  font-family: system-ui, sans-serif;
+  /* font-family: system-ui, sans-serif; */
 }
 
 .month-picker-input {
@@ -412,14 +411,11 @@
 
 /* ใต้รูป: จัดกึ่งกลางทุกอย่างในแนวตั้ง */
 .popup-event-section {
-  display: flex;
-  flex-direction: column;   /* เรียงเป็นคอลัมน์ */
-  align-items: center;      /* จัดให้อยู่กึ่งกลางแนวนอน */
-  justify-content: center;  /* จัดให้อยู่กึ่งกลางแนวตั้ง */
-  text-align: center;       /* ให้ข้อความกึ่งกลาง */
-  gap: 8px;
-  /* margin-top: 8px; */
-  /* margin-bottom: 15px; */
+  display: flex;                 
+  align-items: center;         
+  justify-content: space-between; 
+  gap: 10px;            
+  margin-bottom: 15px; 
 }
 
 
