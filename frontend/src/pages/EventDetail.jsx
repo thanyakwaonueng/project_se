@@ -1,7 +1,8 @@
-// src/pages/EventDetail.jsx
+// src/ev-detail-pages/EventDetail.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import api, { extractErrorMessage } from '../lib/api';
+import "../css/EventDetail.css";
 
 /* ========== helpers ========== */
 function formatDT(iso) {
@@ -339,7 +340,7 @@ function InviteModal({
   );
 }
 
-/* ========== main page ========== */
+/* ========== main ev-detail-page ========== */
 export default function EventDetail() {
   const { id } = useParams();
   const location = useLocation();
@@ -505,9 +506,9 @@ export default function EventDetail() {
     return { minM, maxM, startHH: minToHHMM(minM), endHH: minToHHMM(maxM), rawStart: eventStart, rawEnd: eventEnd };
   }, [ev, scheduleRows]);
 
-  if (loading) return <div className="page"><div className="note">กำลังโหลด…</div></div>;
+  if (loading) return <div className="ev-detail-page"><div className="note">กำลังโหลด…</div></div>;
   if (err) return (
-    <div className="page">
+    <div className="ev-detail-page">
       <div className="note err">{err}</div>
       <div style={{ marginTop: 8 }}>
         <button className="btn" onClick={() => navigate(-1)}>← กลับ</button>
@@ -517,7 +518,7 @@ export default function EventDetail() {
   if (!ev) return null;
 
   return (
-    <div className="page">
+    <div className="ev-detail-page">
       {/* แจ้งเตือนเจ้าของ/แอดมิน */}
       {ev?._isOwner && ev?._ready && !ev._ready.isReady && (
         <div className="note" style={{ background:'#fff3cd', border:'1px solid #ffe69c', color:'#664d03', marginBottom:12 }}>
@@ -641,125 +642,7 @@ export default function EventDetail() {
         />
       </section>
 
-      {/* ===== CSS ===== */}
-      <style>{`
-  .page{max-width:1100px;margin:0 auto;padding:24px 20px 64px}
-  .note{background:#fff3cd;color:#664d03;padding:12px 14px;border-radius:10px}
-  .note.err{background:#fde8ea;color:#a6232f}
-  .btn{padding:10px 14px;border-radius:10px;border:1px solid #d0d7de;background:#fff;cursor:pointer}
-  .btn.primary{background:#1f6feb;color:#fff;border-color:#1f6feb}
-  .btn-xs{padding:6px 10px;border-radius:8px;border:1px solid #d0d7de;background:#fff;font-size:12px}
-  .alink{color:#1f6feb}
-  .like{width:24px;height:24px;border-radius:50%;border:1px solid #d0d7de;background:#fff;margin-left:8px}
-  .like.on{background:#ffeff0;border-color:#ffccd1}
 
-  .hero{display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start}
-  .heroR img{width:100%;height:300px;object-fit:cover;border-radius:12px;border:1px solid #e5e7eb}
-  .ph{height:300px;border:1px dashed #e5e7eb;border-radius:12px;display:grid;place-items:center;color:#8a8a8a}
-  .title{margin:0 0 8px 0}
-  .kv{display:grid;grid-template-columns:110px 1fr;gap:10px;margin:6px 0}
-  .sec{margin-top:28px}
-  .h2{font-size:20px}
-  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-  .empty{padding:12px;border:1px dashed #e5e7eb;border-radius:10px;color:#8a8a8a}
-  .secHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-
-  /* ===== Schedule ===== */
-  .bs-wrap{display:grid;row-gap:12px}
-  .bs-head{display:grid;grid-template-columns:220px 1fr;column-gap:12px;align-items:end}
-  .bs-colname{font-weight:700}
-  .bs-scale{display:flex;justify-content:space-between;color:#6b7280;font-size:12px;padding:0 4px}
-  .bs-row{display:grid;grid-template-columns:220px 1fr;column-gap:12px;align-items:center}
-  .bs-name{font-weight:600;margin-bottom:4px}
-  .bs-sub{color:#6b7280;font-size:12px}
-  .bs-sub .st{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid transparent;margin-right:6px}
-  .bs-track{position:relative;height:38px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;overflow:hidden}
-  .bs-bar{position:absolute;top:3px;height:32px;border-radius:8px;border:1px solid #cfe1ff;background:#eaf2ff;
-          display:flex;align-items:center;justify-content:center;font-size:13px;color:#1d2a3a;white-space:nowrap;padding:0 8px;transition:box-shadow .15s}
-  .bs-bar.tbd{background:#fff;border-style:dashed;color:#6b7280}
-
-  /* สีตามสถานะ */
-  .bs-bar.ok{background:#e8f8f0;border-color:#a5e3c6;color:#0f5132}
-  .bs-bar.wait{background:#fff7e6;border-color:#ffe0a3;color:#7a5200}
-  .bs-bar.no{background:#fde8ea;border-color:#f5b5bd;color:#842029}
-  .bs-sub .st.ok{background:#e8f8f0;border-color:#a5e3c6;color:#0f5132}
-  .bs-sub .st.wait{background:#fff7e6;border-color:#ffe0a3;color:#7a5200}
-  .bs-sub .st.no{background:#fde8ea;border-color:#f5b5bd;color:#842029}
-
-  /* ===== Modal / Artist selector ===== */
-  .mdl-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:50}
-  .mdl{
-    background:#fff;
-    border-radius:14px;
-    max-width:820px;
-    width:96vw;
-    padding:18px 18px 16px;
-    max-height:88vh;
-    display:flex;
-    flex-direction:column;
-    overflow:hidden;
-    box-shadow:0 18px 36px rgba(0,0,0,.12)
-  }
-
-  /* ฟอร์มเวลาอยู่ล่างติดเสมอ */
-  .frm{
-    position:sticky; bottom:0;
-    background:#fff;
-    padding-top:10px;
-    margin-top:12px;
-    border-top:1px solid #eee;
-    display:grid; gap:12px
-  }
-  .frm input{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px}
-  .act{display:flex;gap:8px;justify-content:flex-end}
-
-  /* ส่วนหัวค้นหา */
-  .artist-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:6px 2px 10px}
-  .search-wrap{position:relative;flex:1}
-  .search-input{width:100%;padding:10px 34px 10px 40px;border:1px solid #e5e7eb;border-radius:999px;background:#f8fafc;outline:none}
-  .search-input:focus{border-color:#1f6feb;box-shadow:0 0 0 3px rgba(31,111,235,.15)}
-  .search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.65}
-  .search-meta{font-size:12px;color:#6b7280}
-
-  /* ลิสต์ศิลปินให้เตี้ยลง + เป็นตัวสกรอลล์หลัก */
-  .artist-list{
-    flex:1;
-    max-height:38vh;
-    overflow:auto;
-    padding-right:6px;
-    margin-bottom:8px;
-    scrollbar-width:thin
-  }
-  .artist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
-  .artist-card{display:flex;gap:10px;border:1px solid #e5e7eb;border-radius:14px;padding:8px 10px;align-items:center;background:#fff;cursor:pointer;transition:box-shadow .15s,border-color .15s}
-  .artist-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.06)}
-  .artist-card.selected{border-color:#1f6feb;box-shadow:0 0 0 3px rgba(31,111,235,.18)}
-  .artist-card.disabled{opacity:.55;pointer-events:none}
-  .artist-thumb{width:48px;height:48px;border-radius:12px;object-fit:cover;border:1px solid #e5e7eb;background:#fafafa}
-  .artist-info{display:flex;flex-direction:column;gap:4px;min-width:0}
-  .artist-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .artist-actions{display:flex;gap:8px;align-items:center}
-  .pill{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid #d0d7de;background:#f1f5f9}
-  .pill.on{background:#1f6feb;color:#fff;border-color:#1f6feb}
-  .warn{margin:6px 2px 0;background:#fff7e6;border:1px solid #ffe0a3;color:#7a5200;padding:8px 10px;border-radius:10px;font-size:13px}
-
-  /* Duration & quick slots */
-  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
-  .chip{padding:6px 10px;border-radius:999px;border:1px solid #d0d7de;background:#f8fafc;font-size:12px;cursor:pointer}
-  .chip:hover{background:#eef2ff;border-color:#cfe1ff}
-  .chip.on{background:#1f6feb;color:#fff;border-color:#1f6feb}
-  .duration-wrap{display:flex;flex-direction:column;gap:6px}
-  .duration-wrap select{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fff}
-  .duration-chips{display:flex;flex-wrap:wrap;gap:6px}
-
-  @media (min-width:900px){
-    .artist-list{max-height:44vh}
-  }
-  @media (max-width:980px){
-    .hero{grid-template-columns:1fr}
-    .artist-list{max-height:32vh}
-  }
-      `}</style>
     </div>
   );
 }
