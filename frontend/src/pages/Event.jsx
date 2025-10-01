@@ -321,20 +321,20 @@ export default function Event() {
                     <h3 className="popup-event-title" style={{ marginBottom: 6 }}>{ev.title}</h3>
 
                     {/* แสดงยอดผู้ติดตาม */}
-                    {typeof ev.followersCount === 'number' && (
+                    {/* {typeof ev.followersCount === 'number' && (
                       <div style={{ fontSize: 13, opacity: .85, marginBottom: 8 }}>
                         👥 {ev.followersCount} followers
                       </div>
-                    )}
+                    )} */}
 
                     {/* readiness badge (ถ้ามีข้อมูลจาก backend) */}
-                    {ev._ready && (
+                    {/* {ev._ready && (
                       <div style={{ fontSize: 12, marginBottom: 8, color: ev._ready.isReady ? '#0a7' : '#b35' }}>
                         {ev._ready.isReady
                           ? 'Ready: all artists accepted'
                           : `Pending: ${ev._ready.accepted}/${ev._ready.totalInvited} accepted`}
                       </div>
-                    )}
+                    )} */}
 
                     <Link to={`/events/${ev.id}`} className="btn-event-detail">
                       View Event

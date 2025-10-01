@@ -355,27 +355,29 @@
   border: none;
   height: 1px;
   background-color: #ccc;  
-  margin: 12px 0;   
+  /* margin: 12px 0;   */
+  margin-top: 30px; 
 }
 
 
 .popup-event {
-  margin-bottom: 30px;
+  margin-bottom: 10px;
   text-align: center;
 }
 
 .popup-event-title {
-  font-size: 18px;
+  font-size: 26px;
   margin: 15px 0;
   color: #333;
 }
 
 .popup-image {
-  width: 230px;       /* ปรับขนาดที่ต้องการ */
+  width: 280px;       /* ปรับขนาดที่ต้องการ */
   height: auto;       /* รักษาอัตราส่วนเดิม */
   border-radius: 8px; /* ถ้าอยากให้มุมโค้ง */
   object-fit: cover;  /* ปรับให้รูปเต็มขนาด box */
   margin-bottom: 10px;
+  margin-top: 15px;
 }
 
 
@@ -408,13 +410,18 @@
   }
 }
 
+/* ใต้รูป: จัดกึ่งกลางทุกอย่างในแนวตั้ง */
 .popup-event-section {
-  display: flex;                 
-  align-items: center;         
-  justify-content: space-between; 
-  gap: 10px;            
-  margin-bottom: 15px;      
+  display: flex;
+  flex-direction: column;   /* เรียงเป็นคอลัมน์ */
+  align-items: center;      /* จัดให้อยู่กึ่งกลางแนวนอน */
+  justify-content: center;  /* จัดให้อยู่กึ่งกลางแนวตั้ง */
+  text-align: center;       /* ให้ข้อความกึ่งกลาง */
+  gap: 8px;
+  /* margin-top: 8px; */
+  /* margin-bottom: 15px; */
 }
+
 
 
 .btn-event-detail {

@@ -74,7 +74,7 @@ export default function Login() {
                     required
                 />
               </div>
-              <button type="submit" className="btn btn-login" disabled={busy}>
+              <button type="submit" className="btn-login" disabled={busy}>
                 {busy ? 'Signing in…' : 'Login'}
               </button>
             </form>
