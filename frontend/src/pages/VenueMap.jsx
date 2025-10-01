@@ -77,11 +77,14 @@ function formatDT(iso) {
   if (!iso) return '—';
   try {
     const dt = new Date(iso);
-    return new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeStyle: 'short' }).format(dt);
+    const dateStr = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(dt);
+    const timeStr = new Intl.DateTimeFormat('th-TH', { hour: '2-digit', minute: '2-digit' }).format(dt);
+    return `${dateStr} ${timeStr}`;
   } catch {
     return iso;
   }
 }
+
 
 // ===== path helpers =====
 const toEventDetailPath = (ev) => {
@@ -435,7 +438,7 @@ export default function VenueMap() {
             )}
 
             {/* Near me */}
-            <span
+            {/* <span
               className="vmap-ghostLink"
               onClick={flyToNearestVenue}
               title={nearestVenue ? `ใกล้สุด ≈ ${nearestVenue.distanceKm.toFixed(2)} km` : 'ยังไม่มีตำแหน่งฉัน'}
@@ -446,7 +449,7 @@ export default function VenueMap() {
                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
                 <circle cx="12" cy="9" r="2.5" />
               </svg>
-            </span>
+            </span> */}
 
             {/* Switch (VENUES / EVENTS) */}
             <div className="vmap-modeBox">
@@ -537,11 +540,11 @@ export default function VenueMap() {
                           </Link>
                         </div>
 
-                        {subline && (
+                        {/* {subline && (
                           <div className="vmap-cardSub">
                             <span className="vmap-sub">{subline}</span>
                           </div>
-                        )}
+                        )} */}
 
                         <div className="vmap-cardMeta">
                           {typeof v.rating === 'number' && (
@@ -553,11 +556,6 @@ export default function VenueMap() {
                         </div>
 
                         <div className="vmap-cardActions">
-                          {v.websiteUrl && (
-                            <a className="vmap-btn" href={v.websiteUrl} target="_blank" rel="noreferrer">
-                              Visit Website ↗
-                            </a>
-                          )}
                           {v.genre && (
                             <span className="vmap-genreTag">{v.genre}</span>
                           )}
@@ -586,7 +584,12 @@ export default function VenueMap() {
                     || '/img/fallback.jpg';
 
                   return (
-                    <div key={ev.id || ev._id || ev.slug} className="vmap-card">
+                    <div
+                      key={ev.id || ev._id || ev.slug}
+                      className="vmap-card"
+                      onClick={() => window.location.href = toEventDetailPath(ev)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <div className="vmap-cardImg">
                         <img
                           src={img}
@@ -601,6 +604,7 @@ export default function VenueMap() {
                           <Link to={toEventDetailPath(ev)} className="vmap-cardTitleLink">
                             {ev.title || ev.name || 'Untitled Event'}
                           </Link>
+                          {/* {ev.title || ev.name || 'Untitled Event'} */}
                         </div>
 
                         <div className="vmap-cardSub">
@@ -610,8 +614,8 @@ export default function VenueMap() {
 
                         {(ev.venue?.address || ev.address) && (
                           <a className="vmap-cardLink"
-                             href={`https://maps.google.com/?q=${encodeURIComponent(ev.venue?.address || ev.address)}`}
-                             target="_blank" rel="noreferrer">
+                            href={`https://maps.google.com/?q=${encodeURIComponent(ev.venue?.address || ev.address)}`}
+                            target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
                             {ev.venue?.address || ev.address}
                           </a>
                         )}
@@ -625,21 +629,14 @@ export default function VenueMap() {
 
                         <div className="vmap-cardActions">
                           {ev.url && (
-                            <a className="vmap-btn" href={ev.url} target="_blank" rel="noreferrer">Visit Website ↗</a>
+                            <a className="vmap-btn" href={ev.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>Visit Website ↗</a>
                           )}
-                          {ev.eventType && (
-                            <span className="vmap-eventTypeTag">
-                              {ev.eventType}
-                            </span>
-                          )}
-                          {ev.genre && (
-                            <span className="vmap-genreTag">
-                              {ev.genre}
-                            </span>
-                          )}
+                          {ev.eventType && <span className="vmap-eventTypeTag">{ev.eventType}</span>}
+                          {ev.genre && <span className="vmap-genreTag">{ev.genre}</span>}
                         </div>
                       </div>
                     </div>
+
                   );
                 })}
               </div>

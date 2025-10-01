@@ -316,7 +316,7 @@
 
 .vmap-listHeader {
   padding: 10px;
-  border-bottom: 1px dashed #ccc;
+  border-bottom: 1px solid #ccc;
   margin-bottom: 20px;
   /* background-color: #0b57d0; */
 }
