@@ -232,7 +232,7 @@ function InviteModal({
 
         {/* Artist list */}
         <div className="artist-list">
-          <div className="artist-grid">
+          <div className="evartist-grid">
             {filtered.map(a => {
               const id = a.performerId;
               const sel = Number(selectedId) === Number(id);
@@ -242,7 +242,7 @@ function InviteModal({
               return (
                 <div
                   key={id}
-                  className={`artist-card ${sel ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
+                  className={`evartist-card ${sel ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
                   onClick={()=>{ if (!disabled) setSelectedId(id); }}
                   role="button"
                   title={disabled ? 'Already in lineup' : displayName(a)}

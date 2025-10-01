@@ -213,13 +213,13 @@
   padding-right: 4px;
 }
 
-.artist-grid {
+.evartist-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(280px, 1fr));
   gap: 10px;
 }
 
-.artist-card {
+.evartist-card {
   display: grid;
   grid-template-columns: 64px 1fr;
   gap: 10px;
@@ -229,9 +229,9 @@
   background: #fff;
   cursor: pointer;
 }
-.artist-card:hover { background: #f7f7f8; }
-.artist-card.selected { outline: 2px solid #1d4ed8; }
-.artist-card.disabled { opacity: .6; cursor: not-allowed; }
+.evartist-card:hover { background: #f7f7f8; }
+.evartist-card.selected { outline: 2px solid #1d4ed8; }
+.evartist-card.disabled { opacity: .6; cursor: not-allowed; }
 
 .artist-thumb {
   width: 64px;
