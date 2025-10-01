@@ -318,7 +318,7 @@ export default function Event() {
                   />
 
                   <div className="popup-event-section">
-                    <h3 className="popup-event-title" style={{ marginBottom: 6 }}>{ev.title}</h3>
+                    <h3 className="popup-event-title">{ev.title}</h3>
 
                     {/* แสดงยอดผู้ติดตาม */}
                     {/* {typeof ev.followersCount === 'number' && (
