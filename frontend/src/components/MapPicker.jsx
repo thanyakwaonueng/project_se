@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -24,39 +24,67 @@ const markerIcon = L.icon({
   shadowSize: [41, 41],
 });
 
-function ClickHandler({ onPick }) {
+function ClickHandler({ onPickImmediate }) {
   useMapEvents({
     click(e) {
-      onPick({ lat: e.latlng.lat, lng: e.latlng.lng });
+      onPickImmediate({ lat: e.latlng.lat, lng: e.latlng.lng });
     },
   });
   return null;
 }
 
 /**
- * props:
- *  - value: { lat, lng, address } | null
- *  - onChange: (next) => void
- *  - defaultCenter: [lat, lng]  (เช่น กทม. [13.7563,100.5018])
+ * ✅ รองรับทั้งสองสไตล์พร็อพ:
+ *    (A) ใหม่:  value={{lat, lng, address}}  + onChange(next)
+ *    (B) เก่า:  lat={..} lng={..}  + onPick(({lat,lng,address}))
+ *
+ *    ถ้ามีค่าเข้ามาทั้งคู่ จะให้ priority กับ (A)
+ *
+ * อื่น ๆ:
+ *  - defaultCenter: [lat, lng]  (ดีฟอลต์ = เชียงใหม่ 18.7883, 98.9853)
  *  - height: string (เช่น '380px')
  */
-export default function MapPicker({
-  value,
-  onChange,
-  defaultCenter = [13.7563, 100.5018],
-  height = '380px',
-}) {
+export default function MapPicker(props) {
   ensureLeafletCSS();
 
+  // ====== PRop mapping & compatibility layer ======
+  const {
+    value,              // ใหม่: {lat, lng, address}
+    onChange,           // ใหม่: (next) => void
+    lat: latProp,       // เก่า: number|undefined
+    lng: lngProp,       // เก่า: number|undefined
+    onPick,             // เก่า: ({lat,lng,address}) => void
+
+    // ดีฟอลต์ center เป็น "เชียงใหม่"
+    defaultCenter = [18.7883, 98.9853],
+    height = '380px',
+  } = props;
+
+  // สร้าง object ตำแหน่งจากรูปแบบเก่าถ้าไม่มี value ใหม่
+  const derivedValue = useMemo(() => {
+    if (value && value.lat != null && value.lng != null) return value;
+    if (latProp != null && lngProp != null) return { lat: latProp, lng: lngProp, address: '' };
+    return null;
+  }, [value, latProp, lngProp]);
+
+  // center ของแผนที่
+  const center = useMemo(() => {
+    if (derivedValue?.lat != null && derivedValue?.lng != null) {
+      return [derivedValue.lat, derivedValue.lng];
+    }
+    return defaultCenter;
+  }, [derivedValue, defaultCenter]);
+
+  // state ภายในเพื่อโชว์ address (ไม่บังคับให้พาเรนต์ต้องเก็บ)
+  const [addressLocal, setAddressLocal] = useState(derivedValue?.address || '');
+  useEffect(() => {
+    setAddressLocal(derivedValue?.address || '');
+  }, [derivedValue?.address]);
+
+  // ====== ค้นหาด้วย Nominatim (มี debounce ส่วน reverse geocode) ======
   const [keyword, setKeyword] = useState('');
   const [results, setResults] = useState([]);
 
-  const center = useMemo(() => {
-    if (value?.lat && value?.lng) return [value.lat, value.lng];
-    return defaultCenter;
-  }, [value, defaultCenter]);
-
-  // ค้นหาด้วย Nominatim
   async function searchPlace() {
     const q = keyword.trim();
     if (!q) return;
@@ -65,18 +93,26 @@ export default function MapPicker({
         q
       )}`;
       const res = await fetch(url, { headers: { 'Accept-Language': 'th' } });
+      if (!res.ok) {
+        setResults([]);
+        return;
+      }
       const data = await res.json();
       setResults(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error('nominatim search failed', e);
+      setResults([]);
     }
   }
 
-  // reverse geocoding เพื่อเอาข้อความที่อยู่กลับมา (ตอนคลิก/ลากหมุด)
+  // ====== Reverse geocode: ไม่ throw, ไม่บล็อกหมุด, มี debounce ======
+  const revTimer = useRef(null);
   async function reverseGeocode(lat, lng) {
     try {
-      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17&addressdetails=1`;
+      // ใส่ format=jsonv2 และไม่ตั้ง no-cors (จะอ่านผลไม่ได้)
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=17&addressdetails=1`;
       const res = await fetch(url, { headers: { 'Accept-Language': 'th' } });
+      if (!res.ok) return '';
       const data = await res.json();
       return data?.display_name || '';
     } catch {
@@ -84,16 +120,48 @@ export default function MapPicker({
     }
   }
 
-  // ใช้ตำแหน่งฉัน (HTML5 Geolocation)
+  // helper: ส่งค่าออกไปยังพาเรนต์ในรูปแบบที่เขาใช้ (รองรับทั้งใหม่/เก่า)
+  function emitToParent(next) {
+    if (onChange) onChange(next);
+    if (onPick) onPick(next);
+  }
+
+  // ✅ ปักหมุดทันที (ไม่รอ reverse geocode) จาก: คลิก/ลาก/เลือกผลค้นหา
+  function pickImmediate(lat, lng, addrMaybe = '') {
+    // 1) แจ้งพาเรนต์ก่อนเลย เพื่อให้หมุดขึ้นทันที
+    emitToParent({ lat, lng, address: addrMaybe });
+
+    // 2) ยิง reverse geocode แบบ debounce เบื้องหลัง (ไม่บล็อกหมุด)
+    if (revTimer.current) clearTimeout(revTimer.current);
+    revTimer.current = setTimeout(async () => {
+      const addr = await reverseGeocode(lat, lng);
+      setAddressLocal(addr || '');
+      // อัปเดตกลับให้พาเรนต์ แต่ถ้าเขาไม่สน address ก็ไม่เป็นไร
+      emitToParent({ lat, lng, address: addr || '' });
+    }, 800);
+  }
+
+  // ใช้ตำแหน่งฉัน (HTML5 Geolocation) — ปักหมุดก่อน, address ตามมาทีหลัง
   function useMyLocation() {
     if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      const address = await reverseGeocode(lat, lng);
-      onChange?.({ lat, lng, address });
-    });
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        pickImmediate(lat, lng);
+      },
+      () => {
+        // เงียบ ๆ ไม่ต้องทำอะไร
+      }
+    );
   }
+
+  // แฮนเดิลตอนคลิกบนแผนที่
+  const onPickImmediate = ({ lat, lng }) => {
+    pickImmediate(lat, lng);
+  };
+
+  const hasMarker = derivedValue?.lat != null && derivedValue?.lng != null;
 
   return (
     <div>
@@ -126,11 +194,11 @@ export default function MapPicker({
           {results.map((r) => (
             <div
               key={r.place_id}
-              onClick={async () => {
+              onClick={() => {
                 const lat = parseFloat(r.lat);
                 const lng = parseFloat(r.lon);
-                const address = r.display_name || (await reverseGeocode(lat, lng));
-                onChange?.({ lat, lng, address });
+                // ปักหมุดก่อนเลยด้วย display_name ถ้ามี
+                pickImmediate(lat, lng, r.display_name || '');
                 setResults([]); // พับผลลัพธ์
               }}
               style={{ padding: 10, cursor: 'pointer', borderTop: '1px solid #eee' }}
@@ -147,30 +215,28 @@ export default function MapPicker({
           attribution='&copy; OpenStreetMap contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <ClickHandler
-          onPick={async ({ lat, lng }) => {
-            const address = await reverseGeocode(lat, lng);
-            onChange?.({ lat, lng, address });
-          }}
-        />
-        {value?.lat && value?.lng ? (
+
+        {/* คลิกปักหมุดทันที */}
+        <ClickHandler onPickImmediate={onPickImmediate} />
+
+        {hasMarker ? (
           <Marker
-            position={[value.lat, value.lng]}
+            position={[derivedValue.lat, derivedValue.lng]}
             draggable
             icon={markerIcon}
             eventHandlers={{
-              dragend: async (e) => {
+              dragend: (e) => {
                 const p = e.target.getLatLng();
-                const address = await reverseGeocode(p.lat, p.lng);
-                onChange?.({ lat: p.lat, lng: p.lng, address });
+                // ปักหมุดก่อน → address ตามมาทีหลัง (debounce)
+                pickImmediate(p.lat, p.lng);
               },
             }}
           >
             <Popup>
               <div style={{ fontWeight: 600, marginBottom: 4 }}>ตำแหน่งสถานที่</div>
-              <div style={{ fontSize: 12 }}>{value.address || ''}</div>
+              <div style={{ fontSize: 12 }}>{addressLocal || derivedValue.address || ''}</div>
               <div style={{ fontSize: 12, marginTop: 6 }}>
-                {value.lat.toFixed(6)}, {value.lng.toFixed(6)}
+                {derivedValue.lat.toFixed(6)}, {derivedValue.lng.toFixed(6)}
               </div>
             </Popup>
           </Marker>
@@ -178,13 +244,13 @@ export default function MapPicker({
       </MapContainer>
 
       {/* แสดงพิกัด/ที่อยู่ที่เลือก */}
-      {value?.lat && value?.lng ? (
+      {hasMarker ? (
         <div style={{ marginTop: 8, fontSize: 13 }}>
-          <div><b>ที่อยู่:</b> {value.address || '-'}</div>
+          <div><b>ที่อยู่:</b> {addressLocal || derivedValue.address || '-'}</div>
           <div>
-            <b>พิกัด:</b> {value.lat.toFixed(6)}, {value.lng.toFixed(6)}{' '}
+            <b>พิกัด:</b> {derivedValue.lat.toFixed(6)}, {derivedValue.lng.toFixed(6)}{' '}
             <a
-              href={`https://www.google.com/maps?q=${value.lat},${value.lng}`}
+              href={`https://www.google.com/maps?q=${derivedValue.lat},${derivedValue.lng}`}
               target="_blank"
               rel="noreferrer"
             >
@@ -194,7 +260,7 @@ export default function MapPicker({
         </div>
       ) : (
         <div style={{ marginTop: 8, fontSize: 13, color: '#777' }}>
-          คลิกบนแผนที่เพื่อปักหมุด หรือค้นหาด้วยที่อยู่/ชื่อสถานที่
+          คลิกบนแผนที่เพื่อปักหมุด หรือค้นหาด้วยที่อยู่/ชื่อสถานที่ (ดีฟอลต์: เชียงใหม่)
         </div>
       )}
     </div>
