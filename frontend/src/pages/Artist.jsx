@@ -44,35 +44,31 @@ export default function Artist() {
   const [followingIds, setFollowingIds] = useState(new Set());
 
   const lastFocusRef = useRef(null);
-  const { id } = useParams();  // ใช้ id อย่างเดียว
+  const { id } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
+  // ---------- 2) AUTH กันหน้าเด้ง (จับ 401) ----------
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await axios.get("/api/auth/me", { withCredentials: true }); // <-- แก้เป็น axios
+        if (alive) setUser(res.data);
+      } catch (e) {
+        if (alive) setUser(null);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
 
-    // ---------- 2) AUTH กันหน้าเด้ง (จับ 401) ----------
-    useEffect(() => {
-      let alive = true;
-      (async () => {
-        try {
-          const res = await api.get("/auth/me");
-          if (alive) setUser(res.data);
-        } catch (e) {
-          if (alive) setUser(null);   // อย่าปล่อย throw
-        }
-      })();
-      return () => { alive = false; };
-    }, []);
-
-  // ---------- 3) MOCK GALLERY + แยกรูป/วิดีโอ ----------
-  // ---- mock data ----
+  // ---- mock gallery data ----
   const GALLERY_SAMPLE = [
-    // photos
     { type: "image", src: "https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg", alt: "Live at City Hall" },
     { type: "image", src: "https://images.pexels.com/photos/3359713/pexels-photo-3359713.jpeg", alt: "Backstage moment" },
     { type: "image", src: "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg", alt: "Studio session" },
     { type: "image", src: "https://images.pexels.com/photos/21067/pexels-photo.jpg", alt: "Crowd shot" },
     { type: "image", src: "https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg", alt: "Hall angle" },
-    // videos
     { type: "video", src: "/media/demo-showcase.mp4", poster: "https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg", alt: "Music video teaser" },
     { type: "video", src: "/media/behind-the-scenes.mp4", poster: "https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg", alt: "Behind the scenes" },
     { type: "video", src: "/media/live-clip.mp4", poster: "https://images.pexels.com/photos/3359713/pexels-photo-3359713.jpeg", alt: "Live clip" },
@@ -80,15 +76,11 @@ export default function Artist() {
     { type: "video", src: "/media/interview.mp4", poster: "https://images.pexels.com/photos/21067/pexels-photo.jpg", alt: "Interview" },
   ];
 
-
-
-  // แยกเป็นรูป/วิดีโอ
   const imagesAll = useMemo(() => GALLERY_SAMPLE.filter(x => x.type === "image"), []);
   const videosAll = useMemo(() => GALLERY_SAMPLE.filter(x => x.type === "video"), []);
 
-  // See more / less
   const [showAllImages, setShowAllImages] = useState(false);
-  const [showAllVideos, setShowAllVideos] = useState(false); // เผื่ออยากให้วีดีโอขยายแนวนอนได้เหมือนกัน
+  const [showAllVideos, setShowAllVideos] = useState(false);
 
   const imagesToShow = showAllImages ? imagesAll : imagesAll.slice(0, 4);
   const videosToShow = showAllVideos ? videosAll : videosAll.slice(0, 4);
@@ -96,12 +88,10 @@ export default function Artist() {
   const hasMoreImages = imagesAll.length > 4 && !showAllImages;
   const hasMoreVideos = videosAll.length > 4 && !showAllVideos;
 
-  // Lightbox (เฉพาะรูป)
   const [lightbox, setLightbox] = useState({ open: false, index: 0 });
   const openLightbox = (idx) => setLightbox({ open: true, index: idx });
   const closeLightbox = () => setLightbox({ open: false, index: 0 });
 
-  // ปิดด้วย ESC
   useEffect(() => {
     if (!lightbox.open) return;
     const onKey = (e) => { if (e.key === "Escape") closeLightbox(); };
@@ -109,12 +99,6 @@ export default function Artist() {
     return () => window.removeEventListener("keydown", onKey);
   }, [lightbox.open]);
 
-
-
-
-
-
-  
   /** fetch groups */
   useEffect(() => {
     let cancelled = false;
@@ -153,32 +137,47 @@ export default function Artist() {
   /** save local follow */
   useEffect(() => { saveFollowed(followed); }, [followed]);
 
-  /** filters & search */
+  /** ---------- SORTING & FILTERING ---------- */
+  // 1) เตรียมลิสต์ที่ "จัดเรียง" ตามแท็บ
+  const sortedGroups = useMemo(() => {
+    const arr = [...groups];
+    if (activeFilter === "popular") {
+      // เรียงตามจำนวนผู้ติดตาม (desc) ถ้าเท่ากัน fallback เป็นชื่อ
+      arr.sort((a, b) => {
+        const fb = (b.followersCount || 0) - (a.followersCount || 0);
+        if (fb !== 0) return fb;
+        return String(a.name || "").localeCompare(String(b.name || ""));
+      });
+    } else if (activeFilter === "new") {
+      // ใหม่สุดก่อน (ถ้าไม่มี debut ให้ไปท้าย)
+      arr.sort((a, b) => (Number(b?.stats?.debut || 0) - Number(a?.stats?.debut || 0)));
+    } else {
+      // เรียงชื่อ A→Z เป็นค่าเริ่มต้น
+      arr.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+    }
+    return arr;
+  }, [groups, activeFilter]);
+
+  // 2) จากนั้นค่อยกรองด้วยคำค้นหา
   const filteredGroups = useMemo(() => {
-    const base = groups.filter((g) => {
-      if (activeFilter === "popular") return (g.followersCount || 0) >= 100000;
-      if (activeFilter === "new") return Number(g?.stats?.debut || 0) >= 2023;
-      return true;
-    });
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return base;
-    return base.filter((g) => {
+    if (!q) return sortedGroups;
+    return sortedGroups.filter((g) => {
       const inGroup =
         g.name?.toLowerCase().includes(q) ||
         (g.description || "").toLowerCase().includes(q) ||
         (g.details || "").toLowerCase().includes(q);
       return inGroup;
     });
-  }, [groups, activeFilter, searchQuery]);
+  }, [sortedGroups, searchQuery]);
 
-  /** follow/unfollow (DB-based; backend ใช้ endpoint like เดิม) */
+  /** follow/unfollow (DB-based) */
   const toggleFollow = async (group) => {
     if (!group?.id) return;
     if (followingIds.has(group.id)) return;
     setFollowingIds((s) => new Set(s).add(group.id));
     try {
       if (group.likedByMe) {
-        // UNFOLLOW
         const { data } = await axios.delete(`/api/artists/${group.id}/like`, { withCredentials: true });
         setGroups((prev) =>
           prev.map((g) =>
@@ -188,7 +187,6 @@ export default function Artist() {
           )
         );
       } else {
-        // FOLLOW
         const { data } = await axios.post(`/api/artists/${group.id}/like`, {}, { withCredentials: true });
         setGroups((prev) =>
           prev.map((g) =>
@@ -228,17 +226,16 @@ export default function Artist() {
 
   const [scheduleTab, setScheduleTab] = useState("upcoming");
 
-  // genres: กลุ่มเดิมไม่มี `genres[]` ให้แตกมาจาก `details` ถ้ามี
- const groupGenres = useMemo(() => {
-   if (!selectedGroup) return [];
-   const list = [];
-   if (selectedGroup.genre) list.push(selectedGroup.genre);
-   if (selectedGroup.subGenre) list.push(selectedGroup.subGenre);
-   if (Array.isArray(selectedGroup.genres)) list.push(...selectedGroup.genres);
-   // กันไว้ก่อน fallback สำหรับเวอร์ชันเดิมที่ BE ส่งมาเป็น details อย่างเดียว
-   if (!list.length && selectedGroup.details) list.push(selectedGroup.details);
-   return Array.from(new Set(list.filter(Boolean))); // กันซ้ำ
- }, [selectedGroup]);
+  // genres:
+  const groupGenres = useMemo(() => {
+    if (!selectedGroup) return [];
+    const list = [];
+    if (selectedGroup.genre) list.push(selectedGroup.genre);
+    if (selectedGroup.subGenre) list.push(selectedGroup.subGenre);
+    if (Array.isArray(selectedGroup.genres)) list.push(...selectedGroup.genres);
+    if (!list.length && selectedGroup.details) list.push(selectedGroup.details);
+    return Array.from(new Set(list.filter(Boolean)));
+  }, [selectedGroup]);
 
   const fmtCompact = (n) => {
     const num = Number(n || 0);
@@ -252,7 +249,7 @@ export default function Artist() {
   const scheduleUpcoming = useMemo(() => {
     const arr = (selectedGroup?.schedule || []).filter(ev => new Date(ev.dateISO) >= now);
     return arr.sort((a,b) => new Date(a.dateISO) - new Date(b.dateISO));
-  }, [selectedGroup]); // ห้ามใส่ now ใน deps
+  }, [selectedGroup]);
 
   const schedulePast = useMemo(() => {
     const arr = (selectedGroup?.schedule || []).filter(ev => new Date(ev.dateISO) < now);
@@ -395,7 +392,7 @@ export default function Artist() {
               <h1 className="title">{selectedGroup?.name || "Artist"}</h1>
               <p className="desc">{(selectedGroup?.description || "").trim() || "No description."}</p>
 
-              {/* ปุ่ม EPK => ใช้ techRider.downloadUrl ถ้ามี */}
+              {/* ปุ่ม EPK */}
               {selectedGroup?.techRider?.downloadUrl && (
                 <a
                   className="epk-pill"
@@ -475,7 +472,7 @@ export default function Artist() {
             </aside>
           </div>
 
-          {/* ===== LISTEN ON (ใช้ socials.* ที่เป็นบริการสตรีม) ===== */}
+          {/* LISTEN ON */}
           <div className="listen2">
             <div className="listen2-top">
               <div className="listen2-title">LISTEN ON</div>
@@ -503,7 +500,7 @@ export default function Artist() {
             </div>
           </div>
 
-          {/* ===== SCHEDULE ===== */}
+          {/* SCHEDULE */}
           <section className="schedule-sec">
             <div className="schedule-head">
               <h2 className="schedule-title">SCHEDULE</h2>
@@ -532,104 +529,9 @@ export default function Artist() {
             </ul>
           </section>
 
-          {/* <hr className="big-divider" /> */}
-
-
-
-          {/* ===================== [6] GALLERY (Photos top / Videos bottom, mock + See more) ===================== */}
-          {/* ===================== [6] GALLERY ===================== */}
-          <section className="gallery small" aria-label="Artist gallery">
-            <div className="gallery-top">
-              <h2 className="gallery-title">GALLERY</h2>
-              <p className="gallery-quote">Photos on top, videos below.</p>
-            </div>
-
-            {/* ---------- Photos Row ---------- */}
-            {imagesAll.length > 0 && (
-              <div className="gallery-row">
-                <div className="gallery-row-head">
-                  <h3 className="gallery-row-title">Photos</h3>
-                  {hasMoreImages ? (
-                    <button className="gallery-see-more" type="button" onClick={() => setShowAllImages(true)}>
-                      See more →
-                    </button>
-                  ) : showAllImages ? (
-                    <button className="gallery-see-more" type="button" onClick={() => setShowAllImages(false)}>
-                      ← See less
-                    </button>
-                  ) : null}
-                </div>
-
-                <div className={`gallery-grid g-4 ${showAllImages ? "is-expanded" : ""}`}>
-                  {imagesToShow.map((it, i) => (
-                    <button
-                      key={`img-${i}`}
-                      type="button"
-                      className="gallery-item as-button"
-                      onClick={() => openLightbox(showAllImages ? i : i)}  /* index ตามลิสต์ที่โชว์ */
-                      aria-label={it.alt || "Open image"}
-                      title={it.alt || "Open image"}
-                    >
-                      <img className="gallery-media" src={it.src} alt={it.alt || ""} loading="lazy" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ---------- Videos Row ---------- */}
-            {videosAll.length > 0 && (
-              <div className="gallery-row">
-                <div className="gallery-row-head">
-                  <h3 className="gallery-row-title">Videos</h3>
-                  {hasMoreVideos ? (
-                    <button className="gallery-see-more" type="button" onClick={() => setShowAllVideos(true)}>
-                      See more →
-                    </button>
-                  ) : showAllVideos ? (
-                    <button className="gallery-see-more" type="button" onClick={() => setShowAllVideos(false)}>
-                      ← See less
-                    </button>
-                  ) : null}
-                </div>
-
-                <div className={`gallery-grid g-4 ${showAllVideos ? "is-expanded" : ""}`}>
-                  {videosToShow.map((it, i) => (
-                    <div className="gallery-item is-video" key={`vid-${i}`}>
-                      <video
-                        className="gallery-media"
-                        controls
-                        preload="metadata"
-                        poster={it.poster || undefined}
-                        aria-label={it.alt || "Artist video"}
-                      >
-                        <source src={it.src} />
-                      </video>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ---------- Lightbox (เฉพาะรูป) ---------- */}
-            {lightbox.open && (
-              <div className="lightbox" role="dialog" aria-modal="true" onClick={closeLightbox}>
-                <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
-                  <img
-                    src={(showAllImages ? imagesAll : imagesToShow)[lightbox.index]?.src}
-                    alt={(showAllImages ? imagesAll : imagesToShow)[lightbox.index]?.alt || ""}
-                  />
-                  <button className="lightbox-close" type="button" onClick={closeLightbox} aria-label="Close">×</button>
-                </div>
-              </div>
-            )}
-          </section>
-
-
-
-
           <hr className="big-divider" />
-          {/* ===== OTHER: mock ไว้ก่อน (ไม่พึ่ง API) ===== */}
+
+          {/* OTHER (mock) */}
           <section className="other-sec">
             <div className="other-head">
               <h3 className="other-title">OTHER</h3>
