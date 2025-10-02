@@ -195,11 +195,25 @@ export default function VenueEditor() {
         ...imageUploadedUrls,
       ];
 
+      // ===== build location object ให้ตรงกับฝั่งอ่าน =====
+      const locationObj =
+        lat != null && lng != null
+          ? {
+              latitude: lat,
+              longitude: lng,
+              locationUrl:
+                (locationUrl || '').trim() ||
+                `https://www.google.com/maps?q=${lat},${lng}`,
+            }
+          : undefined;
+
       // ===== payload =====
       const raw = {
         name: (name || '').trim(),
 
-        locationUrl: (locationUrl || '').trim() || (lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : undefined),
+        locationUrl:
+          (locationUrl || '').trim() ||
+          (lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : undefined),
         genre: (genre || '').trim(),               // single-select (ผ่าน chips)
         description: (description || '').trim() || undefined,
         capacity: capacity ? parseInt(capacity, 10) : undefined,
@@ -227,7 +241,10 @@ export default function VenueEditor() {
         lineUrl: lineUrl || undefined,
         tiktokUrl: tiktokUrl || undefined,
 
-        // location
+        // location (เพิ่มแบบ nested ให้ตรงกับของเดิมที่อ่านมา)
+        location: locationObj,
+
+        // เก็บแบบเดิมไว้ด้วย (ไม่ลบของเพื่อน)
         latitude: lat,
         longitude: lng,
       };
@@ -272,10 +289,6 @@ export default function VenueEditor() {
           <h1 className="ve-title ve-title-hero">{hasProfile ? "VENUE SETUP" : "VENUE SETUP"}</h1>
           {/* <p className="ve-subtitle">Fill out venue information and contact details.</p> */}
         </div>
-
-        {/* OLD (ลบ): ปุ่ม Cancel/Save ด้านบน
-            <div className="ve-actions"> ... </div>
-        */}
       </header>
 
       <div className="ve-line" />
@@ -288,140 +301,123 @@ export default function VenueEditor() {
 
       {/* ===== SECTION: Details (รวม Name + Dates + Genre + Description) ===== */}
       <section className="ve-section">
-  <div className="ve-form">
+        <div className="ve-form">
+          <h2 className="ve-section-title">Details</h2>
+          <div className="ve-grid-2">
+            <div className="ve-field ve-col-span-2">
+              <label className="ve-label" htmlFor="name">Venue name</label>
+              <input
+                id="name"
+                className="ve-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nimman Studio"
+              />
+            </div>
 
-    <h2 className="ve-section-title">Details</h2>
+            <div className="ve-field ve-col-span-2">
+              <div className="ve-grid-3">
+                <div className="ve-field">
+                  <label className="ve-label" htmlFor="timeOpen">Opening time</label>
+                  <input
+                    id="timeOpen"
+                    className="ve-input"
+                    type="time"
+                    value={timeOpen}
+                    onChange={(e) => setTimeOpen(e.target.value)}
+                  />
+                </div>
 
-    {/* คลุมทั้งหมดด้วย 2 คอลัมน์ (ใช้แค่ ve-grid-2 ก็พอ) */}
-    <div className="ve-grid-2">
+                <div className="ve-field">
+                  <label className="ve-label" htmlFor="timeClose">Closing time</label>
+                  <input
+                    id="timeClose"
+                    className="ve-input"
+                    type="time"
+                    value={timeClose}
+                    onChange={(e) => setTimeClose(e.target.value)}
+                  />
+                </div>
 
-      {/* แถว: Venue name เต็มแถว */}
-      <div className="ve-field ve-col-span-2">
-        <label className="ve-label" htmlFor="name">Venue name</label>
-        <input
-          id="name"
-          className="ve-input"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nimman Studio"
-        />
-      </div>
+                <div className="ve-field">
+                  <label className="ve-label" htmlFor="capacity">Capacity</label>
+                  <input
+                    id="capacity"
+                    className="ve-input"
+                    type="number"
+                    inputMode="numeric"
+                    value={capacity}
+                    onChange={(e) => setCapacity(e.target.value)}
+                    placeholder="e.g., 300"
+                  />
+                </div>
+              </div>
+            </div>
 
-      {/* แถว: Opening / Close (แบ่ง 2 คอลัมน์) */}
-      {/* NEW — Opening/Closing time แบบหน้า CreateEvent */}
-      {/* === เวลาเปิด/ปิด + ความจุ (3 คอลัมน์ แถวเดียวกัน) === */}
-      <div className="ve-field ve-col-span-2">
-        <div className="ve-grid-3">
-          <div className="ve-field">
-            <label className="ve-label" htmlFor="timeOpen">Opening time</label>
-            <input
-              id="timeOpen"
-              className="ve-input"
-              type="time"
-              value={timeOpen}
-              onChange={(e) => setTimeOpen(e.target.value)}
-            />
-          </div>
+            <div className="ve-field ve-col-span-2">
+              <label className="ve-label">Favorite genres</label>
+              <div className="ve-chips">
+                {["Pop","Rock","Indie","Jazz","Blues","Hip-Hop","EDM","Folk","Metal","R&B"].map(g => {
+                  const selected = genre?.toLowerCase() === g.toLowerCase();
+                  return (
+                    <button
+                      key={g}
+                      type="button"
+                      className={`ve-chip ${selected ? "is-selected" : ""}`}
+                      aria-pressed={selected}
+                      onClick={() => setGenre(g)}
+                    >
+                      {g}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-          <div className="ve-field">
-            <label className="ve-label" htmlFor="timeClose">Closing time</label>
-            <input
-              id="timeClose"
-              className="ve-input"
-              type="time"
-              value={timeClose}
-              onChange={(e) => setTimeClose(e.target.value)}
-            />
-          </div>
+            <div className="ve-field ve-col-span-2">
+              <label className="ve-label" htmlFor="description">Description</label>
+              <textarea
+                id="description"
+                className="ve-textarea"
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Short description of your venue"
+              />
+            </div>
 
-          {/* NEW: ย้าย Capacity มาต่อท้าย Closing time */}
-          <div className="ve-field">
-            <label className="ve-label" htmlFor="capacity">Capacity</label>
-            <input
-              id="capacity"
-              className="ve-input"
-              type="number"
-              inputMode="numeric"
-              value={capacity}
-              onChange={(e) => setCapacity(e.target.value)}
-              placeholder="e.g., 300"
-            />
-          </div>
-        </div>
-      </div>
+            <div className="ve-col-span-2">
+              <div className="ve-grid-2">
+                <div className="ve-field">
+                  <label className="ve-label" htmlFor="ageRestriction">Age restriction</label>
+                  <select
+                    id="ageRestriction"
+                    className="ve-select"
+                    value={ageRestriction}
+                    onChange={(e) => setAgeRestriction(e.target.value)}
+                  >
+                    <option value="ALL">All ages</option>
+                    <option value="18+">18+</option>
+                    <option value="20+">20+</option>
+                  </select>
+                </div>
 
+                <div className="ve-field">
+                  <label className="ve-label" htmlFor="alcoholPolicy">Alcohol policy</label>
+                  <input
+                    id="alcoholPolicy"
+                    className="ve-input"
+                    value={alcoholPolicy}
+                    onChange={(e) => setAlcoholPolicy(e.target.value)}
+                    placeholder="Serve beer/wine, no spirits, etc."
+                  />
+                </div>
+              </div>
+            </div>
 
-      {/* แถว: Genre เต็มแถว */}
-      <div className="ve-field ve-col-span-2">
-        <label className="ve-label">Favorite genres</label>
-        <div className="ve-chips">
-          {["Pop","Rock","Indie","Jazz","Blues","Hip-Hop","EDM","Folk","Metal","R&B"].map(g => {
-            const selected = genre?.toLowerCase() === g.toLowerCase();
-            return (
-              <button
-                key={g}
-                type="button"
-                className={`ve-chip ${selected ? "is-selected" : ""}`}
-                aria-pressed={selected}
-                onClick={() => setGenre(g)}
-              >
-                {g}
-              </button>
-            );
-          })}
-        </div>
-        {/* <p className="ve-help">เลือกได้ 1 แนวเพลง</p> */}
-      </div>
-
-      {/* แถว: Description เต็มแถว */}
-      {/* NEW — Description แบบ textarea (เหมือนหน้า CreateEvent) */}
-      <div className="ve-field ve-col-span-2">
-        <label className="ve-label" htmlFor="description">Description</label>
-        <textarea
-          id="description"
-          className="ve-textarea"
-          rows={4}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Short description of your venue"
-        />
-      </div>
-
-      {/* แถว: 3 คอลัมน์ — ซ้อนกริด 3 คอลัมน์เข้าไป แล้วให้กินเต็มแถวก่อน */}
-      <div className="ve-col-span-2">
-        <div className="ve-grid-2">
-          <div className="ve-field">
-            <label className="ve-label" htmlFor="ageRestriction">Age restriction</label>
-            <select
-              id="ageRestriction"
-              className="ve-select"
-              value={ageRestriction}
-              onChange={(e) => setAgeRestriction(e.target.value)}
-            >
-              <option value="ALL">All ages</option>
-              <option value="18+">18+</option>
-              <option value="20+">20+</option>
-            </select>
-          </div>
-
-          <div className="ve-field">
-            <label className="ve-label" htmlFor="alcoholPolicy">Alcohol policy</label>
-            <input
-              id="alcoholPolicy"
-              className="ve-input"
-              value={alcoholPolicy}
-              onChange={(e) => setAlcoholPolicy(e.target.value)}
-              placeholder="Serve beer/wine, no spirits, etc."
-            />
           </div>
         </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-
+      </section>
 
       {/* ===== SECTION: Images & Videos ===== */}
       <section className="ve-section">
@@ -492,7 +488,6 @@ export default function VenueEditor() {
           </div>
         </div>
       </section>
-
 
       {/* ===== SECTION: Social & Contact ===== */}
       <section className="ve-section">
@@ -618,6 +613,8 @@ export default function VenueEditor() {
               lat={latitude ? Number(latitude) : undefined}
               lng={longitude ? Number(longitude) : undefined}
               onPick={({ lat: la, lng: ln }) => {
+                // ✅ อัปเดต location ด้วย เพื่อให้ effect สร้าง locationUrl ให้อัตโนมัติ
+                setLocation({ lat: la, lng: ln, address: '' });
                 setLatitude(String(la));
                 setLongitude(String(ln));
               }}
