@@ -64,6 +64,18 @@ const OFFICIAL_ARTISTS = [
   { email:'billie@example.com',   name:'Billie Eilish', genre:'Pop', bookingType:'SOLO',    profilePhotoUrl:'https://picsum.photos/id/256/640/400' },
   { email:'taylor@example.com',   name:'Taylor Swift', genre:'Pop', bookingType:'SOLO',     profilePhotoUrl:'https://picsum.photos/id/257/640/400' },
 ];
+const PENDING_ARTISTS = [
+  { email:'echonova@example.com',     name:'Echo Nova',       profilePhotoUrl:'https://picsum.photos/id/250/640/400' },
+  { email:'velourbloom@example.com',  name:'Velour Bloom',    profilePhotoUrl:'https://picsum.photos/id/251/640/400' },
+  { email:'ashharbor@example.com',    name:'Ash Harbor',      profilePhotoUrl:'https://picsum.photos/id/252/640/400' },
+  { email:'neonserenade@example.com', name:'Neon Serenade',   profilePhotoUrl:'https://picsum.photos/id/253/640/400' },
+  { email:'lunastatic@example.com',   name:'Luna Static',     profilePhotoUrl:'https://picsum.photos/id/254/640/400' },
+  { email:'crimsonvale@example.com',  name:'Crimson Vale',    profilePhotoUrl:'https://picsum.photos/id/255/640/400' },
+  { email:'solstice@example.com',     name:'Solstice Avenue', profilePhotoUrl:'https://picsum.photos/id/256/640/400' },
+  { email:'drifttheory@example.com',  name:'Drift Theory',    profilePhotoUrl:'https://picsum.photos/id/257/640/400' },
+  { email:'glassmonarch@example.com', name:'Glass Monarch',   profilePhotoUrl:'https://picsum.photos/id/257/640/400' },
+  { email:'aurorafade@example.com',   name:'Aurora Fade',     profilePhotoUrl:'https://picsum.photos/id/257/640/400' }
+];
 const FAKE_NAMES = [
   'Siam Sunset','Nimman Lights','Ping River Echo','Old City Rhythm','Tha Phae Folk','Santitham Lo-Fi','Chang Klan Beats',
   'Wat Gate Ensemble','Lanna Groove','Chiang Chill Trio','North Star Duo','Golden Lotus','Jade Melody','Mountain Breeze',
@@ -110,6 +122,68 @@ async function main() {
   await prisma.user.create({
     data: { email:'fan@example.com', passwordHash:await bcrypt.hash('password123',10), role:'AUDIENCE', isVerified:true, name:'Super Fan' }
   });
+
+    /* ---------- pending artists (~10) ---------- */
+  for (const pa of PENDING_ARTISTS){
+    const user = await prisma.user.create({
+      data: { email: pa.email, passwordHash:await bcrypt.hash('password123',10), role:'AUDIENCE', isVerified:true, name:pa.name, profilePhotoUrl:pa.profilePhotoUrl }
+    });
+
+    const r = "I’m an independent artist who produces and releases original tracks. \
+    I’d like an artist profile so I can share my work, connect with listeners, \
+    and collaborate with other musicians."
+
+    const artistApplication  = {
+          name: user.name,
+          description: null,
+          genre: "POP",
+          subGenre: "ROCK",
+          bookingType: "SOLO",
+          foundingYear: null,
+          label: null,
+          isIndependent: null,
+          memberCount: null,
+          priceMin: null,
+          priceMax: null,
+          profilePhotoUrl: user.profilePhotoUrl,
+          photoUrl: null,
+          videoUrl: null,
+          rateCardUrl: null,
+          epkUrl: null,
+          riderUrl: null,
+          contactEmail: user.email,
+          contactPhone: "000-000-0000",
+          spotifyUrl: null,
+          youtubeUrl: "https://www.youtube.com/",
+          appleMusicUrl: null,
+          facebookUrl: null,
+          instagramUrl: null,
+          twitterUrl: null,
+          soundcloudUrl: null,
+          shazamUrl: null,
+          bandcampUrl: null,
+          tiktokUrl: null,
+        };
+
+    const createdRoleRequest = await prisma.roleRequest.create({
+      data: { userId: user.id, requestedRole: "ARTIST", reason: r, application : artistApplication}
+    })
+
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+          await Promise.all(
+            admins.map((a) =>
+              prisma.notification.create({
+                data: {
+                  userId: a.id,
+                  type: 'role_request.new',
+                  message: `New role request: ${user.email} -> ARTIST`,
+                  data: { roleRequestId: createdRoleRequest.id },
+                },
+              })
+            )
+          );
+  }
+  console.log('✅ Pending Artists = 10');
 
   /* ---------- artists ---------- */
   const artistProfiles = [];
