@@ -1,7 +1,7 @@
 .footer {
   background-color: #2f2f2f;
   color: #aaa;
-  padding: 40px 60px;
+  padding: 40px 120px;
 }
 
 .footer-container {
@@ -25,7 +25,7 @@
 }
 
 .footer-logo .logo {
-  width: 100px;
+  width: 90px;
   height: auto;
 }
 
@@ -38,32 +38,20 @@
 .social-icons {
   display: flex;
   gap: 15px;
-}
-
-
-.social-icons img {
-  width: 32px;
-  height: 32px;
-  opacity: 0.7;
-  transition: 0.3s;
-}
-
-
-.social-icons img:hover {
-  opacity: 1;
+  padding-top: 10px;
+  flex-wrap: wrap;
 }
 
 .social-icons img {
   width: 32px;
   height: 32px;
-  filter: brightness(0) saturate(100%) invert(84%) sepia(9%) saturate(1564%) hue-rotate(176deg) brightness(103%) contrast(101%);
-  transition: 0.3s;
-}
-
-.social-icons img:hover {
   filter: brightness(0) saturate(100%) invert(100%) sepia(4%) saturate(0%) hue-rotate(180deg) brightness(110%) contrast(101%);
+  transition: 0.3s;
 }
 
+.social-icons img:hover {
+  filter: brightness(0) saturate(100%) invert(84%) sepia(9%) saturate(1564%) hue-rotate(176deg) brightness(103%) contrast(101%);
+}
 
 .footer-section h4 {
   font-size: 16px;
@@ -74,50 +62,6 @@
 .footer-section p {
   font-size: 14px;
   margin: 4px 0;
-}
-
-.signup-btn {
-  display: inline-block;
-  padding: 10px 20px;
-  width: 90%;
-  background-color: #fff;  /* your requested color */
-  color: #2f2f2f;
-  font-size: 14px;
-  text-decoration: none;
-  transition: background 0.3s, color 0.3s;
-}
-
-.signup-btn:hover {
-  background-color: #bfbfbf;
-  color: #2f2f2f;
-  text-decoration: none;
-}
-
-
-.subscribe-box {
-  display: flex;
-  margin-top: 10px;
-}
-
-.subscribe-box input {
-  padding: 8px;
-  border: none;
-  border-radius: 4px 0 0 4px;
-  outline: none;
-  flex: 1;
-}
-
-.subscribe-box button {
-  background: #444;
-  color: #fff;
-  border: none;
-  padding: 0 12px;
-  border-radius: 0 4px 4px 0;
-  cursor: pointer;
-}
-
-.subscribe-box button:hover {
-  background: #666;
 }
 
 .footer-divider {
@@ -133,6 +77,15 @@
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .footer-container {
+    justify-content: center;
+  }
+  .footer-section {
+    margin: 15px;
+  }
+}
+
 @media (max-width: 768px) {
   .footer-container {
     flex-direction: column;
@@ -142,7 +95,32 @@
   .footer-section {
     margin: 15px 0;
   }
+  .footer-logo {
+    justify-content: center;
+  }
   .social-icons {
     justify-content: center;
+  }
+
+  .footer-section h4 {
+    font-size: 14px;
+  }
+
+  .footer-section p {
+    font-size: 12px;
+  }
+
+}
+
+@media (max-width: 480px) {
+  .footer {
+    padding: 30px 20px;
+  }
+  .footer-logo .logo {
+    width: 90px;
+  }
+  .social-icons img {
+    width: 28px;
+    height: 28px;
   }
 }
