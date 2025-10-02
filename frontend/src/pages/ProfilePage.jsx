@@ -214,14 +214,14 @@ export default function ProfilePage() {
     }
   }
 
-  /* ===== Organizer datasets mapping — put BEFORE any early return ===== */
+  /* ===== Organizer datasets mapping — Published/Draft/Canceled ===== */
   const oeAccepted = useMemo(() => {
     return (orgEvents || [])
       .filter(e => e?.date)
       .filter(e => e.isPublished)
       .map(e => ({
         id: e.id,
-        status: "ACCEPTED",
+        status: "ACCEPTED", // map to "Published" in labelMap
         event: { id: e.id, name: e.name, date: e.date },
         slotStartAt: null,
         slotEndAt: null,
@@ -235,7 +235,7 @@ export default function ProfilePage() {
       .filter(e => !e.isPublished)
       .map(e => ({
         id: e.id,
-        status: "PENDING",
+        status: "PENDING", // map to "Draft" in labelMap
         event: { id: e.id, name: e.name, date: e.date },
         slotStartAt: null,
         slotEndAt: null,
@@ -243,7 +243,7 @@ export default function ProfilePage() {
       }));
   }, [orgEvents]);
 
-  const oeDeclined = useMemo(() => [], []); // ผู้จัดไม่มีสถานะนี้ แต่คง hook order คงที่
+  const oeDeclined = useMemo(() => [], []); // ไม่มีข้อมูลยกเลิกจาก /myevents ตอนนี้
 
   /* ===== helpers (not hooks) ===== */
   function fmtDate(iso) {
@@ -345,7 +345,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Calendar: Artist */}
+        {/* Calendar: Artist (ใช้ค่าเริ่มต้น Accepted/Pending/Declined) */}
         {isArtistApproved && (
           <CalendarSection
             title="My Artist Schedule"
@@ -359,17 +359,18 @@ export default function ProfilePage() {
           />
         )}
 
-        {/* Calendar: Organizer */}
+        {/* Calendar: Organizer (แปลงข้อความเป็น Published/Draft/Canceled) */}
         {isOrganizer && (
           <CalendarSection
             title="My Event Schedule (Organizer)"
             datasets={[
               { rows: oeAccepted, status: "accepted" }, // published
               { rows: oePending,  status: "pending"  }, // draft
-              { rows: oeDeclined, status: "declined" },
+              { rows: oeDeclined, status: "declined" }, // (currently none)
             ]}
             fmtDate={fmtDate}
             fmtTimeHM={fmtTimeHM}
+            labelMap={{ accepted: "Published", pending: "Draft", declined: "Canceled" }}
           />
         )}
 
@@ -475,8 +476,8 @@ export default function ProfilePage() {
   );
 }
 
-/* ===== Reusable Calendar Section ===== */
-function CalendarSection({ title, datasets, fmtDate, fmtTimeHM }) {
+/* ===== Reusable Calendar Section (รองรับ labelMap สำหรับข้อความสถานะและ legend) ===== */
+function CalendarSection({ title, datasets, fmtDate, fmtTimeHM, labelMap }) {
   const [calMonth, setCalMonth] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -540,6 +541,9 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM }) {
     return cells;
   };
 
+  const prettyDefault = { accepted: "Accepted", pending: "Pending", declined: "Declined" };
+  const labels = { ...prettyDefault, ...(labelMap || {}) };
+
   return (
     <div className="following-card">
       <div className="following-head">
@@ -553,9 +557,9 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM }) {
 
       <div className="following-subbar">
         <div className="cal-legend">
-          <span className="dot dot-acc" /> Accepted
-          <span className="dot dot-pen" /> Pending
-          <span className="dot dot-dec" /> Declined
+          <span className="dot dot-acc" /> {labels.accepted}
+          <span className="dot dot-pen" /> {labels.pending}
+          <span className="dot dot-dec" /> {labels.declined}
         </div>
       </div>
 
@@ -625,36 +629,40 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM }) {
                 </div>
               );
             }
-            return list.map((ev) => (
-              <div key={`ev-${ev.id}`} className="pf-card">
-                <img
-                  className="pf-thumb"
-                  src={"/img/fallback.jpg"}
-                  alt={ev.title}
-                  onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
-                />
-                <div className="pf-main">
-                  <div className="pf-name">
-                    {ev.eventId ? <Link to={`/events/${ev.eventId}`}>{ev.title}</Link> : ev.title}
-                  </div>
-                  <div className="pf-sub">
-                    <span>{fmtDate(ev.date)}</span>
-                    {(ev.start || ev.end) && (
-                      <span className="pf-separator">
-                        {fmtTimeHM(ev.start)}–{fmtTimeHM(ev.end)}
+            return list.map((ev) => {
+              const st = String(ev.status).toLowerCase(); // accepted/pending/declined
+              const label = labels[st] || st;
+              return (
+                <div key={`ev-${ev.id}`} className="pf-card">
+                  <img
+                    className="pf-thumb"
+                    src={"/img/fallback.jpg"}
+                    alt={ev.title}
+                    onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
+                  />
+                  <div className="pf-main">
+                    <div className="pf-name">
+                      {ev.eventId ? <Link to={`/events/${ev.eventId}`}>{ev.title}</Link> : ev.title}
+                    </div>
+                    <div className="pf-sub">
+                      <span>{fmtDate(ev.date)}</span>
+                      {(ev.start || ev.end) && (
+                        <span className="pf-separator">
+                          {fmtTimeHM(ev.start)}–{fmtTimeHM(ev.end)}
+                        </span>
+                      )}
+                      {ev.stage && <span className="pf-separator">{ev.stage}</span>}
+                      <span className={`pf-separator badge-${st}`}>
+                        {label}
                       </span>
-                    )}
-                    {ev.stage && <span className="pf-separator">{ev.stage}</span>}
-                    <span className={`pf-separator badge-${String(ev.status).toLowerCase()}`}>
-                      {String(ev.status).toLowerCase()}
-                    </span>
+                    </div>
+                  </div>
+                  <div className="pf-actions">
+                    {ev.eventId && <Link className="btn-ghost" to={`/events/${ev.eventId}`}>Detail</Link>}
                   </div>
                 </div>
-                <div className="pf-actions">
-                  {ev.eventId && <Link className="btn-ghost" to={`/events/${ev.eventId}`}>Detail</Link>}
-                </div>
-              </div>
-            ));
+              );
+            });
           })()}
         </div>
       </div>

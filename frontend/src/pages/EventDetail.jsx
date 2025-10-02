@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import api, { extractErrorMessage } from '../lib/api';
 import '../css/EventDetail.css';
 
-
+/* ========== helpers ========== */
 // en-US date like "october 21, 2025" (lowercase month)
 function formatDateEN(iso) {
   if (!iso) return '—';
@@ -12,21 +12,10 @@ function formatDateEN(iso) {
     const s = new Intl.DateTimeFormat('en-US', {
       month: 'long', day: 'numeric', year: 'numeric'
     }).format(new Date(iso));
-    return s.toLowerCase(); // ตามตัวอย่างผู้ใช้: october 21, 2025
+    return s.toLowerCase();
   } catch { return '—'; }
 }
 
-
-
-/* ========== helpers ========== */
-function formatDT(iso) {
-  if (!iso) return '—';
-  try {
-    const dt = new Date(iso);
-    return new Intl.DateTimeFormat('th-TH', { dateStyle: 'long', timeStyle: 'short' }).format(dt);
-  } catch { return iso; }
-}
-// รองรับ 19:30, 19.30, 19-30, 1930 → 19:30
 function normTime(t) {
   if (!t) return null;
   const s = String(t).trim();
@@ -57,6 +46,107 @@ function dtToHHMM(x) {
     const mm = String(d.getUTCMinutes()).padStart(2,'0');
     return `${hh}:${mm}`;
   } catch { return null; }
+}
+
+/* ========== Reschedule modal (EN) ========== */
+function RescheduleModal({ open, onClose, eventId, initialDateISO, initialDoor, initialEnd, onSaved }) {
+  const [busy, setBusy] = useState(false);
+  const [warn, setWarn] = useState('');
+  const [form, setForm] = useState({
+    date: initialDateISO ? String(initialDateISO).split('T')[0] : '',
+    doorOpenTime: normTime(initialDoor) || '',
+    endTime: normTime(initialEnd) || ''
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    setWarn('');
+    setBusy(false);
+    setForm({
+      date: initialDateISO ? String(initialDateISO).split('T')[0] : '',
+      doorOpenTime: normTime(initialDoor) || '',
+      endTime: normTime(initialEnd) || ''
+    });
+  }, [open, initialDateISO, initialDoor, initialEnd]);
+
+  const validate = () => {
+    if (!form.date) return 'Please choose a new date.';
+    if (!form.doorOpenTime || !form.endTime) return 'Please fill door-open and end time.';
+    const s = toMin(normTime(form.doorOpenTime));
+    const e = toMin(normTime(form.endTime));
+    if (s == null || e == null) return 'Invalid time format (e.g., 19:30).';
+    if (s >= e) return 'Door-open must be earlier than end time.';
+    return '';
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const msg = validate();
+    if (msg) { setWarn(msg); return; }
+    setBusy(true);
+    try {
+      const payload = {
+        date: new Date(form.date).toISOString(),
+        doorOpenTime: normTime(form.doorOpenTime),
+        endTime: normTime(form.endTime),
+      };
+      await api.post(`/events/${eventId}/reschedule`, payload, { withCredentials: true });
+      onSaved?.();     // refetch
+      onClose?.();     // close
+    } catch (err) {
+      setWarn(extractErrorMessage?.(err, 'Reschedule failed') || 'Reschedule failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!open) return null;
+  return (
+    <div className="mdl-backdrop" onClick={onClose}>
+      <div className="mdl" onClick={(e)=>e.stopPropagation()}>
+        <h3 style={{marginTop:0}}>Postpone / Reschedule</h3>
+        <div className="note" style={{marginBottom:8, fontSize:13}}>
+          If the event was already published, it will go back to <b>Draft</b> and all invited artists must re-confirm.
+        </div>
+        <form onSubmit={submit} className="frm" style={{ position:'static', borderTop:'none' }}>
+          <div className="grid2">
+            <label>New date
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e)=>setForm(v=>({ ...v, date: e.target.value }))}
+                required
+              />
+            </label>
+            <span />
+            <label>Door open
+              <input
+                type="time"
+                value={form.doorOpenTime}
+                onChange={(e)=>setForm(v=>({ ...v, doorOpenTime: normTime(e.target.value) }))}
+                required
+              />
+            </label>
+            <label>End time
+              <input
+                type="time"
+                value={form.endTime}
+                onChange={(e)=>setForm(v=>({ ...v, endTime: normTime(e.target.value) }))}
+                required
+              />
+            </label>
+          </div>
+          {warn && <div className="warn" style={{marginTop:8}}>{warn}</div>}
+          <div className="act" style={{marginTop:12}}>
+            <button type="button" className="btn" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn primary" disabled={busy}>
+              {busy ? 'Saving…' : 'Confirm'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 /* ========== invite/edit modal (EN) ========== */
@@ -161,19 +251,16 @@ function InviteModal({
         return 'This artist is already in the lineup.';
       }
     }
-
     const st = normTime(form.startTime);
     const et = normTime(form.endTime);
     if (!st || !et) return 'Please fill start time and end time.';
     const sm = toMin(st), em = toMin(et);
     if (sm==null || em==null) return 'Invalid time format (e.g., 19:30).';
     if (sm >= em) return 'Start time must be earlier than end time.';
-
     const wmS = windowStartHHMM ? toMin(windowStartHHMM) : null;
     const wmE = windowEndHHMM ? toMin(windowEndHHMM) : null;
     if (wmS!=null && sm < wmS) return `Start time is before event window (${windowStartHHMM}).`;
     if (wmE!=null && em > wmE) return `End time exceeds event window (${windowEndHHMM}).`;
-
     return '';
   };
 
@@ -352,7 +439,6 @@ function InviteModal({
   );
 }
 
-
 /* ===== helpers (ภายในไฟล์) ===== */
 const badgeCss = {
   display:'inline-block',
@@ -363,7 +449,7 @@ const badgeCss = {
 };
 
 /* ===== Schedule component (EN labels) ===== */
-function BasicSchedule({ rows, minM, maxM, onBarClick }) {
+function BasicSchedule({ rows, minM, maxM, onBarClick, onCancelInvite, canCancelInvite, isPublished }) {
   const total = Math.max(1, maxM - minM);
   const percent = (m) => ((m - minM) / total) * 100;
 
@@ -409,14 +495,23 @@ function BasicSchedule({ rows, minM, maxM, onBarClick }) {
           ? { left: `${left}%`, right: 0 }
           : { left: `${left}%`, width: `${width}%` };
 
+        const allowCancel = canCancelInvite && !isPublished && st === 'PENDING';
+
         return (
           <div key={r.key} className="bs-row">
             <div>
               <div className="bs-name">{r.name}</div>
-              
               <div className="bs-sub">
                 <span className={`st ${cls}`}>{st}</span>
-                <button className="btn-xs cancel">CANCEL INVITE</button>
+                {allowCancel && (
+                  <button
+                    className="btn-xs cancel"
+                    onClick={() => onCancelInvite?.(r)}
+                    title="Cancel this pending invite"
+                  >
+                    CANCEL INVITE
+                  </button>
+                )}
               </div>
             </div>
             <div className="bs-track">
@@ -442,8 +537,6 @@ function BasicSchedule({ rows, minM, maxM, onBarClick }) {
   );
 }
 
-
-
 /* ========== main page ========== */
 export default function EventDetail() {
   const { id } = useParams();
@@ -459,6 +552,10 @@ export default function EventDetail() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+
+  // new: reschedule + cancel-event UI state
+  const [resModalOpen, setResModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchEvent = async () => {
     const { data } = await api.get(`/events/${id}`, { withCredentials: true });
@@ -506,7 +603,7 @@ export default function EventDetail() {
     } finally { setBusy(false); }
   };
 
-  // แก้ได้เฉพาะตอนยังไม่ publish และเป็นเจ้าของ/แอดมิน
+  // edit lineup only when not published & owner/admin
   const canEdit = useMemo(() => {
     if (!me || !ev?.venue) return false;
     const isOrg = me.role === 'ORGANIZE' || me.role === 'ADMIN';
@@ -514,7 +611,6 @@ export default function EventDetail() {
     return isOrg && owns && !ev.isPublished;
   }, [me, ev]);
 
-  // ปุ่ม Publish (แสดงเฉพาะ HERO)
   const canPublish = !!(ev?._isOwner) && !ev?.isPublished;
   const isReady = !!(ev?._ready?.isReady);
   const onPublish = async () => {
@@ -530,7 +626,13 @@ export default function EventDetail() {
     }
   };
 
-  // แปลง artistEvents + scheduleSlots เป็นแถว
+  // NEW: show reschedule only when owner/admin AND already published
+  const canReschedule = !!(ev?._isOwner) && !!ev?.isPublished;
+
+  // NEW: delete event allowed for owner/admin
+  const canDeleteEvent = !!(ev?._isOwner);
+
+  // schedule rows
   const scheduleRows = useMemo(() => {
     const rows = [];
     const aes = Array.isArray(ev?.artistEvents) ? ev.artistEvents : [];
@@ -541,7 +643,7 @@ export default function EventDetail() {
         `Artist ${ae?.artistId ?? ''}`;
       rows.push({
         key: `${ae.artistId}-${ae.eventId}`,
-        aeId: ae.id,            // ✅ เก็บ id ของ artistEvent ไว้ใช้ตอนแทนที่
+        aeId: ae.id,
         artistId: ae.artistId,
         name,
         status: ae?.status || 'PENDING',
@@ -587,7 +689,7 @@ export default function EventDetail() {
     return aes.map(ae => Number(ae.artistId));
   }, [ev]);
 
-  // ขอบเขตเวลาโชว์
+  // display window range
   const windowRange = useMemo(() => {
     const eventStart = normTime(ev?.doorOpenTime);
     const eventEnd   = normTime(ev?.endTime);
@@ -610,6 +712,34 @@ export default function EventDetail() {
     return { minM, maxM, startHH: minToHHMM(minM), endHH: minToHHMM(maxM), rawStart: eventStart, rawEnd: eventEnd };
   }, [ev, scheduleRows]);
 
+  // actions
+  const onCancelInvite = async (row) => {
+    if (!row?.artistId || !ev?.id) return;
+    if (!window.confirm(`Cancel invite for "${row.name}"?`)) return;
+    try {
+      await api.delete(`/events/${ev.id}/invites/${row.artistId}`, { withCredentials: true });
+      await fetchEvent();
+    } catch (e) {
+      alert(extractErrorMessage?.(e, 'Cancel invite failed') || 'Cancel invite failed');
+    }
+  };
+
+  const onDeleteEvent = async () => {
+    if (!ev?.id) return;
+    const reason = window.prompt('Type a reason (optional):', '');
+    if (!window.confirm('This will permanently delete the event. Continue?')) return;
+    setDeleting(true);
+    try {
+      await api.post(`/events/${ev.id}/cancel`, { reason: reason || null }, { withCredentials: true });
+      // go back after delete
+      navigate(location.pathname.startsWith('/myevents') ? '/myevents' : '/events', { replace: true });
+    } catch (e) {
+      alert(extractErrorMessage?.(e, 'Delete failed') || 'Delete failed');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) return <div className="page"><div className="note">กำลังโหลด…</div></div>;
   if (err) return (
     <div className="page">
@@ -621,7 +751,7 @@ export default function EventDetail() {
   );
   if (!ev) return null;
 
-  /* ================= HERO ใหม่ (พื้นหลังภาพเข้ม + โปสเตอร์ขวา) ================= */
+  /* ================= HERO ================= */
   const poster = ev?.posterUrl || '/img/graphic-3.png';
   const venueName = ev?.venue?.performer?.user?.name || ev?.venue?.name || '—';
   const locationUrl = ev?.venue?.location?.locationUrl || null;
@@ -631,18 +761,17 @@ export default function EventDetail() {
 
   return (
     <div className="page">
-      {/* แจ้งเตือนเจ้าของ/แอดมิน */}
+      {/* Owner notice */}
       {ev?._isOwner && ev?._ready && !ev._ready.isReady && (
         <div className="note" style={{ background:'#fff3cd', border:'1px solid #ffe69c', color:'#664d03', marginBottom:12 }}>
-          งานนี้ยังไม่เผยแพร่ต่อสาธารณะ: รอศิลปินตอบรับ {ev._ready.accepted}/{ev._ready.totalInvited}
+          This event is not public yet: waiting for artist acceptance {ev._ready.accepted}/{ev._ready.totalInvited}
           {typeof ev._ready.pending === 'number' ? ` (pending ${ev._ready.pending})` : ''}
         </div>
       )}
 
-      {/* ===== HERO (ภาพพื้นหลัง + ขวาโปสเตอร์) ===== */}
+      {/* HERO */}
       <div className="ed-hero" style={{ backgroundImage: `url(${poster})` }}>
         <div className="ed-hero-inner">
-          {/* ซ้าย: ชื่อ + meta + ปุ่ม */}
           <div className="ed-hero-left">
             <div className="ed-title-row">
               <h1 className="ed-title">{ev.name || `Event #${ev.id}`}</h1>
@@ -653,41 +782,12 @@ export default function EventDetail() {
               )}
             </div>
 
-            <div className="ed-meta">
-              <span className="ed-k">Date</span>
-              <span className="ed-v">{formatDateEN(ev.date)}</span>
-            </div>
-
-            <div className="ed-meta">
-              <span className="ed-k">Hours</span>
-              <span className="ed-v">{scheduleRange}</span>
-            </div>
-
-            <div className="ed-meta">
-              <span className="ed-k">Event Type</span>
-              <span className="ed-v">{ev?.eventType || '—'}</span>
-            </div>
-
-            <div className="ed-meta">
-              <span className="ed-k">Location</span>
-              <span className="ed-v">
-                {venueName}{' '}
-              </span>
-            </div>
-
-
-            {/* <div className="ed-actions">
-              <button
-                className={`like ${ev.likedByMe ? 'on' : ''}`}
-                onClick={toggleFollow}
-                aria-label="follow"
-                title={ev.likedByMe ? 'Unfollow' : 'Follow'}
-              />
-              <span className="ed-followers">👥 {ev.followersCount || 0}</span>
-            </div> */}
+            <div className="ed-meta"><span className="ed-k">Date</span><span className="ed-v">{formatDateEN(ev.date)}</span></div>
+            <div className="ed-meta"><span className="ed-k">Hours</span><span className="ed-v">{scheduleRange}</span></div>
+            <div className="ed-meta"><span className="ed-k">Event Type</span><span className="ed-v">{ev?.eventType || '—'}</span></div>
+            <div className="ed-meta"><span className="ed-k">Location</span><span className="ed-v">{venueName}{' '}</span></div>
           </div>
 
-          {/* ขวา: โปสเตอร์ซ้ำ */}
           <div className="ed-hero-right">
             <img
               src={poster}
@@ -698,10 +798,9 @@ export default function EventDetail() {
         </div>
       </div>
 
-      {/* ===== INFO GRID 3 คอลัมน์ ===== */}
+      {/* INFO GRID */}
       <section className="ed-info">
         <div className="ed-info-grid">
-          {/* CONTACT */}
           <div className="ed-info-block">
             <h3 className="ed-info-title">CONTACT</h3>
             <div className="ed-kv"><div>Email</div><div>—</div></div>
@@ -716,13 +815,11 @@ export default function EventDetail() {
             </div>
           </div>
 
-          {/* DESCRIPTION */}
           <div className="ed-info-block">
             <h3 className="ed-info-title">DESCRIPTION</h3>
             <p className="ed-text">{ev?.description || '—'}</p>
           </div>
 
-          {/* LINKS */}
           <div className="ed-info-block">
             <h3 className="ed-info-title">LINKS</h3>
             <p className="ed-text">
@@ -734,7 +831,7 @@ export default function EventDetail() {
         </div>
       </section>
 
-      {/* ===== SCHEDULE (EN + styled like info blocks) ===== */}
+      {/* SCHEDULE */}
       <section className="ed-schedule">
         <div className="ed-schedule-head">
           <h2 className="h2">Artist Schedule</h2>
@@ -744,7 +841,6 @@ export default function EventDetail() {
                 Schedule / Invite Artists
               </button>
             )}
-            {/* ⬇️ ย้าย Publish มาตรงนี้ */}
             {canPublish && (
               <button
                 className="btn primary"
@@ -755,9 +851,16 @@ export default function EventDetail() {
                 {publishing ? 'Publishing…' : 'Publish'}
               </button>
             )}
-
-            <button className="btn primary">Postpone</button>
-            <button className="btn primary">Delete Event</button>
+            {canReschedule && (
+              <button className="btn" onClick={()=>setResModalOpen(true)} title="Postpone / reschedule">
+                Postpone
+              </button>
+            )}
+            {canDeleteEvent && (
+              <button className="btn danger" onClick={onDeleteEvent} disabled={deleting} title="Delete event">
+                {deleting ? 'Deleting…' : 'Delete Event'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -783,10 +886,13 @@ export default function EventDetail() {
             minM={windowRange.minM}
             maxM={windowRange.maxM}
             onBarClick={canEdit ? (row)=>{ setEditing(row); setModalOpen(true); } : undefined}
+            onCancelInvite={onCancelInvite}
+            canCancelInvite={!!(ev?._isOwner)}   // allow owner/admin to see "CANCEL INVITE" (button disables itself if published or not PENDING)
+            isPublished={!!ev?.isPublished}
           />
         )}
 
-        {/* Modal */}
+        {/* Invite Modal */}
         <InviteModal
           open={modalOpen && !ev.isPublished}
           onClose={()=>setModalOpen(false)}
@@ -796,6 +902,17 @@ export default function EventDetail() {
           windowStartHHMM={windowRange.rawStart || null}
           windowEndHHMM={windowRange.rawEnd || null}
           invitedIds={invitedIds}
+        />
+
+        {/* Reschedule Modal */}
+        <RescheduleModal
+          open={resModalOpen}
+          onClose={()=>setResModalOpen(false)}
+          eventId={ev.id}
+          initialDateISO={ev.date}
+          initialDoor={ev.doorOpenTime}
+          initialEnd={ev.endTime}
+          onSaved={fetchEvent}
         />
       </section>
     </div>

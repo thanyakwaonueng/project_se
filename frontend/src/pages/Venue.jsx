@@ -63,7 +63,7 @@ export default function Venue() {
         // ✅ backend ส่ง include performer{user}, location, events
         const v = (await api.get(`/venues/${vid}`, { withCredentials: true })).data;
         if (!alive) return;
-        if (!v) setErr("ไม่พบสถานที่ที่ต้องการ");
+        if (!v) setVenueData(null);
         else setVenueData(v);
       } catch (e) {
         if (!alive) return;
@@ -121,23 +121,6 @@ export default function Venue() {
     }).format(d);
   };
 
-  // Upcoming events (ตามเดิม)
-  const eventsUpcoming = useMemo(() => {
-    const list = Array.isArray(venueData?.events) ? venueData.events : [];
-    const today = new Date();
-    const todayMid = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate()
-    );
-    return list
-      .filter(
-        (ev) =>
-          ev?.date && !isNaN(new Date(ev.date)) && new Date(ev.date) >= todayMid
-      )
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
-  }, [venueData]);
-
   // ✅ เช็คสิทธิ์แก้ไข: ORGANIZE/ADMIN + เป็นเจ้าของ venue นี้
   const canEdit = useMemo(() => {
     if (!me || !venueData) return false;
@@ -149,6 +132,21 @@ export default function Venue() {
       Number(me.id) === Number(id);
     return roleOK && ownerMatches;
   }, [me, venueData, id]);
+
+  // ✅ ใครมองเห็น Draft ได้บ้าง (เจ้าของ/ADMIN เท่านั้น)
+  const canSeeDrafts = (me?.role === "ADMIN") || canEdit;
+
+  // ✅ Upcoming events: โชว์เฉพาะที่ "publish แล้ว" สำหรับผู้ชมทั่วไป
+  const eventsUpcoming = useMemo(() => {
+    const list = Array.isArray(venueData?.events) ? venueData.events : [];
+    const today = new Date();
+    const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    return list
+      .filter((ev) => ev?.date && !isNaN(new Date(ev.date)) && new Date(ev.date) >= todayMid)
+      .filter((ev) => ev?.isPublished || canSeeDrafts) // ⬅️ สำคัญ: กรอง Draft ออก
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [venueData, canSeeDrafts]);
 
   if (loading)
     return (
@@ -201,10 +199,9 @@ export default function Venue() {
             {/* 🔧 ปุ่มแก้ไข → กลับไป route เดิม /venue/edit */}
             {canEdit && (
               <Link to={`/venue/edit`} className="vn-btn-img">
-                <img src="/img/edit-text.png" alt="Edit"/>
+                <img src="/img/edit-text.png" alt="Edit" />
               </Link>
             )}
-
           </div>
 
           {venueData.description && (
@@ -299,8 +296,6 @@ export default function Venue() {
                 )}
               </div>
             </div>
-
-
           </div>
 
           <div className="vn-info-block">
@@ -332,28 +327,6 @@ export default function Venue() {
               <div className="vn-kv">No schedule available</div>
             )}
           </div>
-
-
-          {/* Basics */}
-          {/* <div className="vn-info-block">
-            <div className="vn-info-title">Basics</div>
-            <div className="vn-kv">
-              <div>Genre</div>
-              <div>{venueData.genre || "—"}</div>
-            </div>
-            <div className="vn-kv">
-              <div>Capacity</div>
-              <div>{venueData.capacity || "—"}</div>
-            </div>
-            <div className="vn-kv">
-              <div>Alcohol</div>
-              <div>{venueData.alcoholPolicy || "—"}</div>
-            </div>
-            <div className="vn-kv">
-              <div>Age Restriction</div>
-              <div>{venueData.ageRestriction || "—"}</div>
-            </div>
-          </div> */}
 
           {/* Links / Socials */}
           <div className="vn-info-block">
@@ -402,7 +375,6 @@ export default function Venue() {
         </div>
       </section>
 
-
       {/* ===== UPCOMING ===== */}
       <section className="vn-section">
         <h2 className="vn-section-title">Upcoming</h2>
@@ -412,7 +384,14 @@ export default function Venue() {
               <li key={ev.id || ev.slug || ev.title} className="a-schedule-item">
                 <div className="a-date">{fmtEnLong(ev.date || ev.dateISO)}</div>
                 <div className="a-event">
-                  <div className="a-event-title">{ev.title || ev.name}</div>
+                  <div className="a-event-title">
+                    {ev.title || ev.name}{" "}
+                    {!ev.isPublished && canSeeDrafts && (
+                      <span className="vn-chip" style={{ marginLeft: 8, background: "#6b7280", color: "#fff" }}>
+                        Draft
+                      </span>
+                    )}
+                  </div>
                   <div className="a-event-sub">
                     {(ev.venue?.name ||
                       venueData?.performer?.user?.name ||
@@ -470,7 +449,6 @@ export default function Venue() {
           </div>
         </section>
       )}
-
     </div>
   );
 }
