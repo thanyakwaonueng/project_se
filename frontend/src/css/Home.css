@@ -1,55 +1,55 @@
+/* ===== GLOBAL STYLES ===== */
 body {
-  /* font-family: 'Anton', sans-serif; */
-  /* font-family: 'Inter', sans-serif; */
-  /* font-family: 'Poppins', sans-serif; */
   font-family: 'Poppins', 'Mitr', sans-serif;
   background-color: #f7f7f7;
+  margin: 0;
+  padding: 0;
 }
 
-
+/* ===== HEADER SECTION ===== */
 .header-homepage {
   display: flex;
-  flex-direction: column; 
-  align-items: center;    
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  gap: 10px;          
+  gap: 10px;
 }
 
 .container-1 {
   display: flex;
   justify-content: center;
-  align-items: center;  
+  align-items: center;
   gap: 10px;
 }
 
 .topic-1 {
   font-size: 140px;
-  font-weight: bold; 
+  font-weight: bold;
   text-align: center;
-  color: #000;    
+  color: #000;
 }
 
-.news-box { 
-  width: 85%;              
-  height: 55px;       
-  background-color: #000;   
-  display: flex;            /* ใช้ flex */
-  align-items: center;      /* จัดให้อยู่ตรงกลางแนวตั้ง */
-  justify-content: flex-start; /* ชิดซ้าย */
+.news-box {
+  width: 85%;
+  height: 55px;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
   padding-left: 20px;
 }
 
 .news {
   font-size: 20px;
-  font-weight: 500; 
-  color: #ffffff; 
+  font-weight: 500;
+  color: #ffffff;
   margin: 0;
   padding-right: 20px;
 }
 
 .marquee {
-  flex: 1;                 /* กินพื้นที่ที่เหลือ */
-  color: #cdcdcd; 
+  flex: 1;
+  color: #cdcdcd;
   overflow: hidden;
   position: relative;
 }
@@ -57,73 +57,59 @@ body {
 .marquee span {
   display: inline-block;
   white-space: nowrap;
-  padding-left: 100%;      /* เริ่มจากด้านขวาสุด */
+  padding-left: 100%;
   animation: marquee 20s linear infinite;
 }
 
 @keyframes marquee {
-  0%   { transform: translateX(0); }
+  0% { transform: translateX(0); }
   100% { transform: translateX(-100%); }
 }
 
 .vinyl-picture-box {
   width: 85%;
   height: 500px;
-  overflow: hidden;          /* ป้องกันรูปล้นกรอบ */
-  position: relative;  
-  align-self: center; 
+  overflow: hidden;
+  position: relative;
+  align-self: center;
   margin-bottom: 20px;
 }
 
 .vinyl-picture {
   margin-top: 20px;
-  width: 100%;            
-  height: 100%;           
-  object-fit: cover;         /* ครอบคลุมทั้ง container โดยไม่ผิดสัดส่วน */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   display: block;
-  
 }
 
-.latest-artists {
-  font-size: 24px;
-  align-self: flex-start;
-  color: #000; 
-  margin-left:50px;
-
-}
-
-.divider-nextcontent {
-  width: 90%;
-  height: 1.2px;
-  background-color: #7b7b7b;
-  margin: 30px auto;
-
-}
-
+/* ===== CHIANG MAI ORIGINAL SECTION ===== */
 .chiangmai-original-content {
-  margin-top: 50px;
+  width: 85%;
+  margin: 50px auto; 
+  display: flex;
+  justify-content: center;
+  align-items: center;   
 }
 
 .container-2 {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  justify-content: center; 
+  align-items: center;   
   gap: 10px;
   width: 100%;
-  padding: 30px 90px 30px 90px;
+  padding: 30px 20px; 
+  box-sizing: border-box; 
 }
 
 .chiangmai-original-topic {
   font-family: 'Nothing You Could Do', sans-serif;
-  font-size: 60px;
-  /* color: #a9deff; */
-
+  font-size: 50px;
 }
 
 .chiangmai-original-info {
-  font-size: 20px;
+  font-size: 16px;
   color: #000000;
-
 }
 
 .text-section {
@@ -132,137 +118,221 @@ body {
   justify-content: center;
   align-items: center;
   gap: 50px;
-} 
+}
 
-/* Artist section */
+.divider-nextcontent {
+  width: 90%;
+  height: 1.2px;
+  background-color: #7b7b7b;
+  margin: 30px auto;
+}
+
+/* ===== ARTISTS SECTION ===== */
 .artist-content {
   width: 100%;
+  box-sizing: border-box;
+  padding: 0;
 }
 
+.discover-artists-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.discover-artists {
+  font-size: 24px;
+  color: #000;
+  margin: 0;
+}
+
+.artist-navigation {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.nav-arrow {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.nav-arrow.is-active {
+  color: #111; /* active = ดำ */
+  outline: none;
+}
+
+.nav-arrow:hover {
+  transform: scale(1.1);
+  outline: none;
+}
+
+
+.discover-artists-subtitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 10px;
+}
+
+.discover-artists-subtitle a h2 {
+  font-size: 14px;
+  margin: 0;
+  color: #000;
+}
+
+.artist-subtitle {
+  font-size: 14px;
+  margin: 0;
+  color: #000;
+}
 
 .container-3 {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  /* gap: 20px; */
   width: 100%;
-  margin-top: -5%;
+  margin: 0 auto;
 }
-
-.artist-header {
-  display: flex;
-  justify-content: space-between; 
-  align-items: center;  
-  gap: 5px;                 /* ระยะห่างระหว่าง h1 กับ h2 */    
-  padding-left: 50px;       /* ขอบซ้ายเดียวกันสำหรับทั้ง h1 และ h2 */
-}
-
-
-.artist-header a h2 {
-  font-size: 14px;
-  margin-right: 50px;  
-  color: #252525;
-  text-decoration: none;
-}
-
-.artist-header a h2:hover {
-  text-decoration: underline;
-}
-
 
 .artist-grid {
   display: flex;
-  /* flex-wrap: nowrap;      ไม่ให้ขึ้นบรรทัดใหม่ */
-  justify-content: flex-start; /* หรือ center / space-between ตามต้องการ */
-  gap: 20px;              /* ระยะห่างระหว่างการ์ด */
-  overflow-x: auto;       /* เลื่อนซ้ายขวาได้ถ้ามีการ์ดเกินพื้นที่ */
-  width: 100%;
-  padding: 100px ;
+  gap: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  padding: 20px 10px 30px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #353535 transparent;
+}
+
+.artist-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.artist-grid::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.artist-grid::-webkit-scrollbar-thumb {
+  background: #a9deff;
+  border-radius: 10px;
+}
+
+.artist-grid::-webkit-scrollbar-thumb:hover {
+  background: #75cafe;
 }
 
 .artist-card {
-  /* flex: 0 0 300px;        กำหนดความกว้างคงที่ของการ์ด */
+  flex: 0 0 auto;
+  width: 300px;
+  background: #fff;
   border-radius: 2px;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
 }
 
-
+.artist-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
 
 .artist-image-wrapper {
-  position: relative;      /* ให้ปุ่มอยู่บนรูปภาพ */
+  position: relative;
   width: 100%;
-  height: 200px;           /* ความสูงของรูป */
+  height: 200px;
   overflow: hidden;
-  margin-bottom: 10px;
 }
 
 .artist-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.artist-card:hover .artist-image {
+  transform: scale(1.05);
 }
 
 .like-button {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 35px;
-  height: 35px;
-  border: none;           /* เอาขอบออก */
-  outline: none;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
   border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
   cursor: pointer;
-  transition: transform 0.2s;
-  background: #2a2a2a url('/img/heart_light.png') no-repeat center;
-  background-size: 15px 15px;
-  
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
-
 .like-button:hover {
-  background: #a9deff url('/img/heart_dark.png') no-repeat center;
-  background-size: 18px 18px;
+  background: #fff;
   transform: scale(1.1);
 }
 
-/* ✅ เมื่อถูกกดแล้ว (liked) */
 .like-button.liked {
-  border: none;           /* เอาขอบออก */
-  outline: none;
-  background: #a9deff url('/img/heart_dark.png') no-repeat center;
-  background-size: 18px 18px;
-}
-
-
-.artist-content {
-  margin-bottom: 0;
-}
-
-.artist-title {
-  font-size: 16px;
-  /* font-weight: bold; */
-  margin-bottom: 8px;
-  color: #000;
-}
-
-.artist-date {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 12px;
-
+  color: #ff4757;
 }
 
 .artist-genre {
   position: absolute;
-  bottom: 10px;        
-  left: 10px;        
-  background: #2a2a2a;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(42, 42, 42, 0.9);
   color: #fff;
-  padding: 4px 8px;
+  padding: 6px 12px;
   border-radius: 20px;
   font-size: 12px;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
 }
 
+.artist-content {
+  width: 90%;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.artist-title {
+  font-size: 18px;
+  /* font-weight: 500; */
+  color: #000;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.artist-date {
+  font-size: 14px;
+  color: #888;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ===== MUSIC GENRE SECTION ===== */
 .music-genre-content {
   width: 100%;
 }
@@ -275,26 +345,25 @@ body {
   width: 100%;
   padding: 90px;
   background-color: #292929;
-
 }
 
 .discover-music {
   font-size: 24px;
   align-self: flex-start;
-  color: #ffffff; 
+  color: #ffffff;
 }
 
 .discover-music-subtitle {
   display: flex;
-  justify-content: space-between; 
-  gap: 5px;      
+  justify-content: space-between;
+  gap: 5px;
 }
 
 .discover-music-subtitle a h2 {
   display: flex;
-  align-items: flex-end; 
+  align-items: flex-end;
   font-size: 14px;
-  margin: 0;      
+  margin: 0;
   color: #ccc;
 }
 
@@ -302,19 +371,17 @@ body {
   font-size: 14px;
   margin-bottom: 20px;
   color: #ccc;
-
 }
 
 .genre-section {
   margin-bottom: 60px;
 }
 
-
-.genre-grid, .location-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    justify-content: center;
+.genre-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
 }
 
 .genre-item {
@@ -324,51 +391,25 @@ body {
   border-radius: 60px;
   transition: all 0.3s ease;
   cursor: pointer;
-  /* border: 1px solid rgba(255, 255, 255, 0.15); */
   color: #ffffff;
 }
 
 .genre-item:hover {
-    background: #a9deff;
-    color: #0c1120;
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  background: #a9deff;
+  color: #0c1120;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
-.explore-more {
-    text-align: center;
-    margin-top: 50px;
-}
-
-.explore-btn {
-    background: linear-gradient(90deg, #ff6b6b, #ff9e7d);
-    color: white;
-    border: none;
-    padding: 15px 40px;
-    border-radius: 50px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
-}
-
-
-.explore-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
-}
-
+/* ===== EVENT SECTION ===== */
 .event-content {
-  display: flex;            
-  justify-content: space-between; 
-  align-items: flex-start;    
-  /* gap: 20px;                */
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   width: 100%;
-  box-sizing: border-box;  
+  box-sizing: border-box;
 }
 
-/* left box */
 .container-5 {
   display: flex;
   flex-direction: column;
@@ -376,35 +417,28 @@ body {
   gap: 10px;
   width: 70%;
   padding: 60px;
-  /* background-color: #452727; */
   box-sizing: border-box;
 }
 
-/* right box */
 .container-6 {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start; 
+  justify-content: flex-start;
   gap: 10px;
   width: 30%;
   padding: 60px;
-  /* background-color: #000; */
   box-sizing: border-box;
 }
-
 
 .event-grid {
   display: flex;
   flex-direction: column;
-  /* background-color: #a97676; */
-
 }
 
 .event-card {
   display: flex;
   align-items: flex-start;
   padding: 30px 0;
-  /* border-bottom: 1px solid #ddd; */
   border-bottom: 1px solid #7b7b7b;
 }
 
@@ -420,17 +454,16 @@ body {
 }
 
 .event-title {
-  font-size: 24px !important; 
+  font-size: 18px;
   font-weight: 700;
   margin-bottom: 12px;
 }
 
 .event-desc {
-  font-size: 16px;
+  font-size: 14px;
   color: #555;
   margin-bottom: 16px;
   line-height: 1.5;
-  /* white-space: pre-line;  */
 }
 
 .event-meta {
@@ -439,14 +472,15 @@ body {
   font-size: 14px;
   color: #888;
   align-items: center;
-  justify-content: space-between;   
+  justify-content: space-between;
 }
 
 .event-meta strong {
   color: #000;
 }
+
 .event-info span {
-  margin-right: 10px; /* เว้นระยะระหว่าง Date และ Genre */
+  margin-right: 10px;
 }
 
 .event-genre {
@@ -455,7 +489,6 @@ body {
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
-  /* text-transform: uppercase; */
 }
 
 .view-detail-btn {
@@ -476,6 +509,7 @@ body {
   color: #292929;
 }
 
+/* ===== MODAL STYLES ===== */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -487,7 +521,7 @@ body {
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  padding: 20px; /* เว้นระยะขอบบนล่าง */
+  padding: 20px;
 }
 
 .modal-content {
@@ -496,9 +530,9 @@ body {
   padding: 20px;
   border-radius: 8px;
   box-sizing: border-box;
-  max-width: 500px;   /* สูงสุดไม่เกิน 500px */
-  max-height: 500px;  /* สูงสุดไม่เกิน 500px */
-  overflow-y: auto;   /* scroll ถ้า content ยาวเกิน */
+  max-width: 500px;
+  max-height: 500px;
+  overflow-y: auto;
 }
 
 .modal-content h2 {
@@ -521,185 +555,124 @@ body {
   color: #b00101;
 }
 
+/* ===== RESPONSIVE DESIGN ===== */
 
-.chiangmai-original-playlist-content {
-  width: 100%;
-}
-
-.container-7 {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  padding: 90px;
-  /* background-color: #292929; */
-
-}
-
-.chiangmai-original-playlist-content {
-  width: 100%;
-}
-
-.chiangmai-original-playlist {
-  font-size: 24px;
-  align-self: flex-start;
-  color: #292929; 
-}
-
-.playlist-card-content {
-  width: 400px;
-  height: 400px;
-  
-}
-
-.playlist-card {
-  display: flex;              /* จัด layout แนวนอน */
-  align-items: center; 
-  overflow: hidden; 
-  /* border: 1px solid #ccc;    */
-  border-radius: 2px;       
-  /* box-shadow: 0 1px 1px rgba(0,0,0,0.1); */     
-         
- 
-}
-
-.playlist-picture {
-  width: 70%;            
-  height: 70%;             
-  object-fit: cover;         
-  display: block; 
-  z-index: 2; 
-  position: relative;
-  border: 1px solid #ccc;   
-}
-
-.playlist-image-wrapper {
-  position: relative;  /* ให้ปุ่ม absolute อยู่บนรูป */
-  overflow: hidden; 
-}
-
-.play-button {
-  position: absolute;
-  bottom: 5%;
-  right: 5%;
-  transform: translate(-50%, -50%);
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background-color: #a9deff;
-  color: #000000;
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  z-index: 3;
-}
-
-.play-button:hover {
-  transform: translate(-50%, -50%);
-  background-color: #75cafe;
-  color: #000000;
-  text-decoration: none;
-
-}
-
-.graphic-4 {
-  position: absolute;
-  top: 5px;
-  right: -5px;            /* เลื่อน graphic ไปทางขวา */
-  height: 100%;
-  z-index: 1;              /* อยู่ด้านหลัง playlist-picture */
-}
-
-
-
-/* Responsive design */
+/* Tablet Styles */
 @media (max-width: 1024px) {
   .topic-1 {
     font-size: 80px;
   }
-  
-  .topic-2 {
-    font-size: 50px;
+
+  .container-2 {
+    padding: 30px 50px;
+  }
+
+  .artist-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding-left: 20px;
+  }
+
+  .artist-grid {
+    gap: 15px;
   }
 
   .artist-card {
-    flex: 0 0 200px;  /* การ์ดเล็กลง */
-  }
-  
-  .artist-title {
-    font-size: 14px;
-  }
-  
-  .artist-date {
-    font-size: 12px;
+    flex: 0 0 auto;
   }
 
-  .container-5 {
+  .container-5,
+  .container-6 {
     width: 100%;
     padding: 40px;
   }
+  .container-6 iframe {
+    max-width: 100%;
+    height: 400px; 
+  }
 }
 
-/* mobile */
+/* Mobile Styles */
 @media (max-width: 768px) {
   .topic-1 {
-    font-size: 60px;
-  }
-  
-  .news-box {
-    width: 100%;
-  }
-  
-  .vinyl-picture {
-    width: 100%;
-  }
-  
-  .topic-2 {
-    font-size: 40px;
-    padding-left: 20px;
-  }
-  
-  .artist-grid {
-    grid-template-columns: 1fr;
-    padding: 0 20px;
+    font-size: 50px;
+    text-align: center;
   }
 
-  .discover-music {
-    font-size: 2.2rem;
+  .news-box {
+    width: 90%;
+    padding-left: 10px;
   }
-    
+
+  .vinyl-picture-box {
+    width: 90%;
+    height: 300px;
+  }
+
+  .container-2 {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .chiangmai-original-topic {
+    font-size: 24px;
+  }
+
+  .chiangmai-original-info {
+    font-size: 14px;
+  }
+
+  .text-section {
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+
+  .artist-header {
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding-left: 0;
+  }
+
+  .artist-grid {
+    padding: 0 20px;
+    gap: 10px;
+  }
+
+  .artist-card {
+    flex: 0 0 auto;
+  }
+
+  .discover-artists {
+    font-size: 24px;
+  }
+
+  .discover-artists-subtitle {
+    font-size: 14px;
+  }
+
   .container-4 {
     padding: 30px 20px;
-  }
-    
-  .genre-item, .location-item {
-    padding: 12px 20px;
-    font-size: 0.9rem;
   }
 
   .event-content {
     flex-direction: column;
   }
-  .container-5, .container-6 {
+
+  .container-5,
+  .container-6 {
     width: 100%;
     padding: 20px;
   }
 
-  .event-grid {
-    grid-template-columns: 1fr; /* เหลือคอลัมน์เดียวในจอมือถือ */
-  }
-
   .event-card {
-    flex-direction: column;   /* ซ้อนเป็นแนวตั้ง */
+    flex-direction: column;
   }
 
   .event-image {
     max-width: 100%;
-    min-width: auto;
     padding: 15px;
   }
 
@@ -712,191 +685,44 @@ body {
     align-items: flex-start;
     gap: 10px;
   }
-
-  .view-detail-btn {
-    align-self: flex-start; /* ปุ่มอยู่ซ้าย ไม่โดด */
-  }
 }
 
+/* Small Mobile Styles */
 @media (max-width: 480px) {
   .topic-1 {
     font-size: 40px;
   }
-  
+
   .news {
     font-size: 16px;
   }
-  
-  .topic-2 {
-    font-size: 32px;
-    padding-left: 20px;
-  }
-  
-  .artist-homepage {
-    padding: 40px 0;
-  }
-  
-  .container-2 {
-    padding: 0 10px;
-  }
-  
-  .artist-grid {
-    padding: 0 10px;
+
+  .container-2,
+  .container-3 {
+    padding: 10px;
   }
 
   .artist-card {
-    flex: 0 0 160px;  /* การ์ดเล็กลงอีกสำหรับมือถือ */
+    flex: 0 0 auto;
   }
-  
+
   .artist-title {
     font-size: 12px;
   }
-  
+
   .artist-date {
     font-size: 10px;
   }
 
-    .discover-music {
-        font-size: 1.8rem;
-    }
-    
-    .subtitle {
-        font-size: 1rem;
-    }
-    
-    .genre-grid, .location-grid {
-        gap: 10px;
-    }
-    
-    .genre-item, .location-item {
-        padding: 10px 15px;
-        font-size: 0.8rem;
-    }
-    
-    .explore-btn {
-        padding: 12px 30px;
-        font-size: 1rem;
-    }
+  .discover-artists {
+    font-size: 24px;
+  }
+
+  .discover-music {
+    font-size: 24px;
+  }
+
+  .container-6 {
+    padding: 20px 15px;
+  }
 }
-
-
-
-.cat-1 {
-  width: 600px;
-  height: auto;
-}
-
-
-
-.learn-more-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background-color: #c4e7fc;
-  color: #000;
-  border: none;
-  border-radius: 999px;
-  padding: 10px 20px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  margin-top: 20px;
-  transition: background-color 0.3s ease;
-}
-
-.learn-more-btn:hover {
-  background-color: #a9deff;
-}
-
-.learn-more-btn {
-  width: 50%; /* ปรับตามความกว้างของ container */
-  max-width: 300px; /* จำกัดสูงสุด */
-}
-
-
-.icon-circle {
-  background-color: #222;
-  color: #fff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  font-size: 14px;
-  margin-left: auto;
-}
-
-#nav-start-btn {
-    border-radius: 20px;
-    /* background-color: #67b1f9; */
-    background-color: #231f20;
-    margin: 6px;
-    color: #fbbf12;
-    transition: all 0.3s ease; /* เพิ่ม transition เพื่อให้เอฟเฟกต์ลื่นขึ้น */
-    /* font-weight: bold; */
-    padding: 8px 18px; 
-
-    
-}
-
-#nav-start-btn:hover {
-  background-color: #fbbf12;
-  color: #231f20;
-  transform: scale(1.1);
-}
-
-#nav-start-btn:active {
-  background-color: #808080; 
-  color: #ffffff; 
-  transform: scale(0.95); 
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-.content-box {
-  background-color: #231f20;
-  width: 100%;       
-  height: 200px;         
-  border-radius: 12px;     
-  padding: 20px;      
-  box-sizing: border-box;      /* ให้นับ padding ใน width/height */
-}
-
-.Graphic-1 {
-  width: 500px;
-}
-
-
-
-
-/* heart button (reuse from Home.css) */
-.like-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 35px;
-  height: 35px;
-  border: none;
-  outline: none;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: transform 0.2s;
-  background: #2a2a2a url('/img/heart_light.png') no-repeat center;
-  background-size: 15px 15px;
-}
-
-.like-button:hover {
-  background: #a9deff url('/img/heart_dark.png') no-repeat center;
-  background-size: 18px 18px;
-  transform: scale(1.1);
-}
-
-.like-button.liked {
-  border: none;
-  outline: none;
-  background: #a9deff url('/img/heart_dark.png') no-repeat center;
-  background-size: 18px 18px;
-}
-
-/* ให้ปุ่มวางทับมุมขวาบนได้ */
-.group-card-wrap { position: relative; }

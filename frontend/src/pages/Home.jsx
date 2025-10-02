@@ -38,6 +38,41 @@ export default function Home() {
       date: "August 26, 2022",
       genre: "alternative",
       image: "https://www.myband.co.th/uploads/20180516/2a4d42f0264c7563812aad9d07aeddf7.jpg"
+    },
+    {
+      id: 6,
+      title: "Mark",
+      date: "August 26, 2022",
+      genre: "alternative",
+      image: "https://www.myband.co.th/uploads/20180516/2a4d42f0264c7563812aad9d07aeddf7.jpg"
+    },
+    {
+      id: 7,
+      title: "Mark",
+      date: "August 26, 2022",
+      genre: "alternative",
+      image: "https://www.myband.co.th/uploads/20180516/2a4d42f0264c7563812aad9d07aeddf7.jpg"
+    },
+    {
+      id: 8,
+      title: "Mark",
+      date: "August 26, 2022",
+      genre: "alternative",
+      image: "https://www.myband.co.th/uploads/20180516/2a4d42f0264c7563812aad9d07aeddf7.jpg"
+    },
+    {
+      id: 9,
+      title: "Mark",
+      date: "August 26, 2022",
+      genre: "alternative",
+      image: "https://www.myband.co.th/uploads/20180516/2a4d42f0264c7563812aad9d07aeddf7.jpg"
+    },
+    {
+      id: 10,
+      title: "Mark",
+      date: "August 26, 2022",
+      genre: "alternative",
+      image: "https://www.myband.co.th/uploads/20180516/2a4d42f0264c7563812aad9d07aeddf7.jpg"
     }
   ];
 
@@ -72,7 +107,10 @@ export default function Home() {
       desc: "Get ready for an unforgettable night of music and energy 🎶 Featuring talented artists across diverse genres — from soulful melodies to electrifying beats that will keep you on your feet. Immerse yourself in dazzling lights, powerful sound, and a vibrant atmosphere where music lovers come together to celebrate and create lasting memories"
     }
     ]
-  
+
+  const [scrollLeftActive, setScrollLeftActive] = useState(false);
+  const [scrollRightActive, setScrollRightActive] = useState(false);
+
 
   function ArtistCard({ image, title, date, tag, genre }) {
   const [liked, setLiked] = useState(false);
@@ -188,35 +226,75 @@ function EventCard({ image, title, date, desc, genre }) {
       <div className="divider-nextcontent"></div>
 
       <div className="artist-content">
-          <div className="artist-header">
-            <h1 className="latest-artists">Discover new artists</h1>
-            <a href="/page_artists">
-              <h2>Explore more artists ↗</h2>
-            </a>
-          </div>
+        <div className="discover-artists-header">
+          <h1 className="discover-artists">Discover new artists</h1>
+        <div className="artist-navigation">
+          <button
+            type="button"
+            className={`nav-arrow ${scrollLeftActive ? 'is-active' : ''}`}
+            onClick={() => {
+              const grid = document.getElementById('artistGrid');
+              grid.scrollBy({ left: -320, behavior: 'smooth' });
+              setScrollLeftActive(true);
+              setScrollRightActive(false);
+            }}
+            aria-label="Scroll left"
+          >
+            <svg viewBox="0 0 24 24" width="50" height="50" stroke="currentColor" fill="none" strokeWidth="1.5">
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 5 5 12 12 19" />
+            </svg>
+          </button>
 
-          <div className="container-3">
-            <div className="artist-grid">
-              {artists.map(artist => (
-                <ArtistCard 
-                  key={artist.id}
-                  title={artist.title}
-                  date={artist.date}
-                  genre={artist.genre}
-                  image={artist.image}
-                />
-              ))}
-            </div>
+          <button
+            type="button"
+            className={`nav-arrow ${scrollRightActive ? 'is-active' : ''}`}
+            onClick={() => {
+              const grid = document.getElementById('artistGrid');
+              grid.scrollBy({ left: 320, behavior: 'smooth' });
+              setScrollRightActive(true);
+              setScrollLeftActive(false);
+            }}
+            aria-label="Scroll right"
+          >
+            <svg viewBox="0 0 24 24" width="50" height="50" stroke="currentColor" fill="none" strokeWidth="1.5">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
+        </div>
+        </div>
+
+        <div className="discover-artists-subtitle">
+          <p className="artist-subtitle">Your guide to new sounds in Chiang Mai, one vibe at a time</p>
+          <a href="/artists">
+            <h2>Explore more artists ↗</h2>
+          </a>
+        </div>
+
+        <div className="container-3">
+          <div className="artist-grid" id="artistGrid">
+            {artists.map(artist => (
+              <ArtistCard 
+                key={artist.id}
+                title={artist.title}
+                date={artist.date}
+                genre={artist.genre}
+                image={artist.image}
+              />
+            ))}
           </div>
+        </div>
       </div>
+
 
       <div className="music-genre-content">
         <div className="container-4">
           <h1 className="discover-music">Discover music by genre</h1>
 
           <div className="discover-music-subtitle">
-          <p className="subtitle">Your guide to Chiang Mai artists, one genre at a time</p>
-            <a href="/page_artists">
+          <p className="subtitle">Explore Chiang Mai’s music scene through genres you love</p>
+            <a href="/artists">
               <h2>Explore more genres ↗</h2>
             </a>
           </div>
@@ -257,9 +335,6 @@ function EventCard({ image, title, date, desc, genre }) {
         </div>
       </div>
 
-
-
-
       {/* <div className="chiangmai-original-playlist-content">
         <div className="container-6">
             <h1 className="chiangmai-original-playlist">Chiang mai original playlist</h1>
@@ -281,29 +356,3 @@ function EventCard({ image, title, date, desc, genre }) {
     </div>
   );
 }
-// export default function Home() {
-//   return (
-    
-//     <div className="container-1">
-//       <div className="text-section">
-        // <h1 className="overlay-text-1">Chiang Mai Original</h1>
-        // <h2 className="overlay-text-2">
-        //   Explore the music and lifestyle of the people of the northern city. 
-        //   Discover local artists Listen to the songs you love and discover new music styles with us.
-        // </h2>
-
-//         <button type="button" className="learn-more-btn" 
-//           onClick={() => window.location.href = "/page_artists"}>
-//           <span>Learn more</span>
-//           <div className="icon-circle">
-//             <span>➜</span>
-
-//           </div>
-//         </button>
-//       </div>
-
-//       <img src="/img/cat_1.png" className="cat-1" />
-//     </div>
-
-//   );
-// }
