@@ -250,6 +250,43 @@ export default function VenueMap() {
     return filtered.sort((a,b) => new Date(a.date) - new Date(b.date));
   }, [events, bounds, q, eventType, daysForward, myLoc, radiusKm]);
 
+
+
+
+  // [ADD] Pagination (ต้องอยู่ "ภายใน" ฟังก์ชัน VenueMap เท่านั้น)
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 8; // 2 แถว x 4 ใบ/หน้า
+
+  // เลือกลิสต์เต็มตามโหมด แล้วค่อยตัดตามหน้า
+  const sourceList = mode === 'VENUES' ? visibleVenues : visibleEvents;
+  const totalPages = Math.max(1, Math.ceil(sourceList.length / ITEMS_PER_PAGE));
+  const start = (currentPage - 1) * ITEMS_PER_PAGE;
+  const pageItems = useMemo(
+    () => sourceList.slice(start, start + ITEMS_PER_PAGE),
+    [sourceList, start]
+  );
+
+  const goToPage = (p) => setCurrentPage(Math.min(Math.max(1, p), totalPages));
+
+  // แสดงเลขรอบ current (±2)
+  const pageNumbers = useMemo(() => {
+    const delta = 2;
+    const from = Math.max(1, currentPage - delta);
+    const to = Math.min(totalPages, currentPage + delta);
+    const arr = [];
+    for (let i = from; i <= to; i++) arr.push(i);
+    return arr;
+  }, [currentPage, totalPages]);
+
+  // reset หน้าเมื่อเงื่อนไขเปลี่ยน (กันเคสจำนวนลดลงแล้วค้างหน้าสูง)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [mode, q, genre, eventType, daysForward, radiusKm, myLoc, bounds, visibleVenues.length, visibleEvents.length]);
+
+
+
+
+
   const totalVenuesWithCoords = useMemo(
     () =>
       venues.filter(v => v?.location?.latitude != null && v?.location?.longitude != null).length,
@@ -499,7 +536,7 @@ export default function VenueMap() {
               <div className="vmap-empty">เลื่อนแผนที่/ปรับรัศมีเพื่อหาสถานที่</div>
             ) : (
               <div className="vmap-grid">
-                {visibleVenues.map(v => {
+                {pageItems.map(v => {
                   const img =
                     v?.performer?.user?.profilePhotoUrl ||
                     v.bannerUrl ||
@@ -572,7 +609,7 @@ export default function VenueMap() {
               <div className="vmap-empty">ยังไม่พบอีเวนต์ในกรอบแผนที่/ช่วงวันที่เลือก</div>
             ) : (
               <div className="vmap-grid">
-                {visibleEvents.map(ev => {
+                {pageItems.map(ev => {
                   const img = ev.bannerUrl
                     || ev.coverImage
                     || ev.image
@@ -642,6 +679,66 @@ export default function VenueMap() {
               </div>
             )
           )}
+
+          {/* เส้นคั่นก่อน pagination */}
+          <div className="linevenuemap" />
+          
+          {/* VENUES / EVENTS grid (เทิร์นารีทั้งก้อนที่คุณมีอยู่) */}
+          {sourceList.length > 0 && (
+            <nav className="vmap-pagination" aria-label="venue map pagination">
+              <div className="p-nav-left">
+                <button className="p-link" onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
+                  ← Previous
+                </button>
+              </div>
+
+              <div className="p-nav-center">
+                {pageNumbers[0] > 1 && (
+                  <>
+                    <button
+                      className={`p-num ${currentPage === 1 ? "is-active" : ""}`}
+                      onClick={() => goToPage(1)}
+                      aria-current={currentPage === 1 ? "page" : undefined}
+                    >
+                      1
+                    </button>
+                    {pageNumbers[0] > 2 && <span className="p-ellipsis">…</span>}
+                  </>
+                )}
+
+                {pageNumbers.map((p) => (
+                  <button
+                    key={p}
+                    className={`p-num ${p === currentPage ? "is-active" : ""}`}
+                    onClick={() => goToPage(p)}
+                    aria-current={p === currentPage ? "page" : undefined}
+                  >
+                    {p}
+                  </button>
+                ))}
+
+                {pageNumbers[pageNumbers.length - 1] < totalPages && (
+                  <>
+                    {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && <span className="p-ellipsis">…</span>}
+                    <button
+                      className={`p-num ${currentPage === totalPages ? "is-active" : ""}`}
+                      onClick={() => goToPage(totalPages)}
+                      aria-current={currentPage === totalPages ? "page" : undefined}
+                    >
+                      {totalPages}
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div className="p-nav-right">
+                <button className="p-link" onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                  Next →
+                </button>
+              </div>
+            </nav>
+          )}
+
         </div>
       </div>
     </div>
