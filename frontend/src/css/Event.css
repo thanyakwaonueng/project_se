@@ -9,7 +9,7 @@
 }
 
 .sound-agenda {
-  font-size: 150px;
+  font-size: clamp(40px, 15vw, 150px); /* Responsive font size */
   font-weight: bold; 
   text-align: center;
   color: #000; 
@@ -197,11 +197,10 @@
   transform: scale(0.95);
 }
 
-
 .month-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 6px;
 }
 
 .month-btn {
@@ -211,7 +210,8 @@
   border: none;
   cursor: pointer;
   transition: 0.2s;
-  font-size: 14px;
+  font-size: 13px;
+  min-height: 36px; /* Better touch targets */
 }
 
 .month-btn:hover {
@@ -224,16 +224,17 @@
   font-weight: bold;
 }
 
+/* ========== CALENDAR GRID - RESPONSIVE ========== */
 .calendar-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
   font-weight: 500;
-  font-size: 16px;
+  font-size: clamp(12px, 3vw, 16px); /* Responsive font */
   color: #555;
   border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
-  margin-bottom: 10px;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -241,20 +242,21 @@
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 2px; /* Smaller gap on mobile */
 }
 
 .calendar-cell {
   background-color: #fbfbfb;
-  padding: 10px;
-  min-height: 200px;
+  padding: 6px 4px;
+  min-height: 120px; /* Smaller height on mobile */
   border: 1px solid #eee;
-  border-top: 1px solid #b7b7b7; 
+  border-top: 1px solid #b7b7b7;
   position: relative;
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: 1.3;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* Prevent content overflow */
 }
 
 .calendar-cell.empty {
@@ -264,140 +266,144 @@
 
 .date {
   font-weight: 600;
-  font-size: 16px;
-  margin-bottom: 6px;
+  font-size: clamp(12px, 3vw, 16px);
+  margin-bottom: 10px;
+  margin-left: 3px;
   color: #111;
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.event-dot {
-  width: 6px;
-  height: 6px;
-  background-color: #a9deff; /* สีจุด */
-  border-radius: 50%;
-}
-
-
-.events {
-  display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   gap: 4px;
 }
 
-.event {
-  font-size: 12px;
-  color: #333;
+.event-dot {
+  width: 5px;
+  height: 5px;
+  background-color: #a9deff;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.event-title {
-  font-weight: 500;
-  display: block;
-}
-
-.event-time {
-  font-size: 11px;
-  color: #888;
-}
-
-
-.event-image {
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-  margin-bottom: 8px;
-}
-
-.event-title {
+/* .date {
   font-weight: 600;
-  font-size: 14px;
+  font-size: clamp(12px, 3vw, 16px);
+  margin-bottom: 4px;
+  color: #111;
+  display: flex;
+  align-items: center;
+  gap: 6px; 
+  flex-wrap: nowrap;
 }
 
-.event-desc {
-  font-size: 12px;
-  color: #666;
+.event-dot {
+  width: 5px;
+  height: 5px;
+  background-color: #a9deff;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+} */
+
+.event-summaries {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-grow: 1;
+  overflow: hidden;
 }
 
-/* ---------------- Popup Event Overlay ---------------- */
+.event-title-short {
+  font-size: 10px;
+  color: #333;
+  background: rgba(169, 222, 255, 0.2);
+  padding: 2px 4px;
+  border-radius: 3px;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-left: 2px solid #a9deff;
+}
+
+/* ========== POPUP RESPONSIVE STYLES ========== */
 .popup-event-overlay {
   position: fixed;
-  top: 0; 
-  left: 0; 
-  right: 0; 
+  top: 0;
+  left: 0;
+  right: 0;
   bottom: 0;
   background-color: rgba(0,0,0,0.6);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1100;
-  padding: 20px; /* กัน popup ติดขอบเกินไปตอนเลื่อน */
+  padding: 10px;
 }
 
-/* ---------------- Popup Event Content ---------------- */
 .popup-event-content {
   background: #fff;
-  padding: 30px;
+  padding: 20px;
   border-radius: 12px;
-  width: 80%;
+  width: 95%;
   max-width: 500px;
-  max-height: 80vh;    /* สูงสุดไม่เกิน 80% ของหน้าจอ */
-  overflow-y: auto;    /* ถ้าเนื้อหายาวเกิน → เลื่อนลงได้ */
+  max-height: 90vh;
+  overflow-y: auto;
   position: relative;
   box-shadow: 0 8px 24px rgba(0,0,0,0.3);
   animation: popupFadeIn 0.25s ease-out;
 }
 
-
-/* ---------------- Popup Event Detail ---------------- */
 .popup-divider {
   border: none;
   height: 1px;
-  background-color: #ccc;  
-  /* margin: 12px 0;   */
-  margin-top: 30px; 
+  background-color: #ccc;
+  margin-top: 20px;
 }
-
 
 .popup-event {
   margin-bottom: 10px;
   text-align: center;
+  position: relative;
 }
 
 .popup-event-title {
-  font-size: 26px;
-  margin: 15px 0;
+  font-size: clamp(18px, 5vw, 26px);
+  margin: 10px 0;
   color: #333;
+  line-height: 1.2;
 }
 
 .popup-image {
-  width: 280px;       /* ปรับขนาดที่ต้องการ */
-  height: auto;       /* รักษาอัตราส่วนเดิม */
-  border-radius: 8px; /* ถ้าอยากให้มุมโค้ง */
-  object-fit: cover;  /* ปรับให้รูปเต็มขนาด box */
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  border-radius: 8px;
+  object-fit: cover;
   margin-bottom: 10px;
   margin-top: 15px;
 }
 
-
-/* ---------------- Close Button ---------------- */
 .close-btn {
   position: absolute;
-  top: 12px;
-  right: 16px;
-  font-size: 1.8rem;
+  top: 8px;
+  right: 12px;
+  font-size: 1.5rem;
   font-weight: bold;
   background: none;
   border: none;
   cursor: pointer;
   color: #333;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .close-btn:hover {
   color: #ff3333;
 }
 
-/* ---------------- Animation ---------------- */
 @keyframes popupFadeIn {
   from {
     opacity: 0;
@@ -409,21 +415,19 @@
   }
 }
 
-/* ใต้รูป: จัดกึ่งกลางทุกอย่างในแนวตั้ง */
 .popup-event-section {
-  display: flex;                 
-  align-items: center;         
-  justify-content: space-between; 
-  gap: 10px;            
-  margin-bottom: 15px; 
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 15px;
+  flex-wrap: wrap; 
 }
-
-
 
 .btn-event-detail {
   display: inline-block;
-  padding: 4px 12px;
-  font-size: 12px;
+  padding: 6px 12px;
+  font-size: 11px;
   font-weight: 500;
   background-color: #292929;
   color: #d2d2d2;
@@ -432,6 +436,8 @@
   cursor: pointer;
   transition: background-color 0.2s ease;
   text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .btn-event-detail:hover {
@@ -440,29 +446,15 @@
   text-decoration: none;
 }
 
-
-
-.btn.select-genre {
-  display: inline-block;
-  justify-content: right;
-  background-color: #fbbf12;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 10px;
-  user-select: none;
-  cursor: pointer;
-  margin-left: auto; /* กดดันให้ปุ่มชิดขวา */
+/* Like button adjustments for mobile */
+.like-button {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
 }
 
-.btn.select-genre:hover {
-  background-color: #ffd34d;
-}
 
-.btn-full-image {
-  width: 25px;
-
-}
-
+/* popup select genre */
 .popup-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -485,26 +477,207 @@
   overflow-y: auto;
 }
 
-.close-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  font-size: 24px;
-  font-weight: bold;
-  cursor: pointer;
-  color: #333;
-  outline: none !important;
-  box-shadow: none !important;
-  border: none !important;
+
+/* ========== MEDIA QUERIES ========== */
+
+/* Tablet and smaller desktop */
+@media (max-width: 1024px) {
+  .calendar-cell {
+    min-height: 100px;
+    padding: 4px 3px;
+  }
+  
+  .event-title-short {
+    font-size: 9px;
+  }
 }
 
-.close-btn:hover {
-  color: #b00101;
-  background: none;
-  border: none;
+/* Mobile devices */
+@media (max-width: 768px) {
+
+  .eventpage-content {
+    padding: 0 5px;
+  }
+  
+  .event-picture-box {
+    width: 85%;
+    height: 30%;
+    margin: 15px auto;
+  }
+
+  .text-section-right {
+    display: none ;
+  }
+  
+
+  .month-select {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .month-picker-container,
+  .select-genre {
+    width: 100%;
+  }
+  
+  .select-genre {
+    text-align: center;
+    order: -1; /* Move genre button to top */
+  }
+  
+  .calendar-header div {
+    font-size: 11px;
+    padding: 0 2px;
+  }
+  
+  .calendar-cell {
+    min-height: 80px;
+    padding: 3px 2px;
+  }
+  
+  .date {
+    font-size: 11px;
+    flex-direction: column;
+    gap: 2px;
+  }
+  
+  .event-title-short {
+    font-size: 8px;
+    padding: 1px 2px;
+  }
+  
+  .popup-event-content {
+    padding: 15px;
+    width: 98%;
+  }
+  
+  .popup-event-section {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+
+  .event-picture-box {
+    width: 85%;
+    height: 30%;
+    margin: 15px auto;
+  }
+
+  .calendar-grid {
+    gap: 1px;
+  }
+  
+  .calendar-cell {
+    min-height: 70px;
+    font-size: 10px;
+  }
+  
+  .date {
+    font-size: 10px;
+  }
+  
+  .event-title-short {
+    font-size: 7px;
+    display: none; 
+  }
+  
+  .calendar-cell.has-event .date .event-dot {
+    display: block;
+  }
+  
+  .popup-image {
+    max-width: 200px;
+  }
+}
+
+/* Very small screens - simplify calendar */
+@media (max-width: 360px) {
+  .calendar-header div {
+    font-size: 10px;
+  }
+  
+  .calendar-cell {
+    min-height: 60px;
+    padding: 2px 1px;
+  }
+  
+  .date {
+    font-size: 9px;
+  }
+}
+
+/* Landscape orientation on mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .popup-event-content {
+    max-height: 85vh;
+    padding: 10px;
+  }
+  
+  .popup-image {
+    max-width: 150px;
+  }
 }
 
 
-.popup-content ul li:hover {
-  background-color: #eee;
+/* 
+Responsive in another type
+@media (max-width: 900px) {
+  .sound-agenda {
+    font-size: 80px;  
+  }
+  .subtitle-sound-agenda {
+    font-size: 32px;
+    text-align: center;
+  }
+  .text-section-right {
+    position: static;
+    align-items: center;
+    padding-right: 0;
+    margin-top: 10px;
+  }
+  .event-picture-box {
+    width: 100%;
+    height: 200px;
+    margin-left: 0;
+  }
+  .calendar-content {
+    width: 100%;
+  }
 }
+
+/* --- Calendar Responsiveness --- */
+/* @media (max-width: 700px) {
+  .calendar-header {
+    font-size: 12px;
+  }
+  .calendar-grid {
+    grid-template-columns: repeat(2, 1fr); 
+  }
+  .calendar-cell {
+    min-height: 120px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 500px) {
+  .calendar-grid {
+    grid-template-columns: 1fr;
+  }
+  .calendar-cell {
+    min-height: 100px;
+    font-size: 12px;
+  }
+  .date {
+    font-size: 14px;
+  }
+  .event-title-short {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; 
+  }
+} */

@@ -169,7 +169,7 @@ export default function Signup() {
                   ถ้าต้องการสิทธิ์ ARTIST/VENUE/ORGANIZER ให้ไปขออัปเกรดสิทธิ์ภายหลังที่เมนู "Request role upgrade"
                   ใน Account dropdown (ที่ Navbar) */}
 
-              <button type="submit" className="btn btn-signup" disabled={busy}>
+              <button type="submit" className="btn-signup" disabled={busy}>
                 {busy ? 'Creating account…' : 'Sign Up'}
               </button>
             </form>
