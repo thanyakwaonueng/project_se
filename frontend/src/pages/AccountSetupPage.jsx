@@ -29,6 +29,12 @@ export default function AccountSetupPage() {
   const [avatarPreview, setAvatarPreview] = useState("");
   const [avatarFile, setAvatarFile] = useState(null);
 
+  // ===== [ADD] ไฟล์ที่เลือกจากหน้า AccountSetupPage =====
+  const [apmImageFiles, setApmImageFiles] = useState([]); // เลือกรูปหลายไฟล์
+  const [apmVideoFiles, setApmVideoFiles] = useState([]); // เลือกวิดีโอหลายไฟล์
+  const apmOnPickImages = (e) => setApmImageFiles(Array.from(e.target.files || []));
+  const apmOnPickVideos = (e) => setApmVideoFiles(Array.from(e.target.files || []));
+
   // Role
   const [role, setRole] = useState(""); // "", "AUDIENCE", "ARTIST"
 
@@ -88,6 +94,18 @@ export default function AccountSetupPage() {
   // ใช้แยก flow ว่าผู้ใช้ “ได้รับอนุมัติเป็น ARTIST แล้วหรือยัง”
   const [meRole, setMeRole] = useState("AUDIENCE");                 // ← เพิ่มใช้จริง
   const [priceRange, setPriceRange] = useState("");
+
+
+  // ===== [ADD] docs upload states & handlers =====
+  const [docRateCard, setDocRateCard] = useState(null); // File | null
+  const [docEPK, setDocEPK]         = useState(null);
+  const [docRider, setDocRider]     = useState(null);
+
+  const onPickRateCard = (e) => setDocRateCard(e.target.files?.[0] ?? null);
+  const onPickEPK      = (e) => setDocEPK(e.target.files?.[0] ?? null);
+  const onPickRider    = (e) => setDocRider(e.target.files?.[0] ?? null);
+
+
 
   // Prefill
   useEffect(() => {
@@ -223,6 +241,16 @@ export default function AccountSetupPage() {
         avatarUrl = await uploadAvatarIfNeeded();
       } catch {}
 
+
+      // อัปโหลดไฟล์ใหม่ (เหมือน venueEditor)
+      const newImageUrls = await uploadMany(apmImageFiles);   // จาก /api/upload -> ได้ array ของ url
+      const newVideoUrls = await uploadMany(apmVideoFiles);
+
+      // รวมกับของเดิมในฟอร์ม (string CSV เดิม)
+      const mergedPhotoUrls = [...splitCsv(artist.photoUrl), ...newImageUrls];
+      const mergedVideoUrls = [...splitCsv(artist.videoUrl), ...newVideoUrls];
+
+
       // 1) บันทึกโปรไฟล์พื้นฐาน (+ แนบใบสมัครถ้าเลือก ARTIST)
       const setupPayload = cleanObject({
         name: displayName || artist?.name || undefined,
@@ -265,8 +293,8 @@ export default function AccountSetupPage() {
           priceMin: priceMinNum,
           priceMax: priceMaxNum,
           profilePhotoUrl: artist.profilePhotoUrl,
-          photoUrl: artist.photoUrl,
-          videoUrl: artist.videoUrl,
+          photoUrl: joinCsv(mergedPhotoUrls),
+          videoUrl: joinCsv(mergedVideoUrls),
           rateCardUrl: artist.rateCardUrl,
           epkUrl: artist.epkUrl,
           riderUrl: artist.riderUrl,
@@ -301,6 +329,12 @@ export default function AccountSetupPage() {
           memberCount: artist.memberCount ? parseInt(artist.memberCount, 10) : null,
           priceMin: artist.priceMin ? Number(artist.priceMin) : null,
           priceMax: artist.priceMax ? Number(artist.priceMax) : null,
+
+          // ✅ เพิ่มสองฟิลด์นี้ให้ไปอัปเดต Artist จริง
+          photoUrl: joinCsv(mergedPhotoUrls),
+          videoUrl: joinCsv(mergedVideoUrls),
+
+          
           contact: {
             email: artist.contactEmail || null,
             phone: artist.contactPhone || null,
@@ -351,6 +385,21 @@ export default function AccountSetupPage() {
     return data?.url || null;
   }
 
+
+  async function uploadMany(files) {
+    const urls = [];
+    for (const f of files) {
+      const form = new FormData();
+      form.append("file", f);
+      const { data } = await api.post("/api/upload", form, {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (data?.url) urls.push(data.url);
+    }
+    return urls;
+  }
+
   const formRef = React.useRef(null);
   const chooseRole = (r) => {
     setRole(r);
@@ -394,6 +443,61 @@ export default function AccountSetupPage() {
     e.preventDefault();
   }
 
+
+
+
+
+
+  // === [ADD] Helper ===
+  function getPhones(str) {
+    return (str || "")
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+
+  // === [ADD] Local states ===
+  const [hasLabel, setHasLabel] = useState(!!(artist.label && artist.label.trim() !== ""));
+  const [phones, setPhones] = useState(() => getPhones(artist.contactPhone));
+
+  // sync hasLabel เมื่อ label เปลี่ยนจากด้านนอก
+  useEffect(() => {
+    setHasLabel(!!(artist.label && artist.label.trim() !== ""));
+  }, [artist.label]);
+
+  // เขียนค่ากลับไปหา artist.contactPhone เป็นสตริงคั่นด้วย , ทุกครั้งที่ phones เปลี่ยน
+  useEffect(() => {
+    setA("contactPhone", phones.join(", "));
+  }, [phones]);
+
+  // === [ADD] Phone ops ===
+  function updatePhoneAt(idx, val) {
+    setPhones(prev => {
+      const list = [...prev];
+      list[idx] = val;
+      return list;
+    });
+  }
+  function addPhone() {
+    setPhones(prev => [...prev, ""]);
+  }
+  function removePhoneAt(idx) {
+    setPhones(prev => prev.filter((_, i) => i !== idx));
+  }
+
+
+  function splitCsv(str) {
+    return (str || "")
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+  function joinCsv(arr) {
+    return (arr || []).filter(Boolean).join(", ");
+  }
+
+
+    
   return (
     <div className="acc-page">
       <div className="acc-container">
@@ -452,7 +556,16 @@ export default function AccountSetupPage() {
 
                     <div className="col-span-2">
                       <label className="acc-label">Birth date</label>
-                      <input type="date" className="acc-inputUnderline acc-inputDate" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} max={todayStr} inputMode="numeric" onFocus={(e) => e.target.showPicker?.()} />
+                      <input
+                        type="date"
+                        className="acc-inputUnderline acc-inputDate"
+                        value={birthDate || ""}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                        max={todayStr}
+                        inputMode="numeric"
+                        onFocus={(e) => e.target.showPicker?.()}
+                        lang="en-GB"   // ใช้ชื่อเดือนภาษาอังกฤษ + ฟอร์แมต DD/MM/YYYY
+                      />
                     </div>
 
                     <div className="col-span-2">
@@ -478,25 +591,60 @@ export default function AccountSetupPage() {
         {/* ARTIST */}
         {(isEdit || role === "ARTIST") && (
           <section className="acc-section" hidden={role !== "ARTIST"}>
-            <h2 className="acc-sectionTitle">Artist Application (complete all fields)</h2>
+            {/* <h2 className="acc-sectionTitle">Artist Application (complete all fields)</h2> */}
 
             <div className="acc-formGrid">
               <div>
                 <label className="acc-label">Name *</label>
                 <input className="form-control" value={artist.name} onChange={e => setA("name", e.target.value)} placeholder="e.g., NewJeans" required />
               </div>
+
               <div>
+                {/* ===== Label (EN) ===== */}
+                <label className="acc-label">Label</label>
+                <div className="acc-label-wrap">
+                  <label className="acc-check">
+                    <input
+                      type="checkbox"
+                      checked={hasLabel}
+                      onChange={(e) => {
+                        const v = e.target.checked;
+                        setHasLabel(v);
+                        if (!v) setA("label", "");
+                      }}
+                    />
+                    <span>Has label</span> {/* เปลี่ยนจาก "มีค่ายเพลง" */}
+                  </label>
+
+                  {hasLabel && (
+                    <input
+                      type="text"
+                      className="acc-inputUnderline"
+                      placeholder="Specify label name (e.g., HYBE, JYP, SM...)"
+                      value={artist.label || ""}
+                      onChange={(e) => setA("label", e.target.value)}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* <div>
                 <label className="acc-label">Profile Photo URL</label>
                 <input value={artist.profilePhotoUrl} onChange={e => setA("profilePhotoUrl", e.target.value)} placeholder="https://..." />
-              </div>
-              <div>
+              </div> */}
+              {/* ===== Description (เต็ม 1 แถว) ===== */}
+              <div className="acc-col-span-full">
                 <label className="acc-label">Description</label>
-                <input className="form-control" value={artist.description} onChange={e => setA("description", e.target.value)} placeholder="Briefly introduce the artist…" />
+                <textarea
+                  className="acc-inputUnderline"
+                  value={artist.description || ""}
+                  onChange={(e) => setA("description", e.target.value)}
+                  placeholder="Briefly introduce the artist…"
+                  rows={4}
+                />
               </div>
-              <div>
-                <label className="acc-label">Label</label>
-                <input value={artist.label} onChange={e => setA("label", e.target.value)} placeholder="Label name (optional)" />
-              </div>
+
+              
               <div>
                 <label className="acc-label">Genre *</label>
                 <input value={artist.genre} onChange={e => setA("genre", e.target.value)} placeholder="e.g., Pop" required />
@@ -526,24 +674,101 @@ export default function AccountSetupPage() {
               <div>
                 <label className="acc-label">Price range (฿)</label>
                 <input value={priceRange} onChange={handlePriceRangeChange} onBlur={commitPriceRange} onKeyDown={guardPriceKeys} placeholder="0-10000" inputMode="numeric" aria-label="Price range in THB, min-max" />
-                <p className="acc-help">Format: min-max, e.g., 0-10000 (optional)</p>
+                {/* <p className="acc-help">Format: min-max, e.g., 0-10000 (optional)</p> */}
               </div>
               <div>
                 <label className="acc-label">Contact email</label>
                 <input value={artist.contactEmail} onChange={e => setA("contactEmail", e.target.value)} placeholder="example@mail.com" />
               </div>
-              <div>
-                <label className="acc-label">Contact phone</label>
-                <input value={artist.contactPhone} onChange={e => setA("contactPhone", e.target.value)} placeholder="e.g., 080-000-0000" />
+                {/* ===== Contact phone (หลายเบอร์) ===== */}
+                <div className="acc-field">
+                  <div className="acc-field-head">
+                    <label className="acc-label">Contact phone</label>
+                    <button type="button" className="acc-mini-btn tiny" onClick={addPhone}>
+                      + Add phone
+                    </button>
+                  </div>
+
+                  <div className="acc-phoneList">
+                    {(phones.length === 0 ? [""] : phones).map((ph, idx) => (
+                      <div className="acc-phone-row" key={idx}>
+                        <input
+                          type="tel"
+                          className="acc-inputUnderline"
+                          placeholder="e.g. +66 81 234 5678"
+                          value={ph}
+                          onChange={(e) => updatePhoneAt(idx, e.target.value)}
+                          inputMode="tel"
+                          autoComplete="tel"
+                        />
+                        <button
+                          type="button"
+                          className="acc-icon-btn reset"
+                          aria-label="Remove phone"
+                          onClick={() => removePhoneAt(idx)}
+                          title="Remove"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              {/* ===== Images ===== */}
+              {/* ===== Images (left column) ===== */}
+              <div className="ve-field">
+                <label className="ve-label">Images</label>
+                <div>
+                  <label className="apm-fileBtn apm-fileBtn-secondary">
+                    Choose images
+                    <input type="file" accept="image/*" multiple hidden onChange={apmOnPickImages} />
+                  </label>
+                </div>
+
+                {!!apmImageFiles.length && (
+                  <>
+                    <div className="apm-mediaGrid" style={{ marginTop: 10 }}>
+                      {apmImageFiles.map((f, i) => (
+                        <div key={`img-${i}`} className="apm-mediaThumb">
+                          <img src={URL.createObjectURL(f)} alt={`image-${i + 1}`} />
+                        </div>
+                      ))}
+                    </div>
+                    <p className="apm-help">Images will be uploaded when you click Save.</p>
+                  </>
+                )}
               </div>
-              <div>
-                <label className="acc-label">Photo URL</label>
-                <input value={artist.photoUrl} onChange={e => setA("photoUrl", e.target.value)} placeholder="https://..." />
+
+              {/* ===== Videos (right column) ===== */}
+              <div className="ve-field">
+                <label className="ve-label">Videos</label>
+                <div>
+                  <label className="apm-fileBtn">
+                    Choose videos
+                    <input type="file" accept="video/*" multiple hidden onChange={apmOnPickVideos} />
+                  </label>
+                </div>
+
+                {!!apmVideoFiles.length && (
+                  <>
+                    <div className="apm-mediaGrid" style={{ marginTop: 10 }}>
+                      {apmVideoFiles.map((f, i) => (
+                        <div key={`vid-${i}`} className="apm-mediaThumb">
+                          <video
+                            className="apm-videoThumb"
+                            src={URL.createObjectURL(f)}
+                            controls
+                            preload="metadata"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p className="apm-help">Supports common video formats (MP4, MOV, etc.).</p>
+                  </>
+                )}
               </div>
-              <div>
-                <label className="acc-label">Video URL</label>
-                <input value={artist.videoUrl} onChange={e => setA("videoUrl", e.target.value)} placeholder="https://..." />
-              </div>
+
 
               {/* Documents */}
               <details className="acc-collapse col-span-2">
@@ -551,20 +776,68 @@ export default function AccountSetupPage() {
                   <span>Documents (Rate card / EPK / Rider)</span>
                   <span className="acc-summaryArrow" aria-hidden>▾</span>
                 </summary>
-                <div className="acc-collapseBody">
-                  <div>
-                    <label className="acc-label">Rate card URL</label>
-                    <input value={artist.rateCardUrl} onChange={e => setA("rateCardUrl", e.target.value)} placeholder="https://..." />
+                  <div className="acc-collapseBody">
+                    {/* Rate card */}
+                    <div>
+                      <label className="acc-label">Rate card file</label>
+
+                      {/* ใช้ปุ่มเดิมถ้ามี (เช่น .apm-fileBtn หรือ .aup-docBtn) */}
+                      <label className="apm-fileBtn apm-fileBtn-secondary">
+                        Choose file
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,image/*"
+                          hidden
+                          onChange={onPickRateCard}
+                        />
+                      </label>
+
+                      {docRateCard && (
+                        <div style={{marginTop: 8, fontSize: 13}}>
+                          Selected: <strong>{docRateCard.name}</strong>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* EPK */}
+                    <div>
+                      <label className="acc-label">EPK file</label>
+                      <label className="apm-fileBtn apm-fileBtn-secondary">
+                        Choose file
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.ppt,.pptx,.zip,image/*"
+                          hidden
+                          onChange={onPickEPK}
+                        />
+                      </label>
+                      {docEPK && (
+                        <div style={{marginTop: 8, fontSize: 13}}>
+                          Selected: <strong>{docEPK.name}</strong>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Rider */}
+                    <div>
+                      <label className="acc-label">Rider file</label>
+                      <label className="apm-fileBtn apm-fileBtn-secondary">
+                        Choose file
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.xlsx,image/*"
+                          hidden
+                          onChange={onPickRider}
+                        />
+                      </label>
+                      {docRider && (
+                        <div style={{marginTop: 8, fontSize: 13}}>
+                          Selected: <strong>{docRider.name}</strong>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <label className="acc-label">EPK URL</label>
-                    <input value={artist.epkUrl} onChange={e => setA("epkUrl", e.target.value)} placeholder="https://..." />
-                  </div>
-                  <div>
-                    <label className="acc-label">Rider URL</label>
-                    <input value={artist.riderUrl} onChange={e => setA("riderUrl", e.target.value)} placeholder="https://..." />
-                  </div>
-                </div>
+
               </details>
 
               {/* Streaming */}

@@ -141,7 +141,7 @@
 
 /* Label */
 .acc-label {
-  /* font-weight: 600; */
+  font-weight: 600;
   font-size: 16px;
   margin-bottom: 6px;
   display: block;
@@ -625,3 +625,230 @@
   .acc-summaryArrow { transition: none !important; }
   .acc-collapseBody { animation: none !important; max-height: none !important; opacity: 1 !important; transform: none !important; }
 }
+
+
+
+
+
+
+
+/* ทำให้ฟิลด์กินเต็ม 1 แถวของกริด ไม่ว่ากริดจะมีกี่คอลัมน์ */
+.acc-col-span-full {
+  grid-column: 1 / -1;
+  min-width: 0; 
+}
+
+/* (ออปชัน) ให้ textarea กว้างเต็มคอนเทนเนอร์ */
+.acc-inputUnderline {
+  width: 100%;
+}
+
+/* (ออปชัน) ปรับความสูงเริ่มต้นและให้ขยายได้เฉพาะแนวตั้ง */
+.acc-page textarea.acc-inputUnderline {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+
+
+/* ให้ช่องที่กินเต็มแถว ยืดเส้นใต้ไปสุดคอลัมน์จริง ๆ */
+.acc-col-span-full { 
+  grid-column: 1 / -1; 
+  min-width: 0;                 /* กัน overflow ในกริด */
+}
+
+/* ยกเลิกเพดาน 825px สำหรับช่องที่กินเต็มแถว */
+.acc-formGrid .acc-col-span-full .acc-inputUnderline,
+.acc-formGrid .acc-col-span-full :is(input, textarea, select, .form-control) {
+  width: 100% !important;       /* ทับ width: min(825px,100%) เดิม */
+  max-width: none !important;
+  display: block;                /* ให้กินเต็มบรรทัด/คอลัมน์ */
+}
+
+
+
+
+
+
+
+
+
+
+/* Label: checkbox + input ในบรรทัดเดียว */
+.acc-label-wrap {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.acc-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+/* หัวข้อฟิลด์ + ปุ่ม Add ชิดกันด้านซ้าย */
+.acc-field-head{
+  display:flex;
+  align-items:center;
+  gap:20px;              /* ระยะระหว่าง "Contact phone" กับปุ่ม */
+}
+/* .acc-field-head .acc-label{ margin:0; } */
+/* .acc-field-head .acc-mini-btn{ margin-left:0; } */
+
+/* ปุ่ม Add phone เวอร์ชันเล็ก */
+.acc-mini-btn.tiny{
+  padding:2px 18px;      /* เล็กลง */
+  font-size:12px;
+  line-height:1.4;
+  border-radius:6px;
+  border:1px dashed rgba(0,0,0,.25);
+  background:transparent;
+  cursor:pointer;
+  margin-bottom: 6px;
+}
+.acc-mini-btn.tiny:hover{ border-style:solid; }
+
+/* แถวของเบอร์ */
+.acc-phoneList{ display:flex; flex-direction:column; gap:8px; }
+.acc-phone-row{
+  display:grid;
+  grid-template-columns: 1fr auto; /* กล่อง X ติดขอบขวา */
+  align-items:center;
+  gap:8px;
+}
+
+/* ปุ่มกากะบาด: ไม่มีพื้นหลัง/ขอบ เหลือแค่ X และ hover ขยายเล็กน้อย */
+.acc-icon-btn.reset{
+  all: unset;             /* ล้างสไตล์เดิมทั้งหมด */
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;           /* เพิ่มพื้นที่กดนิดนึง แต่ไม่เห็นพื้นหลัง */
+  line-height: 1;
+  border-radius: 6px;     /* เพื่อให้ hit area โค้งนิด ๆ */
+  transition: transform .4s ease;
+}
+.acc-icon-btn.reset:hover{ transform: scale(1.6); }
+.acc-icon-btn.reset:focus{ outline: none; }
+
+/* กันความกว้างไม่สุดในกริด */
+.acc-phoneList .acc-inputUnderline{ width:100%; }
+
+
+
+
+
+
+
+
+
+
+
+/* ─────────────────────────────────────────────
+   APM Uploads — match VenueEditor look & feel
+   ───────────────────────────────────────────── */
+
+/* ปุ่มเรียงแถวเดียวกัน */
+.apm-fileRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* ปุ่มเลือกไฟล์ (อิง ve-fileBtn) */
+.apm-fileBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .15s ease;
+}
+.apm-fileBtn:hover {
+  background: #000000;
+  box-shadow: 0 4px 14px rgba(0,0,0,.08);
+}
+.apm-fileBtn.apm-fileBtn-secondary {
+  background: #ffffff;
+  color: #111111;
+  border-color: #111111;
+}
+.apm-fileBtn.apm-fileBtn-secondary:hover {
+  background: #f5f5f5;
+}
+
+/* รายการไฟล์ (ถ้าอยากแสดงชื่อไฟล์) */
+.apm-fileList {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 14px;
+  color: #333333;
+}
+
+/* กริดพรีวิวสื่อ */
+.apm-mediaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+/* การ์ดพรีวิว */
+.apm-mediaThumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid #e2e2e8;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fafafa;
+  display: grid;
+  place-items: center;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .06s ease;
+}
+.apm-mediaThumb:hover {
+  border-color: #cfcfd6;
+  box-shadow: 0 4px 12px rgba(0,0,0,.06);
+}
+.apm-mediaThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* วิดีโอพรีวิว */
+.apm-videoThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000000;
+}
+
+/* ข้อความช่วย */
+.apm-help {
+  color: #5b5b63;
+  font-size: 12px;
+  /* margin-top: 6px; */
+}
+
+
+/* ช่องอัปโหลดให้มีระยะห่างด้านล่างเล็กน้อย */
+.ve-field .apm-fileBtn { margin-top: 6px; }
+.ve-field .apm-mediaGrid { margin-top: 10px; }
+
+
+
+
+
+
