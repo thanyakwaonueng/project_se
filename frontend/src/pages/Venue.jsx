@@ -347,11 +347,6 @@ export default function Venue() {
                   <img src="/img/instagram.png" alt="Instagram" />
                 </a>
               )}
-              {socials.lineUrl && (
-                <a href={socials.lineUrl} target="_blank" rel="noreferrer">
-                  <img src="/img/line.png" alt="LINE" />
-                </a>
-              )}
               {socials.tiktokUrl && (
                 <a href={socials.tiktokUrl} target="_blank" rel="noreferrer">
                   <img src="/img/tiktok.png" alt="TikTok" />
