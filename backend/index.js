@@ -2076,8 +2076,7 @@ app.post('/role-requests', authMiddleware, async (req, res) => {
 app.get('/role-requests', authMiddleware, requireAdmin, async (_req, res) => {
   try {
     const list = await prisma.roleRequest.findMany({
-      where: { status: 'PENDING' },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
       include: { user: { select: { id: true, email: true, role: true } } },
     });
     res.json(list);
@@ -2272,7 +2271,7 @@ app.get('/role-requests/:id/detail', authMiddleware, requireAdmin, async (req, r
     const id = Number(req.params.id);
     const request = await prisma.roleRequest.findUnique({
       where: { id },
-      include: { user: { select: { id: true, email: true, role: true } } },
+      include: { user: { select: { id: true, email: true, role: true } }},
     });
     if (!request) return res.sendStatus(404);
 

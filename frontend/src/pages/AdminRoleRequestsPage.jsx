@@ -10,6 +10,8 @@ export default function AdminRoleRequestsPage() {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailErr, setDetailErr] = useState('');
+  const [sortOption, setSort] = useState('asc');
+  const [filter, setFilter] = useState('PENDING'); // ALL | PENDING | ACCEPTED | DECLINED
 
   const load = async () => {
     try {
@@ -53,11 +55,54 @@ export default function AdminRoleRequestsPage() {
 
   const close = () => { setShow(false); setDetail(null); setDetailErr(''); };
 
+  if (sortOption == 'asc') {
+    items.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  } else {
+    items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  const counts = {
+    ALL: items.length,
+    PENDING: items.filter(i => i.status === 'PENDING').length,
+    APPROVED: items.filter(i => i.status === 'APPROVED').length,
+    REJECTED: items.filter(i => i.status === 'REJECTED').length,
+  };
+
+  const filteredItems = filter === 'ALL' ? items : items.filter(it => it.status === filter);
+
   return (
     <div style={{ maxWidth: 900, margin: '24px auto', padding: 16 }}>
-      <h2>คำขออัปเกรดสิทธิ์ (รออนุมัติ)</h2>
+      <h2>คำขออัปเกรดสิทธิ์</h2>
       {err && <div className="alert alert-danger">{err}</div>}
-      {!items.length ? (
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+        {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map(s => (
+          <button
+            key={s}
+            type="button"
+            className={`btn btn-sm ${filter === s ? 'btn-primary' : 'btn-outline-primary'}`}
+            onClick={() => setFilter(s)}
+          >
+            {s} ({counts[s] ?? 0})
+          </button>
+        ))}
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary"
+          onClick={() => setSort(sortOption === 'asc' ? 'desc' : 'asc')}
+          style={{ marginLeft: 'auto' }}
+        >
+          Sort Date: {sortOption === 'asc' ? 'Oldest first' : 'Newest first'}
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary"
+          onClick={() => load()}
+          style={{ marginLeft: 'auto' }}
+        >
+          Refresh
+        </button>
+      </div>
+      {!filteredItems.length ? (
         <div>— ไม่มีคำขอ —</div>
       ) : (
         <table className="table">
@@ -67,7 +112,7 @@ export default function AdminRoleRequestsPage() {
             </tr>
           </thead>
           <tbody>
-            {items.map(it => (
+            {filteredItems.map(it => (
               <tr key={it.id}>
                 <td>{it.user?.email}</td>
                 <td>{it.user?.role}</td>
@@ -76,8 +121,12 @@ export default function AdminRoleRequestsPage() {
                 <td>{new Date(it.createdAt).toLocaleString()}</td>
                 <td style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button className="btn btn-sm btn-outline-secondary" onClick={() => view(it.id)}>View</button>
-                  <button className="btn btn-sm btn-success" onClick={() => act(it.id, 'approve')}>Approve</button>
-                  <button className="btn btn-sm btn-outline-danger" onClick={() => act(it.id, 'reject')}>Reject</button>
+                  {(it.status === 'PENDING') && (
+                    <button className="btn btn-sm btn-success" onClick={() => act(it.id, 'approve')}>Approve</button>
+                  )}
+                  {(it.status === 'PENDING') && (
+                    <button className="btn btn-sm btn-outline-danger" onClick={() => act(it.id, 'reject')}>Reject</button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -157,8 +206,12 @@ export default function AdminRoleRequestsPage() {
                 )}
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <button className="btn btn-success" onClick={() => act(detail.request.id, 'approve')}>Approve</button>
-                  <button className="btn btn-outline-danger" onClick={() => act(detail.request.id, 'reject')}>Reject</button>
+                  {(detail.request.status === 'PENDING') && (
+                    <button className="btn btn-success" onClick={() => act(detail.request.id, 'approve')}>Approve</button>
+                  )}
+                  {(detail.request.status === 'PENDING') && (
+                    <button className="btn btn-outline-danger" onClick={() => act(detail.request.id, 'reject')}>Reject</button>
+                  )}
                 </div>
               </div>
             )}
