@@ -348,7 +348,7 @@ export default function ProfilePage() {
         {/* Calendar: Artist (ใช้ค่าเริ่มต้น Accepted/Pending/Declined) */}
         {isArtistApproved && (
           <CalendarSection
-            title="My Artist Schedule"
+            title="My Schedule"
             datasets={[
               { rows: aeAccepted, status: "accepted" },
               { rows: aePending,  status: "pending"  },
@@ -362,7 +362,7 @@ export default function ProfilePage() {
         {/* Calendar: Organizer (แปลงข้อความเป็น Published/Draft/Canceled) */}
         {isOrganizer && (
           <CalendarSection
-            title="My Event Schedule (Organizer)"
+            title="My Schedule"
             datasets={[
               { rows: oeAccepted, status: "accepted" }, // published
               { rows: oePending,  status: "pending"  }, // draft
@@ -527,7 +527,7 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM, labelMap }) {
     return m;
   }, [calendarEvents]);
 
-  const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const dayNames = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
   const daysInThisMonth = () => {
     const s = startOfMonth(calMonth);
     const e = endOfMonth(calMonth);
@@ -549,10 +549,36 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM, labelMap }) {
       <div className="following-head">
         <div className="following-title">{title}</div>
         <div className="cal-nav">
-          <button className="btn-ghost" onClick={() => setCalMonth((m) => addMonths(m, -1))}>← Prev</button>
+          {/* Prev button */}
+          <button
+            type="button"
+            className="nav-arrow"
+            onClick={() => setCalMonth((m) => addMonths(m, -1))}
+            aria-label="Previous month"
+          >
+            <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" fill="none" strokeWidth="1.5">
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 5 5 12 12 19" />
+            </svg>
+          </button>
+
+          {/* Month title */}
           <div className="cal-month">{fmtMonthYear(calMonth)}</div>
-          <button className="btn-ghost" onClick={() => setCalMonth((m) => addMonths(m, 1))}>Next →</button>
+
+          {/* Next button */}
+          <button
+            type="button"
+            className="nav-arrow"
+            onClick={() => setCalMonth((m) => addMonths(m, 1))}
+            aria-label="Next month"
+          >
+            <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" fill="none" strokeWidth="1.5">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
         </div>
+
       </div>
 
       <div className="following-subbar">
@@ -565,7 +591,7 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM, labelMap }) {
 
       <div className="calendar">
         <div className="cal-row cal-header">
-          {dayNames.map((d) => <div key={d} className="cal-cell cal-headcell">{d}</div>)}
+          {dayNames.map((d) => <div key={d} className="cal-headcell">{d}</div>)}
         </div>
 
         <div className="cal-grid">
@@ -591,7 +617,7 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM, labelMap }) {
                 onClick={() => setSelectedDate(cell)}
                 title={`${cell.toDateString()}`}
               >
-                <div className="cal-date">{cell.getDate()}</div>
+                <div className="cal-date">{String(cell.getDate()).padStart(2, "0")}</div>
                 <div className="cal-dots">
                   {items.slice(0, 4).map((ev) => (
                     <span
@@ -658,7 +684,7 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM, labelMap }) {
                     </div>
                   </div>
                   <div className="pf-actions">
-                    {ev.eventId && <Link className="btn-ghost" to={`/events/${ev.eventId}`}>Detail</Link>}
+                    {ev.eventId && <Link className="btn-viewdetail-ev" to={`/events/${ev.eventId}`}>Detail</Link>}
                   </div>
                 </div>
               );
