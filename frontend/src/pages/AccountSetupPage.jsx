@@ -229,6 +229,28 @@ export default function AccountSetupPage() {
     setPriceRange("");
   };
 
+
+
+
+
+
+  async function uploadDoc(file) {
+    if (!file) return null;
+    const form = new FormData();
+    form.append("file", file);
+    const { data } = await api.post("/api/upload", form, {
+      withCredentials: true,
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    // สมมติ backend ตอบ { url, name?, size?, mime? }
+    return data?.url ? { downloadUrl: data.url, name: file.name, size: file.size, mime: file.type } : null;
+  }
+
+
+
+
+
+
   const handleSave = async () => {
     setSaving(true);
     setErr(""); setOk(false);
@@ -240,6 +262,11 @@ export default function AccountSetupPage() {
       try {
         avatarUrl = await uploadAvatarIfNeeded();
       } catch {}
+
+      // === อัปโหลดเอกสาร 3 ไฟล์ (ถ้าเลือกมา) ===
+      const upRate  = await uploadDoc(docRateCard); // => {downloadUrl, name, ...} | null
+      const upEPK   = await uploadDoc(docEPK);
+      const upRider = await uploadDoc(docRider);
 
 
       // อัปโหลดไฟล์ใหม่ (เหมือน venueEditor)
@@ -298,6 +325,13 @@ export default function AccountSetupPage() {
           rateCardUrl: artist.rateCardUrl,
           epkUrl: artist.epkUrl,
           riderUrl: artist.riderUrl,
+
+          // === new object style (เพิ่มใหม่) ===
+          rateCard: upRate || undefined,
+          epk:      upEPK  || undefined,
+          rider:    upRider|| undefined,
+
+
           contactEmail: artist.contactEmail,
           contactPhone: artist.contactPhone,
           spotifyUrl: artist.spotifyUrl,

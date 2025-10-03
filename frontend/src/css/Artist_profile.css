@@ -908,3 +908,60 @@
 .lightbox-close:hover {
   background: rgba(255,255,255,.28);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===== Doc buttons row: ไม่เลื่อน, ไม่ตัดบรรทัด, อยู่แถวเดียวเสมอ ===== */
+.doc-row{
+  display: flex;
+  flex-wrap: nowrap;          /* ห้ามตัดบรรทัด */
+  justify-content: center;    /* อยากชิดซ้ายเปลี่ยนเป็น flex-start */
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  overflow: visible;          /* ไม่ให้มีแถบเลื่อน */
+}
+
+/* ปรับปุ่มให้ “ย่อได้” เพื่อให้พอดีกับแถวเดียว */
+.doc-row .epk-pill{
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;                       /* ไม่ให้ข้อความในปุ่มตัดบรรทัด */
+  height: 40px;
+  padding: 10px 16px 10px 18px;
+  border-radius: 999px;
+  font-size: clamp(12px, 1.6vw, 14px);      /* ย่อ/ขยายตามความกว้าง */
+}
+
+/* จุดกลมในปุ่มให้ย่อด้วย */
+.doc-row .epk-dot{
+  width: clamp(24px, 1.9vw, 30px);
+  height: clamp(24px, 1.9vw, 30px);
+}
+
+/* ย่อ padding เพิ่มเมื่อตัวหน้าจอเริ่มแคบ เพื่อคง 3 ปุ่มในแถวเดียว */
+@media (max-width: 900px){
+  .doc-row .epk-pill{ padding: 8px 14px 8px 14px; height: 36px; }
+}
+@media (max-width: 740px){
+  .doc-row{ gap: 8px; }
+  .doc-row .epk-pill{ padding: 6px 12px 6px 12px; height: 34px; }
+}
+@media (max-width: 520px){
+  .doc-row{ gap: 6px; }
+  .doc-row .epk-pill{ padding: 6px 10px; height: 32px; font-size: 12px; }
+  .doc-row .epk-dot{ width: 24px; height: 24px; }
+}
+

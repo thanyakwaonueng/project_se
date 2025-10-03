@@ -263,6 +263,17 @@ export default function Artist() {
     return <div className="artist-container a-bleed" style={{padding:16}}>Failed to load artists.</div>;
   }
 
+
+
+  const getDocUrl = (g, key) => {
+    // key: 'epk' | 'rider' | 'rateCard'
+    const obj = g?.[key];
+    const legacy = g?.[`${key}Url`] || (key === 'epk' ? g?.techRider?.downloadUrl : null);
+    return obj?.downloadUrl || legacy || null;
+  };
+
+
+
   return (
   <div className="artist-container a-bleed">
     {/* ====== LIST MODE ====== */}
@@ -393,22 +404,32 @@ export default function Artist() {
               <p className="desc">{(selectedGroup?.description || "").trim() || "No description."}</p>
 
               {/* ปุ่ม EPK */}
-              {selectedGroup?.techRider?.downloadUrl && (
-                <a
-                  className="epk-pill"
-                  href={selectedGroup.techRider.downloadUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Open EPK"
-                >
-                  <span>EPK</span>
-                  <span className="epk-dot" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
-                </a>
-              )}
+              {/* เอกสารศิลปิน — 3 ปุ่มบรรทัดเดียว */}
+              <div className="doc-row">
+                {[
+                  { label: "EPK",       url: getDocUrl(selectedGroup, "epk") },
+                  { label: "Rider",     url: getDocUrl(selectedGroup, "rider") },
+                  { label: "Rate card", url: getDocUrl(selectedGroup, "rateCard") },
+                ].map(({ label, url }) => (
+                  url ? (
+                    <a key={label} className="epk-pill" href={url} target="_blank" rel="noreferrer" aria-label={`Open ${label}`}>
+                      <span>{label}</span>
+                      <span className="epk-dot" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                          <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </span>
+                    </a>
+                  ) : (
+                    <button key={label} className="epk-pill is-disabled" disabled aria-disabled="true">
+                      <span>{label}</span>
+                      <span className="epk-dot" aria-hidden="true">–</span>
+                    </button>
+                  )
+                ))}
+              </div>
+
+
             </div>
 
             {/* กลาง: รูป + เส้น + GENRE */}
