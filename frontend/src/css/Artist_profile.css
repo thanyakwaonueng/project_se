@@ -1,17 +1,21 @@
 /* =========================================================
-   ARTIST PROFILE — % Layout + Center Rail (ไม่โดนดัน)
-   - ใช้ % ทั้งหมด
-   - คอลัมน์กลางล็อคกึ่งกลางเสมอ
-   - ภาพกลาง 1:1 ไม่ถูกผลัก
-   - ขยายโซเชียล/ผู้ติดตามด้านขวา
+   ARTIST PROFILE (Clean & Sectioned)
+   - จัดระเบียบเป็นหมวด ๆ
+   - เขียนพร็อพperty ทีละบรรทัด
+   - ปุ่มเอกสาร 3 อันเท่ากัน, ซ่อน dot, มี hover
    ========================================================= */
 
 
 /* ===================== [0] BASE / RESET ===================== */
-* { box-sizing: border-box; }
-.profile { padding: 24px 16px; }
 
-/* ป้องกันคอนเทนต์ล้นแทร็ก */
+* {
+  box-sizing: border-box;
+}
+
+.profile {
+  padding: 24px 16px;
+}
+
 .profile img,
 .profile svg {
   max-width: 100%;
@@ -20,111 +24,192 @@
 }
 
 
-/* ===================== [1] GRID LAYOUT ===================== */
-/* Center-Rail: ซ้าย-กลาง-ขวาเป็น % ของคอนเทนเนอร์
-   - ช่องกลาง (รูป) จะ “อยู่ตรงกลางเพจเสมอ”
-   - ซ้าย/ขวาไม่สามารถผลักให้คอลัมน์กลางเคลื่อนได้ */
+/* ===================== [1] GRID LAYOUT (Left / Center / Right) ===================== */
+
 .profile-grid {
   display: grid;
-
-  /* ปรับ % ได้ตามใจ: รวม 28 + 34 + 28 = 90% (+ ช่องว่าง) */
   grid-template-columns:
-    minmax(0, 28%)  /* ซ้าย */
-    minmax(0, 34%)  /* กลาง (รูป) */
-    minmax(0, 28%); /* ขวา */
-
-  /* column-gap: 2%;            ระยะคั่นคอลัมน์ (เป็น %) */
-  justify-content: center;   /* จัดทั้งกริดให้อยู่กลางหน้ากระดาน */
+    minmax(0, 28%)
+    minmax(0, 34%)
+    minmax(0, 28%);
+  justify-content: center;
   align-items: start;
-  /* background-color: blueviolet; */
 }
 
-/* วางกล่องให้ชิดในแทร็กของตน (ซ้าย/ขวา), กลางอยู่กึ่งกลางแทร็กกลาง */
-.left-box  { justify-self: start; }
-.center-box{ justify-self: center; }
-.right-box { justify-self: end;   }
+.left-box {
+  text-align: left;
+  /* justify-self: start; */
+}
 
-/* ไม่กำหนด width เป็น px ที่กล่อง เพื่อลดแรง “ดัน” */
+.center-box {
+  justify-self: center;
+}
+
+.right-box {
+  justify-self: end;
+}
+
 .left-box,
 .center-box,
 .right-box {
-  width: 100%;     /* กินกว้างเท่าแทร็กของตัวเอง */
-  max-width: 100%; /* กันล้น */
+  width: 100%;
+  max-width: 100%;
 }
 
 
-/* ===================== [2] LEFT COLUMN ===================== */
+/* ===================== [2] LEFT COLUMN (Title / Desc / Doc Buttons) ===================== */
+
 .left-box {
-  background: #fff;
+  background: #ffffff;
   border-radius: 12px;
   padding: 20px;
 }
 
 .title {
   font-size: 40px;
-  color: #111;
+  color: #111111;
+  margin-bottom: 0px;
+}
+
+/* ชื่อศิลปินให้ชิดซ้ายแน่นอน */
+.left-box .title {
+  text-align: left !important;  /* ชนะกฎเก่าที่อาจตั้งเป็น center */
+  display: block;               /* กันพฤติกรรม inline ที่แปลก */
+  margin-left: 0;               /* กันกรณีมี margin: 0 auto; */
+  margin-right: 0;
+  /* padding-left: 12px;           ขยับเข้าในนิดหน่อยให้เส้นซ้ายสวย */
 }
 
 .desc {
   margin: 0 16px 16px 0;
-  color: #333;
+  color: #333333;
   line-height: 1.7;
   font-size: 16px;
   overflow-wrap: anywhere;
 }
 
-/* ปุ่ม EPK */
-.epk-pill {
-  width: fit-content;   
-  display: flex; 
-  align-items: center;
-  gap: 14px;
-  height: 40px;
-  padding: 10px 16px 10px 18px;
-  border-radius: 999px;
-  text-decoration: none;
-  background: #111;
-  color: #fff;
-  border: 2px solid #111;
-  letter-spacing: .02em;
-  transition: .6s;
-  margin: 16px auto 0;  
-}
 
-.epk-dot {
-  width: 30px;
-  height: 30px;
+/* ---------- [2.1] Document Buttons Row (EPK / Rider / Rate card) ---------- */
+
+.left-box .doc-row {
   display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #fff;
-  color: #111;
-  transition: .6s;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  margin-top: 16px;
 }
 
-.epk-pill:hover {
-  background: #0c0c0c;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, .1);
-}
+/* ปุ่มฐาน (ใช้กับทั้ง 3 ปุ่ม) */
+.left-box .doc-row .epk-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-.epk-pill:hover .epk-dot { transform: scale(1.03); }
-
-
-/* ===================== [3] CENTER COLUMN — Image ===================== */
-
-/* กล่องครอบคอลัมน์กลาง: คุมความกว้างทั้งหมดของคอลัมน์ */
-.center-wrap{
-  justify-self: center;      /* ให้อยู่กึ่งกลางกริด */
   width: 100%;
-  max-width: 300px;          /* เดิมเคยใส่ที่ .center-box -> ย้ายมาที่นี่ */
+  height: 44px;
+  padding: 0 18px;
+  box-sizing: border-box;
+
+  background: #111111;
+  color: #ffffff;
+  border: 2px solid #111111;
+  border-radius: 999px;
+
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+
+  transition: background-color 0.25s;
+  transition-property: background-color, box-shadow;
+  transition-duration: 0.25s;
 }
 
-/* กรอบรูป 1:1 “ล็อคกลาง” ไม่โดนดัน */
+/* ล้างสไตล์ link/visited */
+.left-box .doc-row .epk-pill:link {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.left-box .doc-row .epk-pill:visited {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+/* โฟกัสคีย์บอร์ด */
+.left-box .doc-row .epk-pill:focus-visible {
+  outline: 2px solid #d1d5db;
+  outline-offset: 2px;
+}
+
+/* ซ่อน dot (ถ้ายังมีใน DOM) */
+.left-box .doc-row .epk-dot {
+  display: none !important;
+}
+
+/* พื้นที่ข้อความภายในปุ่ม */
+.left-box .doc-row .epk-pill > span:first-child {
+  display: inline-block;
+  line-height: 1;
+  transform: translateZ(0) scale(1);
+  transform-origin: center;
+  will-change: transform;
+  transition: transform 0.18s ease-out;
+}
+
+/* Hover ฐาน (ทุกปุ่ม) */
+.left-box .doc-row .epk-pill:hover {
+  background: #0f0f0f;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.10);
+}
+
+.left-box .doc-row .epk-pill:hover > span:first-child {
+  transform: translateZ(0) scale(1.06);
+}
+
+/* Hover เฉพาะแต่ละปุ่ม (โทนใกล้เคียงกันแต่ต่างเฉดเล็กน้อย) */
+.left-box .doc-row .epk-pill:nth-child(1):hover {
+  background: #0f0f0f;
+  border-color: #0f0f0f;
+}
+
+.left-box .doc-row .epk-pill:nth-child(2):hover {
+  background: #131313;
+  border-color: #131313;
+}
+
+.left-box .doc-row .epk-pill:nth-child(3):hover {
+  background: #151515;
+  border-color: #151515;
+}
+
+/* ขนาดบนจอเล็ก */
+@media (max-width: 560px) {
+  .left-box .doc-row {
+    gap: 8px;
+  }
+
+  .left-box .doc-row .epk-pill {
+    height: 40px;
+    padding: 0 14px;
+  }
+}
+
+
+/* ===================== [3] CENTER COLUMN (Square Image + Like Button) ===================== */
+
+.center-wrap {
+  justify-self: center;
+  width: 100%;
+  max-width: 300px;
+}
+
 .center-box {
-  width: 100%;               /* กินเท่าความกว้าง wrapper */
-  aspect-ratio: 1 / 1;   /* สี่เหลี่ยมจัตุรัส */
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   border-radius: 4px;
-  overflow: hidden;      /* ให้รูปโค้งตามกรอบ */
+  overflow: hidden;
   margin: 0 auto;
   display: grid;
 }
@@ -143,65 +228,79 @@
   object-position: center;
   display: block;
   border-radius: inherit;
-  transition: transform .6s ease;
+  transition: transform 0.6s ease;
 }
 
-.img-frame:hover .img { transform: scale(1.01); }
+.img-frame:hover .img {
+  transform: scale(1.01);
+}
+
+/* ปุ่ม like บนรูป */
+.img-like-shell {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+}
+
+.like-button {
+  transition: transform 0.6s ease, box-shadow 0.6s ease, background-color 0.6s ease;
+}
+
+.img-like-shell .like-button:hover {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+}
 
 
-/* ===================== [4] RIGHT COLUMN — Social / Followers ===================== */
-/* เพิ่มน้ำหนักฝั่งขวาให้ “ใหญ่ขึ้น” และอ่านง่าย */
-.right-box { 
-  padding: 16px 8px; 
+/* ===================== [4] RIGHT COLUMN (Followers / Social) ===================== */
+
+.right-box {
+  padding: 16px 8px;
   text-align: center;
-  /* background-color: aqua; */
 }
 
 .follow-box {
   display: grid;
   justify-items: center;
   gap: 6px;
-  /* margin-bottom: 30px; */
 }
 
 .follow-big {
   font-weight: 700;
-  font-size: clamp(28px, 3.6vw, 48px); /* โตขึ้นอย่างยืดหยุ่น */
+  font-size: clamp(28px, 3.6vw, 48px);
   line-height: 1;
-  color: #111;
-  letter-spacing: .01em;
-  /* margin-bottom: 30px; */
+  color: #111111;
+  letter-spacing: 0.01em;
   margin-top: 30px;
 }
 
 .follow-sub {
   font-size: clamp(13px, 1.2vw, 17px);
   color: #5f5f5f;
-  letter-spacing: .02em;
+  letter-spacing: 0.02em;
   text-transform: lowercase;
   margin-bottom: 30px;
 }
 
-/* หัวข้อโซเชียล */
 .social-title2 {
   text-align: center;
   font-weight: 700;
-  letter-spacing: .02em;
+  letter-spacing: 0.02em;
   font-size: clamp(14px, 1.4vw, 20px);
-  color: #111;
+  color: #111111;
   margin: 8px 0 6px 0;
-  
-  /* margin-bottom: 30px; */
 }
 
-/* เส้นจุด + คลื่นใต้หัวข้อ */
 .social-underline {
-  justify-content: center;          /* เดิม display:flex แล้ว */
-  margin-left: auto;
-  margin-right: auto;
   display: flex;
+  justify-content: center;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
+  margin-right: auto;
   margin-bottom: 30px;
 }
 
@@ -209,7 +308,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #111;
+  background: #111111;
 }
 
 .social-underline .wave {
@@ -221,7 +320,6 @@
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='6' viewBox='0 0 80 6'><path d='M0 3 C15 0, 30 6, 45 3 S65 0, 80 3' fill='none' stroke='%23111' stroke-width='1.2'/></svg>");
 }
 
-/* ปุ่มโซเชียลแนวนอน — ขยายให้เด่น */
 .social-row {
   display: flex;
   align-items: center;
@@ -239,35 +337,32 @@
   background: #f5f6f6;
   border: 1px solid #e3e3e3;
   border-radius: 12px;
-  transition:
-    background-color .6s ease,
-    box-shadow .6s ease,
-    transform .06s ease-in-out;
+  transition: background-color 0.6s, box-shadow 0.6s, transform 0.06s;
 }
 
 .social-btn img {
   width: clamp(20px, 1.8vw, 28px);
   height: clamp(20px, 1.8vw, 28px);
   object-fit: contain;
-  transition: .3s;
+  transition: 0.3s;
 }
 
 .social-btn:hover {
   background: #ececec;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, .06);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
-.social-btn:hover img { transform: scale(1.06); }
+.social-btn:hover img {
+  transform: scale(1.06);
+}
 
 
 /* ===================== [5] LISTEN ON ===================== */
 
 :root {
-  /* ปรับขนาดไอคอน/ช่องไฟได้จากตัวแปรนี้ */
-  --listen2-icon-size: 40px;   /* ขนาดไอคอน */
-  --listen2-label-gap: 8px;    /* ระยะห่างไอคอน↔ข้อความ */
+  --listen2-icon-size: 40px;
+  --listen2-label-gap: 8px;
 }
-
 
 .listen2 {
   width: 92%;
@@ -284,182 +379,161 @@
 
 .listen2-title {
   font-weight: 600;
-  letter-spacing: .06em;
+  letter-spacing: 0.06em;
   font-size: clamp(22px, 3vw, 32px);
 }
 
 .listen2-quote {
   font-size: 14px;
-  color: #666;
+  color: #666666;
 }
 
-/* ---------- กริดหลัก: 3 คอลัมน์ ⇒ ถ้าของครบ 6 ชิ้น = 2 แถวพอดี ---------- */
 .listen2-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0;                          /* ให้เส้นกรอบต่อเนื่อง ไม่เว้นช่อง */
+  gap: 0;
   border: 1px solid #9c9c9c;
   border-radius: 2px;
   overflow: hidden;
 }
 
-/* ---------- เซลล์แต่ละช่อง ---------- */
 .listen2-item {
-  position: relative;              /* ให้ไอคอน absolute อ้างอิงได้ */
-  display: flex;                   /* ใช้ flex จัดแนวตั้ง label ให้อยู่กึ่งกลาง */
+  position: relative;
+  display: flex;
   align-items: center;
-  /* padding รอบเซลล์ */
   padding: clamp(18px, 2.2vw, 26px);
-  /* ดัน "จุดเริ่มข้อความ" ไปทางขวากึ่งกลาง + ครึ่งไอคอน + ช่องว่างเล็กน้อย
-     เพื่อให้ไอคอนที่ล็อกกลาง ไม่โดนข้อความทับจากซ้าย */
   padding-left: calc(38% + (var(--listen2-icon-size) / 2) + var(--listen2-label-gap));
-
-  color: #444;
+  color: #444444;
   text-decoration: none;
-
-  /* เส้นตารางย่อย (คอลัมน์ขวาสุด/แถวล่างสุดจะถูกตัดด้านล่าง) */
   border-right: 1px solid #9c9c9c;
   border-bottom: 1px solid #9c9c9c;
-
-  transition:
-    background-color .6s ease,
-    color .6s ease,
-    box-shadow .6s ease;
+  transition: background-color 0.6s, color 0.6s, box-shadow 0.6s;
 }
 
-/* คอลัมน์ขวาสุด: ไม่ต้องมีเส้นขวา เพื่อไม่ให้ซ้อนกับกรอบนอก */
-.listen2-item:nth-child(3n) { border-right: 0; }
+.listen2-item:nth-child(3n) {
+  border-right: 0;
+}
 
-/* แถวล่างสุด: ไม่ต้องมีเส้นล่าง เพื่อไม่ให้ซ้อนกับกรอบนอก */
-.listen2-item:nth-last-child(-n+3) { border-bottom: 0; }
+.listen2-item:nth-last-child(-n+3) {
+  border-bottom: 0;
+}
 
-/* ---------- ไอคอน: ล็อกกลางช่องจริง ๆ ---------- */
 .listen2-item img,
 .listen2-item .listen2-icon {
   position: absolute;
   left: 36%;
   top: 50%;
-  /* ดึงจุดกึ่งกลางของรูปมาทับกึ่งกลางเซลล์พอดี */
   transform: translate(-50%, -50%);
   width: var(--listen2-icon-size);
   height: var(--listen2-icon-size);
   object-fit: contain;
-  opacity: .95;
-  transition: transform .6s ease;
+  opacity: 0.95;
+  transition: transform 0.6s;
 }
 
-/* ---------- ป้ายชื่อ: อยู่ขวาของไอคอนเสมอ (เพราะ padding-left ข้างบน) ---------- */
 .listen2-item span,
 .listen2-item .listen2-label {
-  white-space: nowrap;             /* กันตัดบรรทัด */
+  white-space: nowrap;
   font-size: 18px;
   font-weight: 600;
-  letter-spacing: .01em;
+  letter-spacing: 0.01em;
 }
 
-/* ---------- Hover (ไม่กระทบเลย์เอาต์/เส้นกรอบ) ---------- */
 .listen2-item:hover img,
 .listen2-item:hover .listen2-icon {
-  /* คงตำแหน่งกึ่งกลางไว้ แล้วค่อย scale */
   transform: translate(-50%, -50%) scale(1.12);
 }
 
 .listen2-item:hover {
   background: #ececeb;
-  color: #222;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, .06);
+  color: #222222;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 
 
+/* ===================== [6] RESPONSIVE STACK (<= 1024px) ===================== */
 
-/* ===================== [6] RESPONSIVE (Stack) ===================== */
 @media (max-width: 1024px) {
   .profile-grid {
-    grid-template-columns: 1fr;  /* เรียงเป็นคอลัมน์เดียว */
-    column-gap: 0;
+    grid-template-columns: 1fr;
   }
+
   .left-box,
   .center-box,
   .right-box {
     justify-self: center;
     width: 100%;
   }
-  .center-box { max-width: 520px; } /* กลางไม่ต้องใหญ่มากในมือถือ */
-  .social-row { justify-content: center; }
+
+  .center-box {
+    max-width: 520px;
+  }
+
+  .social-row {
+    justify-content: center;
+  }
 }
 
 
-/* ===================== [7] ใต้รูป: เส้นคั่น + GENRE ===================== */
+/* ===================== [7] UNDER IMAGE: Divider + GENRE ===================== */
 
-.center-hr{
-  width: 100%;                 /* = เท่ารูป */
-  height: 1px;                 /* ความหนาเส้น */
-  background: var(--c-line, #101010);  /* สีเส้น ให้สอดคล้องธีม */
-  margin-top: 20px;             /* ปรับเพิ่ม/ลดได้ */
-  margin-bottom: 0px;          /* ระยะห่างจากรูปและ caption */
+.center-hr {
+  width: 100%;
+  height: 1px;
+  background: var(--c-line, #101010);
+  margin-top: 20px;
+  margin-bottom: 0;
 }
 
-.center-caption{
-  margin-top: 0px;
+.center-caption {
+  margin-top: 0;
   padding-top: 10px;
 }
-
 
 .center-caption-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  /* gap: 12px; */
-  justify-content:space-between;
-  /* background-color: aqua; */
+  justify-content: space-between;
 }
 
 .center-caption-label {
   font-size: 16px;
-  letter-spacing: .16em;
+  letter-spacing: 0.16em;
   color: #232323;
   font-weight: 700;
-  /* background-color: rgb(160, 255, 27); */
 }
 
-/* รายการประเภทชิดขวา */
-.genre-list{
-  display:flex;
-  /* gap:8px; */
-  flex-wrap:wrap;         /* ถ้าพื้นที่ไม่พอให้ตัดบรรทัด */
-  list-style:none;
-  padding:0; margin:0;
-  margin-left:auto;       /* ดันไปทางขวา */
+.genre-list {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  margin-left: auto;
 }
 
-/* ชิปของ genre: ขอบขาว ตัวอักษรขาว พื้นโปร่ง */
-/* ชิปแต่ละอัน (คงเป็นชิป ไม่ใช้ “/”) */
-.genre-chip{
-  background:#0c0c0c;                 /* ดำสนิท */
-  color:#fff;
-  /* border:1px solid rgba(255,255,255,.55); */
-  border-radius:999px;
-  padding:6px 10px;
-  font-size:14px;
-  /* font-weight:600; */
-  line-height:1;
-  white-space:nowrap;                  /* ไม่ให้คำในชิปขึ้นบรรทัดใหม่ */
+.genre-chip {
+  background: #0c0c0c;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-.genre-chip--single{
-  margin-left:auto;          /* ดันไปชิดขวา */
-  display:inline-flex;
-  align-items:center;
+.genre-chip--single {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
 }
 
 
+/* ===================== [8] SCHEDULE ===================== */
 
-/* ===================== [8] Schedule (อยู่ใต้ Listen On) ===================== */
 .schedule-sec {
-  margin-top: 40px;
-  /* background-color: aqua; */
   width: 92%;
-  margin-inline: auto;
+  margin: 40px auto 0 auto;
 }
 
 .schedule-head {
@@ -473,9 +547,9 @@
 .schedule-title {
   text-align: center;
   font-weight: 600;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   font-size: 30px;
-  color: #111;
+  color: #111111;
 }
 
 .schedule-tabs {
@@ -484,9 +558,9 @@
 }
 
 .sch-tab {
-  border: 1px solid #111;
-  background: #fff;
-  color: #111;
+  border: 1px solid #111111;
+  background: #ffffff;
+  color: #111111;
   border-radius: 999px;
   padding: 8px 14px;
   cursor: pointer;
@@ -494,8 +568,8 @@
 }
 
 .sch-tab.is-active {
-  background: #111;
-  color: #fff;
+  background: #111111;
+  color: #ffffff;
 }
 
 .schedule-list {
@@ -512,60 +586,59 @@
   align-items: center;
   gap: 16px;
   border: 1px solid #9c9c9c;
-  background: #fff;
+  background: #ffffff;
   border-radius: 3px;
   padding: 12px 28px;
 }
 
 .sch-date {
   font-weight: 600;
-  color: #111;
+  color: #111111;
   font-size: 16px;
 }
 
-.sch-title { 
-  font-weight: 600; 
-  color: #111; 
+.sch-title {
+  font-weight: 600;
+  color: #111111;
 }
 
-.sch-sub   { 
-  color: #555; 
-  font-size: 14px; 
+.sch-sub {
+  color: #555555;
+  font-size: 14px;
 }
 
 .sch-link {
   text-decoration: none;
-  color: #111;
-  border: 1px solid #111;
+  color: #111111;
+  border: 1px solid #111111;
   border-radius: 8px;
   padding: 6px 10px;
 }
 
 .sch-link:hover {
-  background: #111;
-  color: #fff;
+  background: #111111;
+  color: #ffffff;
 }
 
 
-/* ===================== [9] เส้นคั่นยาว ===================== */
+/* ===================== [9] LONG DIVIDER ===================== */
+
 .big-divider {
-  /* border: 0; */
   border-top: 1px solid var(--c-line, #5f5f5f);
-  /* margin: 28px 0; */
   margin-top: 40px;
   margin-bottom: 40px;
   width: 92%;
-  margin-inline: auto;
-  
+  margin-left: auto;
+  margin-right: auto;
 }
 
 
-/* ===================== [10] OTHER (horizontal scroll, 8 การ์ด) ===================== */
+/* ===================== [10] OTHER (Horizontal strip) ===================== */
+
 .other-sec {
-  margin-top: 8px;
   width: 92%;
   margin-inline: auto;
-  /* background-color: blue; */
+  margin-top: 8px;
 }
 
 .other-head {
@@ -578,25 +651,28 @@
 .other-title {
   text-align: center;
   font-weight: 600;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   font-size: 30px;
-  color: #111;
+  color: #111111;
 }
 
-.other-sub { 
-  color: #555; 
-  font-size: 14px; 
+.other-sub {
+  color: #555555;
+  font-size: 14px;
 }
 
 .other-strip {
   display: flex;
   gap: 14px;
   overflow-x: auto;
-  padding-bottom:12px;
+  padding-bottom: 12px;
   scroll-snap-type: x mandatory;
 }
 
-.other-strip::-webkit-scrollbar { height: 8px; }
+.other-strip::-webkit-scrollbar {
+  height: 8px;
+}
+
 .other-strip::-webkit-scrollbar-thumb {
   background: #d6d6d8;
   border-radius: 999px;
@@ -604,20 +680,18 @@
 
 .other-card {
   flex: 0 0 180px;
-  background: #fff;
+  background: #ffffff;
   border: 1px solid #e9e9ea;
   border-radius: 4px;
   text-decoration: none;
-  color: #111;
+  color: #111111;
   scroll-snap-align: start;
   padding: 10px;
-  transition:
-    box-shadow .3s ease,
-    transform .06s ease-in-out;
+  transition: box-shadow 0.3s, transform 0.06s;
 }
 
 .other-card:hover {
-  box-shadow: 0 8px 18px rgba(0, 0, 0, .08);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
   transform: translateY(-1px);
 }
 
@@ -645,244 +719,204 @@
 }
 
 
-/* ===================== [11] ลดขนาดรูปกลางให้เล็กลง (Desktop) ===================== */
-/* NOTE: กฎนี้ "เพิ่ม cap" ให้ .center-box ใน desktop
-         และมีอีกกฎใน media query (max-width:1024px) ข้างบนสำหรับ mobile */
-/* .center-box { max-width: 420px; }  เดิมคุณล็อคกลางไว้แล้ว เพิ่ม cap เล็กลง */
+/* ===================== [11] GALLERY (Photos & Videos) ===================== */
 
-@media (max-width: 1024px) {
-  .center-box { max-width: 520px; }  /* มือถือยังคงเหมาะสม */
-}
-
-
-
-
-
-/* ให้สามารถวางปุ่มแบบ absolute บนรูปได้ */
-.center-box { position: relative; }
-
-/* ที่วางปุ่มมุมขวาบน */
-.img-like-shell{
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-}
-
-/* ทำให้ปุ่มตอบสนองลื่น 0.6s (เผื่อคลาส like-button ของคุณมีอยู่แล้ว) */
-.like-button{
-  transition: transform .6s ease, box-shadow .6s ease, background-color .6s ease;
-}
-
-.img-like-shell .like-button:hover{
-  transform: translateY(-1px), scale(1.01);
-  box-shadow: 0 8px 18px rgba(0,0,0,.14);
-}
-
-
-
-
-
-
-/* ==========================================================================
-   [6] GALLERY — Photos on top, Videos bottom
-   - การ์ดเล็กลง
-   - แถวละ 4
-   - See more → แถวแนวนอนเลื่อนได้
-   - Lightbox สำหรับรูป
-   ========================================================================== */
-
-
-/* ===================== 6.0 SECTION WRAPPER / HEADER ===================== */
 .gallery {
   width: 92%;
   margin: 0 auto 24px auto;
 }
+
 .gallery-top {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-top: 40px;                  /* เว้นหัวบน */
-}
-.gallery-title {
-  font-weight: 700;
-  letter-spacing: .06em;
-  font-size: clamp(20px, 2.6vw, 28px);
-}
-.gallery-quote {
-  font-size: 13px;
-  color: #666;
+  margin-top: 40px;
+  margin-bottom: 12px;
 }
 
-/* ย่อ grid ให้กระชับนิดนึงเมื่อใส่ .small */
+.gallery-title {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-size: clamp(20px, 2.6vw, 28px);
+}
+
+.gallery-quote {
+  font-size: 13px;
+  color: #666666;
+}
+
 .gallery.small .gallery-grid {
   gap: 10px;
   padding: 5px;
 }
 
-
-/* ===================== 6.1 ROW HEAD (หัวแถว + See more) ===================== */
-.gallery-row {                       /* กล่องต่อแถว Photos / Videos */
+.gallery-row {
   margin-bottom: 16px;
 }
+
 .gallery-row-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin: 0 0 6px;
+  margin: 0 0 6px 0;
 }
+
 .gallery-row-title {
   font-size: 16px;
   font-weight: 700;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
 }
+
 .gallery-see-more {
   border: none;
   background: none;
   font-size: 13px;
   cursor: pointer;
-  color: #111;
-  opacity: .85;
+  color: #111111;
+  opacity: 0.85;
   padding: 4px 6px;
 }
+
 .gallery-see-more:hover {
   opacity: 1;
   text-decoration: underline;
 }
 
-
-/* ===================== 6.2 GRID (แถวละ 4) ===================== */
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);  /* สำคัญ: 4 ต่อแถว */
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-  border: 1px solid #9c9c9c;              /* กรอบนอก */
+  border: 1px solid #9c9c9c;
   border-radius: 2px;
   padding: 10px;
 }
 
-/* เฉพาะตัวแปรคลาส g-4 (เผื่อใช้ร่วม) */
 .gallery-grid.g-4 {
   grid-template-columns: repeat(4, 1fr);
 }
 
-
-/* ===================== 6.3 CARD & MEDIA ===================== */
 .gallery-item {
   position: relative;
   display: block;
   border-radius: 8px;
   overflow: hidden;
   background: #f7f7f8;
-  border: 1px solid #ddd;
-  transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease;
+  border: 1px solid #dddddd;
+  transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
 }
+
 .gallery-media {
   width: 100%;
-  aspect-ratio: 16/9;                /* คง 16:9 */
+  aspect-ratio: 16 / 9;
   object-fit: cover;
   display: block;
 }
 
-/* กรณีการ์ดเป็นปุ่ม (แทน <a>) */
+/* ปุ่ม-การ์ด */
 .gallery-item.as-button {
   background: none;
   padding: 0;
-  border: 1px solid #ddd;
+  border: 1px solid #dddddd;
   width: 100%;
   text-align: inherit;
   cursor: pointer;
 }
 
-
-/* ===================== 6.4 VIDEO OVERLAY (ปุ่มเล่น) ===================== */
+/* วิดีโอ overlay */
 .gallery-item.is-video::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(transparent 0 42%, rgba(0,0,0,.16) 43% 100%);
+  background: radial-gradient(transparent 0 42%, rgba(0,0,0,0.16) 43% 100%);
   pointer-events: none;
 }
+
 .gallery-item.is-video::before {
   content: "";
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%,-50%);
+  transform: translate(-50%, -50%);
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  background: rgba(0,0,0,.58);
-  box-shadow: 0 2px 6px rgba(0,0,0,.22);
+  background: rgba(0,0,0,0.58);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.22);
   pointer-events: none;
   -webkit-mask:
-    radial-gradient(closest-side, transparent 59%, #000 60%) top left/100% 100% no-repeat,
-    conic-gradient(from 0deg at 46% 50%, transparent 0 60deg, #000 60deg 300deg, transparent 300deg) center/60% 60% no-repeat;
+    radial-gradient(closest-side, transparent 59%, #000000 60%) top left / 100% 100% no-repeat,
+    conic-gradient(from 0deg at 46% 50%, transparent 0 60deg, #000000 60deg 300deg, transparent 300deg) center / 60% 60% no-repeat;
   mask:
-    radial-gradient(closest-side, transparent 59%, #000 60%) top left/100% 100% no-repeat,
-    conic-gradient(from 0deg at 46% 50%, transparent 0 60deg, #000 60deg 300deg, transparent 300deg) center/60% 60% no-repeat;
+    radial-gradient(closest-side, transparent 59%, #000000 60%) top left / 100% 100% no-repeat,
+    conic-gradient(from 0deg at 46% 50%, transparent 0 60deg, #000000 60deg 300deg, transparent 300deg) center / 60% 60% no-repeat;
 }
+
 .gallery-item.is-video:hover::before {
-  background: rgba(0,0,0,.7);
+  background: rgba(0,0,0,0.70);
 }
 
-
-/* ===================== 6.5 HOVER EFFECT ===================== */
 .gallery-item:hover {
   transform: translateY(-1px);
-  box-shadow: 0 5px 12px rgba(0,0,0,.06);
+  box-shadow: 0 5px 12px rgba(0,0,0,0.06);
   border-color: #cfcfcf;
 }
 
-
-/* ===================== 6.6 RESPONSIVE ===================== */
 @media (max-width: 1100px) {
-  .gallery-grid { grid-template-columns: repeat(3, 1fr); }
+  .gallery-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
+
 @media (max-width: 800px) {
-  .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+  .gallery-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
+
 @media (max-width: 520px) {
-  .gallery-grid { grid-template-columns: 1fr; }
+  .gallery-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
-
-/* ===================== 6.7 EXPAND MODE (See more → สกรอลล์แนวนอน) ===================== */
+/* โหมด See more → แถวแนวนอน */
 .gallery-grid.is-expanded {
   display: grid;
-  grid-auto-flow: column;                 /* เรียงเป็นคอลัมน์ยาว */
-  grid-auto-columns: minmax(220px, 1fr);  /* ความกว้างการ์ดในโหมดเลื่อน */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 1fr);
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
 }
+
 .gallery-grid.is-expanded .gallery-item {
   scroll-snap-align: start;
 }
 
 
-/* ===================== 6.8 LIGHTBOX ===================== */
+/* ===================== [12] LIGHTBOX ===================== */
+
 .lightbox {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.7);
+  background: rgba(0,0,0,0.70);
   display: grid;
   place-items: center;
   z-index: 1000;
 }
+
 .lightbox-inner {
   position: relative;
   max-width: 92vw;
   max-height: 86vh;
   border-radius: 10px;
   overflow: hidden;
-  background: #000;
-  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+  background: #000000;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.40);
 }
+
 .lightbox-inner img {
   display: block;
   max-width: 92vw;
@@ -891,6 +925,7 @@
   height: auto;
   object-fit: contain;
 }
+
 .lightbox-close {
   position: absolute;
   top: 8px;
@@ -899,69 +934,36 @@
   height: 36px;
   border: none;
   border-radius: 50%;
-  background: rgba(255,255,255,.18);
-  color: #fff;
+  background: rgba(255,255,255,0.18);
+  color: #ffffff;
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
 }
+
 .lightbox-close:hover {
-  background: rgba(255,255,255,.28);
+  background: rgba(255,255,255,0.28);
 }
 
 
+/* ===== Put doc buttons at the bottom of the left card ===== */
 
+/* ให้คอลัมน์ในกริดยืดเต็มแทร็ก (สำคัญ) */
+.profile-grid {
+  align-items: stretch;
+}
 
-
-
-
-
-
-
-
-
-
-
-
-/* ===== Doc buttons row: ไม่เลื่อน, ไม่ตัดบรรทัด, อยู่แถวเดียวเสมอ ===== */
-.doc-row{
+/* กล่องซ้ายเป็นคอลัมน์แบบ flex ทั้งใบ */
+.left-box {
   display: flex;
-  flex-wrap: nowrap;          /* ห้ามตัดบรรทัด */
-  justify-content: center;    /* อยากชิดซ้ายเปลี่ยนเป็น flex-start */
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  overflow: visible;          /* ไม่ให้มีแถบเลื่อน */
+  flex-direction: column;
+  /* คุณมี padding/background/border-radius เดิมอยู่แล้ว จะยังทำงานตามปกติ */
+  min-height: 100%;  /* เผื่อบางเคสในเบราว์เซอร์เก่า */
 }
 
-/* ปรับปุ่มให้ “ย่อได้” เพื่อให้พอดีกับแถวเดียว */
-.doc-row .epk-pill{
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;                       /* ไม่ให้ข้อความในปุ่มตัดบรรทัด */
-  height: 40px;
-  padding: 10px 16px 10px 18px;
-  border-radius: 999px;
-  font-size: clamp(12px, 1.6vw, 14px);      /* ย่อ/ขยายตามความกว้าง */
+/* ดันแถวปุ่มลงล่างสุดของกล่องซ้าย */
+.left-box .doc-row {
+  margin-top: auto;
+  /* ถ้าอยากให้มีระยะห่างจากขอบล่างเพิ่ม: */
+  /* margin-bottom: 4px; */
 }
-
-/* จุดกลมในปุ่มให้ย่อด้วย */
-.doc-row .epk-dot{
-  width: clamp(24px, 1.9vw, 30px);
-  height: clamp(24px, 1.9vw, 30px);
-}
-
-/* ย่อ padding เพิ่มเมื่อตัวหน้าจอเริ่มแคบ เพื่อคง 3 ปุ่มในแถวเดียว */
-@media (max-width: 900px){
-  .doc-row .epk-pill{ padding: 8px 14px 8px 14px; height: 36px; }
-}
-@media (max-width: 740px){
-  .doc-row{ gap: 8px; }
-  .doc-row .epk-pill{ padding: 6px 12px 6px 12px; height: 34px; }
-}
-@media (max-width: 520px){
-  .doc-row{ gap: 6px; }
-  .doc-row .epk-pill{ padding: 6px 10px; height: 32px; font-size: 12px; }
-  .doc-row .epk-dot{ width: 24px; height: 24px; }
-}
-

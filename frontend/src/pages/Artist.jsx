@@ -550,6 +550,101 @@ export default function Artist() {
             </ul>
           </section>
 
+          {/* <hr className="big-divider" /> */}
+
+
+
+
+          {/* ===================== [6] GALLERY (Photos top / Videos bottom, mock + See more) ===================== */}
+          {/* ===================== [6] GALLERY ===================== */}
+          <section className="gallery small" aria-label="Artist gallery">
+            <div className="gallery-top">
+              <h2 className="gallery-title">GALLERY</h2>
+              <p className="gallery-quote">Photos on top, videos below.</p>
+            </div>
+
+            {/* ---------- Photos Row ---------- */}
+            {imagesAll.length > 0 && (
+              <div className="gallery-row">
+                <div className="gallery-row-head">
+                  <h3 className="gallery-row-title">Photos</h3>
+                  {hasMoreImages ? (
+                    <button className="gallery-see-more" type="button" onClick={() => setShowAllImages(true)}>
+                      See more →
+                    </button>
+                  ) : showAllImages ? (
+                    <button className="gallery-see-more" type="button" onClick={() => setShowAllImages(false)}>
+                      ← See less
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className={`gallery-grid g-4 ${showAllImages ? "is-expanded" : ""}`}>
+                  {imagesToShow.map((it, i) => (
+                    <button
+                      key={`img-${i}`}
+                      type="button"
+                      className="gallery-item as-button"
+                      onClick={() => openLightbox(showAllImages ? i : i)}  /* index ตามลิสต์ที่โชว์ */
+                      aria-label={it.alt || "Open image"}
+                      title={it.alt || "Open image"}
+                    >
+                      <img className="galler  y-media" src={it.src} alt={it.alt || ""} loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ---------- Videos Row ---------- */}
+            {videosAll.length > 0 && (
+              <div className="gallery-row">
+                <div className="gallery-row-head">
+                  <h3 className="gallery-row-title">Videos</h3>
+                  {hasMoreVideos ? (
+                    <button className="gallery-see-more" type="button" onClick={() => setShowAllVideos(true)}>
+                      See more →
+                    </button>
+                  ) : showAllVideos ? (
+                    <button className="gallery-see-more" type="button" onClick={() => setShowAllVideos(false)}>
+                      ← See less
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className={`gallery-grid g-4 ${showAllVideos ? "is-expanded" : ""}`}>
+                  {videosToShow.map((it, i) => (
+                    <div className="gallery-item is-video" key={`vid-${i}`}>
+                      <video
+                        className="gallery-media"
+                        controls
+                        preload="metadata"
+                        poster={it.poster || undefined}
+                        aria-label={it.alt || "Artist video"}
+                      >
+                        <source src={it.src} />
+                      </video>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ---------- Lightbox (เฉพาะรูป) ---------- */}
+            {lightbox.open && (
+              <div className="lightbox" role="dialog" aria-modal="true" onClick={closeLightbox}>
+                <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
+                  <img
+                    src={(showAllImages ? imagesAll : imagesToShow)[lightbox.index]?.src}
+                    alt={(showAllImages ? imagesAll : imagesToShow)[lightbox.index]?.alt || ""}
+                  />
+                  <button className="lightbox-close" type="button" onClick={closeLightbox} aria-label="Close">×</button>
+                </div>
+              </div>
+            )}
+          </section>
+
+
           <hr className="big-divider" />
 
           {/* OTHER (mock) */}
