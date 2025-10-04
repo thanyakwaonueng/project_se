@@ -1523,7 +1523,80 @@ app.get('/myevents', authMiddleware, async (req, res) => {
   }
 });
 
+async function fanoutPublishNotifications(prismaClient, ev) {
+  const eventName = ev.name || `Event #${ev.id}`;
+  const venueName = ev?.venue?.performer?.user?.name || ev?.venue?.name || 'สถานที่';
+  const hhmm = (t) => {
+    if (!t) return null;
+    const m = String(t).match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const hh = String(Math.min(23, +m[1])).padStart(2, '0');
+    const mm = String(Math.min(59, +m[2])).padStart(2, '0');
+    return `${hh}:${mm}`;
+  };
+  const timeRange = [hhmm(ev.doorOpenTime), hhmm(ev.endTime)].filter(Boolean).join('–') || 'เวลาไม่ระบุ';
 
+  // ===== 1) ผู้ติดตามศิลปินที่ "ACCEPTED" =====
+  const acceptedAEs = (ev.artistEvents || []).filter(ae => String(ae.status).toUpperCase() === 'ACCEPTED');
+  const artistIds = acceptedAEs.map(ae => ae.artistId);
+  const artistIdToName = new Map(
+    acceptedAEs.map(ae => [ae.artistId, ae?.artist?.performer?.user?.name || `Artist #${ae.artistId}`])
+  );
+
+  const artistFollowers = artistIds.length
+    ? await prismaClient.likePerformer.findMany({
+        where: { performerId: { in: artistIds } },
+        select: { userId: true, performerId: true },
+      })
+    : [];
+
+  // group: userId -> Set(artistId)
+  const byUser = new Map();
+  for (const { userId, performerId } of artistFollowers) {
+    if (!byUser.has(userId)) byUser.set(userId, new Set());
+    byUser.get(userId).add(performerId);
+  }
+
+  const notified = new Set();
+
+  for (const [userId, setIds] of byUser.entries()) {
+    const ids = Array.from(setIds);
+    const firstName = artistIdToName.get(ids[0]) || 'ศิลปิน';
+    const more = ids.length - 1;
+    const artistLabel = more > 0 ? `${firstName} และอีก ${more} คน` : firstName;
+
+    const msg = `ศิลปินที่คุณชื่นชอบ ${artistLabel} จะขึ้นแสดงในงาน “${eventName}” ที่ ${venueName} เวลา ${timeRange}`;
+    await prismaClient.notification.create({
+      data: {
+        userId,
+        type: 'event.published.artist_follow',
+        message: msg,
+        data: { eventId: ev.id, venueId: ev.venueId, artistIds: ids },
+      },
+    });
+    notified.add(userId);
+  }
+
+  // ===== 2) คนที่ "กดไลก์อีเวนต์นี้" (likeEvent) — ข้อความ: งานเผยแพร่แล้ว: … =====
+  const eventLikers = await prismaClient.likeEvent.findMany({
+    where: { eventId: ev.id },
+    select: { userId: true },
+  });
+
+  for (const { userId } of eventLikers) {
+    if (notified.has(userId)) continue; // เลี่ยงซ้ำกับกลุ่มผู้ติดตามศิลปิน
+    const msg = `งานเผยแพร่แล้ว: “${eventName}” เวลา ${timeRange}`;
+    await prismaClient.notification.create({
+      data: {
+        userId,
+        type: 'event.published.generic',
+        message: msg,
+        data: { eventId: ev.id },
+      },
+    });
+    notified.add(userId);
+  }
+}
 app.post('/events/:id/publish', authMiddleware, async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -1532,18 +1605,23 @@ app.post('/events/:id/publish', authMiddleware, async (req, res) => {
     const ev = await prisma.event.findUnique({
       where: { id },
       include: {
-        artistEvents: true,
-        venue: true,
-      },
+        venue: { include: { performer: { include: { user: true } } } },
+        artistEvents: {
+          where: { status: { in: ['ACCEPTED', 'PENDING'] } },
+          include: { artist: { include: { performer: { include: { user: true } } } } }
+        }
+      }
     });
     if (!ev) return res.status(404).json({ error: 'Event not found' });
 
-    // สิทธิ์: ADMIN ได้หมด / ORGANIZE ต้องเป็นเจ้าของ (venueId = user.id)
-    const canPublish = req.user.role === 'ADMIN' || (req.user.role === 'ORGANIZE' && ev.venueId === req.user.id);
+    const canPublish = req.user.role === 'ADMIN' ||
+      (req.user.role === 'ORGANIZE' && ev.venueId === req.user.id);
     if (!canPublish) return res.sendStatus(403);
 
-    const readiness = summarizeReadiness(ev.artistEvents || []);
-    if (!readiness.isReady) {
+    const totalInvited = (ev.artistEvents || []).length;
+    const accepted = (ev.artistEvents || []).filter(ae => String(ae.status).toUpperCase() === 'ACCEPTED').length;
+    const ready = totalInvited > 0 && accepted === totalInvited;
+    if (!ready) {
       return res.status(400).json({ error: 'Event is not ready. All invited artists must ACCEPT first.' });
     }
 
@@ -1556,16 +1634,11 @@ app.post('/events/:id/publish', authMiddleware, async (req, res) => {
       data: { isPublished: true, publishedAt: new Date() },
     });
 
-    // แจ้งฐานผู้ติดตาม/ผู้ที่เกี่ยวข้องว่า "งานเผยแพร่แล้ว"
     try {
-      await fanout(
-        prisma,
-        await getAudienceForEventUpdate(prisma, updated.id),
-        'event.published',
-        `งานเผยแพร่แล้ว: ${ev.name}`,
-        { eventId: updated.id }
-      );
-    } catch (e) { console.error('FANOUT_publish_error', e); }
+      await fanoutPublishNotifications(prisma, ev); // ⬅️ ใช้ฟังก์ชันใหม่ด้านล่าง
+    } catch (e) {
+      console.error('FANOUT_publish_error', e);
+    }
 
     res.json({ ok: true, event: updated });
   } catch (e) {
@@ -1573,6 +1646,7 @@ app.post('/events/:id/publish', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Publish failed' });
   }
 });
+
 
 
 /* ───────────────────────────── ARTIST INVITES ─────────── */
@@ -1843,11 +1917,16 @@ app.post('/events/:id/cancel', authMiddleware, async (req, res) => {
   if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid event id' });
 
   try {
-    // 1) โหลด event เพื่อเช็คสิทธิ์ + เก็บข้อมูลไว้ใช้แจ้งเตือน “ล่วงหน้า”
+    // 1) โหลด event + รายการเชิญ (เอาสถานะมาด้วย)
     const ev = await prisma.event.findUnique({
       where: { id },
       include: {
-        artistEvents: { select: { artistId: true } },
+        artistEvents: {
+          select: { artistId: true, status: true },
+        },
+        venue: {
+          select: { performer: { select: { user: { select: { name: true } } } } }
+        },
         _count: { select: { likedBy: true } },
       },
     });
@@ -1856,7 +1935,13 @@ app.post('/events/:id/cancel', authMiddleware, async (req, res) => {
     const canCancel = (req.user.role === 'ADMIN') || (req.user.role === 'ORGANIZE' && ev.venueId === req.user.id);
     if (!canCancel) return res.sendStatus(403);
 
-    // 2) ลบทั้งหมดให้ “หายจริง” (ใน transaction เดียว)
+    // 2) แยกศิลปินตามสถานะ เพื่อใช้ข้อความที่เหมาะสม
+    const norm = (s) => String(s || '').toUpperCase();
+    const acceptedArtistIds = ev.artistEvents.filter(ae => norm(ae.status) === 'ACCEPTED').map(ae => ae.artistId);
+    const pendingArtistIds  = ev.artistEvents.filter(ae => norm(ae.status) === 'PENDING').map(ae => ae.artistId);
+    const otherArtistIds    = ev.artistEvents.filter(ae => !['ACCEPTED','PENDING'].includes(norm(ae.status))).map(ae => ae.artistId);
+
+    // 3) ลบทั้งหมดให้ “หายจริง” (ใน transaction เดียว)
     await prisma.$transaction([
       prisma.scheduleSlot.deleteMany({ where: { eventId: ev.id } }),
       prisma.artistEvent.deleteMany({ where: { eventId: ev.id } }),
@@ -1864,44 +1949,93 @@ app.post('/events/:id/cancel', authMiddleware, async (req, res) => {
       prisma.event.delete({ where: { id: ev.id } }),
     ]);
 
-    // 3) ตอบกลับ “สำเร็จ” ให้ FE ทันที
+    // 4) ตอบกลับ “สำเร็จ” ให้ FE ทันที
     res.json({ ok: true, deleted: true });
 
-    // 4) ทำแจ้งเตือนแบบ async (ไม่กระทบ HTTP response อีกแล้ว)
+    // 5) ทำแจ้งเตือนแบบ async (ไม่กระทบ HTTP response)
     setImmediate(async () => {
       try {
-        const invitedArtistIds = Array.from(new Set(ev.artistEvents.map(ae => ae.artistId)));
-        if (invitedArtistIds.length) {
+        const venueName = ev?.venue?.performer?.user?.name || '';
+
+        // 5.1 แจ้ง "ศิลปิน"
+        // - ACCEPTED: งานที่คุณยืนยันการแสดงถูกยกเลิกแล้ว…
+        if (acceptedArtistIds.length) {
           await fanout(
             prisma,
-            invitedArtistIds,
-            'event.canceled',
-            `คำเชิญงาน "${ev.name}" ถูกยกเลิกแล้ว${reason ? `: ${reason}` : ''}`,
+            acceptedArtistIds,
+            'event.canceled.artist_self',
+            `งานที่คุณได้ยืนยันการแสดงถูกยกเลิกแล้ว: "${ev.name}"${venueName ? ` @${venueName}` : ''}${reason ? ` — เหตุผล: ${reason}` : ''}`,
             { eventId: id, reason }
           );
         }
+
+        // - PENDING (และสถานะอื่นๆ): คำเชิญถูกยกเลิก…
+        const pendingLikeIds = [...new Set([...pendingArtistIds, ...otherArtistIds])];
+        if (pendingLikeIds.length) {
+          await fanout(
+            prisma,
+            pendingLikeIds,
+            'artist_event.uninvited',
+            `คำเชิญแสดงในงาน "${ev.name}" ถูกยกเลิกโดยผู้จัด${reason ? ` — เหตุผล: ${reason}` : ''}`,
+            { eventId: id, reason }
+          );
+        }
+
+        // 5.2 ถ้าเคยเผยแพร่ → แจ้ง audience ที่กดไลก์งาน
         if (ev.isPublished) {
           const likers = await prisma.likeEvent.findMany({ where: { eventId: id }, select: { userId: true } });
-          const audienceIds = Array.from(new Set(likers.map(l => l.userId)));
-          if (audienceIds.length) {
+          const likeAudienceIds = Array.from(new Set(likers.map(l => l.userId)));
+          if (likeAudienceIds.length) {
             await fanout(
               prisma,
-              audienceIds,
-              'event.canceled',
-              `งาน "${ev.name}" ถูกยกเลิกแล้ว${reason ? `: ${reason}` : ''}`,
+              likeAudienceIds,
+              'event.canceled.generic',
+              `งาน "${ev.name}" ถูกยกเลิกแล้ว${reason ? ` — เหตุผล: ${reason}` : ''}`,
               { eventId: id, reason }
+            );
+          }
+        }
+
+        // 5.3 ใหม่ (I4): แจ้ง "ผู้ติดตามศิลปินที่ยืนยันเล่น" ว่างานของศิลปินที่ติดตามถูกยกเลิก
+        if (acceptedArtistIds.length) {
+          // หาชื่อศิลปินที่ยืนยันไว้ เพื่อประกอบข้อความ
+          const acceptedArtists = await prisma.artist.findMany({
+            where: { performerId: { in: acceptedArtistIds } },
+            select: {
+              performerId: true,
+              performer: { select: { user: { select: { name: true } } } },
+            },
+          });
+          const acceptedNames = acceptedArtists.map(a =>
+            a?.performer?.user?.name || `Artist #${a.performerId}`
+          );
+
+          // รวมผู้ติดตามของศิลปินที่ยืนยัน
+          const followerLists = await Promise.all(
+            acceptedArtistIds.map(aid => getFollowersOfArtist(prisma, aid))
+          );
+          const artistFollowerIds = Array.from(new Set(followerLists.flat()));
+
+          if (artistFollowerIds.length) {
+            // สรุปชื่อในข้อความ: "<A>" หรือ "<A> และอีก N คน"
+            const firstName = acceptedNames[0];
+            const extra = acceptedNames.length > 1 ? ` และอีก ${acceptedNames.length - 1} คน` : '';
+            await fanout(
+              prisma,
+              artistFollowerIds,
+              'event.canceled.artist_follow',
+              `งาน "${ev.name}" ของศิลปินที่คุณติดตาม ${firstName}${extra} ถูกยกเลิกแล้ว${reason ? ` — เหตุผล: ${reason}` : ''}`,
+              { eventId: id, artists: acceptedArtistIds, reason }
             );
           }
         }
       } catch (bgErr) {
         console.error('FANOUT_cancel_async_error', bgErr);
-        // กลืน error ไว้ ไม่ให้มีผลกับ response ที่ส่งไปแล้ว
       }
     });
 
   } catch (e) {
     console.error('POST /events/:id/cancel error', e);
-    // ตรงนี้จะเหลือเฉพาะกรณีล้มเหลวก่อนหรือระหว่างลบเท่านั้น
     res.status(500).json({ error: 'Cancel failed' });
   }
 });
