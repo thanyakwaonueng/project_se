@@ -5,7 +5,6 @@ import api, { extractErrorMessage } from '../lib/api';
 import '../css/EventDetail.css';
 
 /* ========== helpers ========== */
-// en-US date like "october 21, 2025" (lowercase month)
 function formatDateEN(iso) {
   if (!iso) return '—';
   try {
@@ -55,11 +54,11 @@ function InviteModal({
   eventId,
   initial,
   onSaved,
-  windowStartHHMM,   // HH:MM of doorOpenTime (optional)
-  windowEndHHMM,     // HH:MM of endTime (optional)
-  invitedIds = [],   // already invited artistIds
+  windowStartHHMM,
+  windowEndHHMM,
+  invitedStatusMap = new Map(), // <-- เปลี่ยนจาก invitedIds เป็น map: artistId -> STATUS
 }) {
-  const DURATIONS = [15, 30, 45, 60, 90, 120]; // minutes
+  const DURATIONS = [15, 30, 45, 60, 90, 120];
 
   const [loadingArtists, setLoadingArtists] = useState(false);
   const [artists, setArtists] = useState([]);
@@ -67,7 +66,7 @@ function InviteModal({
   const [selectedId, setSelectedId] = useState(initial?.artistId ?? null);
   const [warn, setWarn] = useState('');
 
-  // replace declined mode
+  // replace declined mode (ยังคงไว้ได้)
   const replaceDeclinedId = (initial?.status === 'DECLINED' && initial?.aeId) ? initial.aeId : null;
   const isReplaceMode = !!replaceDeclinedId;
 
@@ -141,14 +140,27 @@ function InviteModal({
     return artists.filter(a => displayName(a).toLowerCase().includes(s));
   }, [artists, q]);
 
-  const alreadyInvited = (id) => invitedIds?.includes?.(Number(id));
+  // ====== logic C6: เชิญคนที่เคย DECLINED/CANCELED ได้ ======
+  const statusOf = (id) => {
+    const key = Number(id);
+    if (invitedStatusMap instanceof Map) return invitedStatusMap.get(key);
+    return invitedStatusMap?.[key];
+  };
+  const isReinvitable = (id) => {
+    const st = String(statusOf(id) || '').toUpperCase();
+    return st === 'DECLINED' || st === 'CANCELED';
+  };
+  const isActiveInLineup = (id) => {
+    const st = String(statusOf(id) || '').toUpperCase();
+    // บล็อคเฉพาะที่ยัง active อยู่: PENDING / ACCEPTED (หรือสถานะอื่นที่ควรนับว่า active)
+    return st === 'PENDING' || st === 'ACCEPTED';
+  };
 
   const validate = () => {
-    if (selectedId && alreadyInvited(selectedId)) {
+    if (selectedId && isActiveInLineup(selectedId)) {
+      // อนุญาตก็ต่อเมื่อเป็น replace mode ของคนเดิม
       const isSameDeclinedArtist = isReplaceMode && Number(selectedId) === Number(initial?.artistId);
-      if (!isSameDeclinedArtist) {
-        return 'This artist is already in the lineup.';
-      }
+      if (!isSameDeclinedArtist) return 'This artist is already in the current lineup.';
     }
     const st = normTime(form.startTime);
     const et = normTime(form.endTime);
@@ -166,7 +178,7 @@ function InviteModal({
   useEffect(() => {
     setWarn(validate());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, form.startTime, form.endTime, windowStartHHMM, windowEndHHMM, invitedIds]);
+  }, [selectedId, form.startTime, form.endTime, windowStartHHMM, windowEndHHMM, invitedStatusMap]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -181,9 +193,22 @@ function InviteModal({
       endTime: normTime(form.endTime),
       ...(isReplaceMode ? { replaceDeclinedOf: replaceDeclinedId } : {}),
     };
-    await api.post('/artist-events/invite', payload, { withCredentials: true });
-    onSaved?.();
-    onClose?.();
+
+    try {
+      await api.post('/artist-events/invite', payload, { withCredentials: true });
+      onSaved?.();
+      onClose?.();
+    } catch (err) {
+      const m =
+        err?.response?.data?.message ||
+        err?.message ||
+        'เชิญศิลปินไม่สำเร็จ';
+      const details = err?.response?.data?.details;
+      const extra = Array.isArray(details) && details.length
+        ? ' • ' + details.map(d => `${d.artistName} (${d.status}) ${d.start}–${d.end}`).join(' | ')
+        : '';
+      setWarn(m + extra);
+    }
   };
 
   if (!open) return null;
@@ -222,9 +247,12 @@ function InviteModal({
             {filtered.map(a => {
               const id = a.performerId;
               const sel = Number(selectedId) === Number(id);
+              const active = isActiveInLineup(id);
+              const reinvitable = isReinvitable(id);
               const disabled =
-                alreadyInvited(id) &&
+                active &&
                 !(isReplaceMode && Number(id) === Number(initial?.artistId));
+
               return (
                 <div
                   key={id}
@@ -237,13 +265,23 @@ function InviteModal({
                        onError={(e)=>{e.currentTarget.src='/img/graphic-3.png';}} />
                   <div className="artist-info">
                     <div className="artist-name" title={displayName(a)}>{displayName(a)}</div>
-                    <div className="artist-actions">
+                    <div className="artist-actions" style={{gap:6}}>
                       <Link to={`/artists/${id}`} className="btn-xs">View detail</Link>
-                      {disabled
-                        ? <span className="pill" style={{opacity:.75}}>Already in lineup</span>
+                      {active && !isReplaceMode
+                        ? <span className="pill" style={{opacity:.8}}>Already in lineup</span>
                         : <span className={`pill ${sel ? 'on':''}`}>{sel ? 'Selected' : 'Select'}</span>
                       }
+                      {reinvitable && (
+                        <span className="pill" title="Previously declined – reinvite allowed">
+                          Reinvite OK
+                        </span>
+                      )}
                     </div>
+                    {reinvitable && (
+                      <div style={{fontSize:12, color:'#64748b', marginTop:4}}>
+                        Previously declined/canceled — you can invite again.
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -264,7 +302,7 @@ function InviteModal({
           {/* Quick slots */}
           {(() => {
             const slots = [];
-            const step = 30; // every 30 min
+            const step = 30;
             const d = Number(form.duration) || 60;
             const minM = windowStartHHMM ? toMin(windowStartHHMM) : 18*60;
             const maxM = windowEndHHMM   ? toMin(windowEndHHMM)   : 24*60;
@@ -285,7 +323,6 @@ function InviteModal({
           })()}
 
           <div className="grid2">
-            {/* Start time */}
             <label>Start time
               <input
                 type="time"
@@ -299,7 +336,6 @@ function InviteModal({
               />
             </label>
 
-            {/* Duration */}
             <label>Duration
               <div className="duration-wrap">
                 <select
@@ -320,12 +356,10 @@ function InviteModal({
             </label>
           </div>
 
-          {/* End time preview */}
           <div className="kv" style={{marginTop:4}}>
             <b>End time</b><span>{form.endTime || '—'}</span>
           </div>
 
-          {/* Actions */}
           <div className="act">
             <button type="button" className="btn" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn primary" disabled={!selectedId || !!warn}>
@@ -347,7 +381,7 @@ const badgeCss = {
   height: 'fit-content'
 };
 
-/* ===== Schedule component (EN labels) ===== */
+/* ===== Schedule component ===== */
 function BasicSchedule({ rows, minM, maxM, onBarClick, onCancelInvite, canCancelInvite, isPublished }) {
   const total = Math.max(1, maxM - minM);
   const percent = (m) => ((m - minM) / total) * 100;
@@ -452,7 +486,6 @@ export default function EventDetail() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
 
-  // cancel-event UI state
   const [deleting, setDeleting] = useState(false);
 
   const fetchEvent = async () => {
@@ -501,7 +534,6 @@ export default function EventDetail() {
     } finally { setBusy(false); }
   };
 
-  // edit lineup only when not published & owner/admin
   const canEdit = useMemo(() => {
     if (!me || !ev?.venue) return false;
     const isOrg = me.role === 'ORGANIZE' || me.role === 'ADMIN';
@@ -524,10 +556,9 @@ export default function EventDetail() {
     }
   };
 
-  // delete event allowed for owner/admin
   const canDeleteEvent = !!(ev?._isOwner);
 
-  // schedule rows
+  // ตาราง lineup (เหมือนเดิม)
   const scheduleRows = useMemo(() => {
     const rows = [];
     const aes = Array.isArray(ev?.artistEvents) ? ev.artistEvents : [];
@@ -579,12 +610,16 @@ export default function EventDetail() {
       });
   }, [ev]);
 
-  const invitedIds = useMemo(() => {
+  // 🔄 เปลี่ยนจาก invitedIds เป็น invitedStatusMap (artistId -> STATUS)
+  const invitedStatusMap = useMemo(() => {
     const aes = Array.isArray(ev?.artistEvents) ? ev.artistEvents : [];
-    return aes.map(ae => Number(ae.artistId));
+    const mp = new Map();
+    for (const ae of aes) {
+      mp.set(Number(ae.artistId), String(ae.status || '').toUpperCase());
+    }
+    return mp;
   }, [ev]);
 
-  // display window range
   const windowRange = useMemo(() => {
     const eventStart = normTime(ev?.doorOpenTime);
     const eventEnd   = normTime(ev?.endTime);
@@ -607,7 +642,6 @@ export default function EventDetail() {
     return { minM, maxM, startHH: minToHHMM(minM), endHH: minToHHMM(maxM), rawStart: eventStart, rawEnd: eventEnd };
   }, [ev, scheduleRows]);
 
-  // actions
   const onCancelInvite = async (row) => {
     if (!row?.artistId || !ev?.id) return;
     if (!window.confirm(`Cancel invite for "${row.name}"?`)) return;
@@ -626,7 +660,6 @@ export default function EventDetail() {
     setDeleting(true);
     try {
       await api.post(`/events/${ev.id}/cancel`, { reason: reason || null }, { withCredentials: true });
-      // go back after delete
       navigate(location.pathname.startsWith('/myevents') ? '/myevents' : '/events', { replace: true });
     } catch (e) {
       alert(extractErrorMessage?.(e, 'Delete failed') || 'Delete failed');
@@ -656,7 +689,6 @@ export default function EventDetail() {
 
   return (
     <div className="page">
-      {/* Owner notice */}
       {ev?._isOwner && ev?._ready && !ev._ready.isReady && (
         <div className="note" style={{ background:'#fff3cd', border:'1px solid #ffe69c', color:'#664d03', marginBottom:12 }}>
           This event is not public yet: waiting for artist acceptance {ev._ready.accepted}/{ev._ready.totalInvited}
@@ -664,7 +696,6 @@ export default function EventDetail() {
         </div>
       )}
 
-      {/* HERO */}
       <div className="ed-hero" style={{ backgroundImage: `url(${poster})` }}>
         <div className="ed-hero-inner">
           <div className="ed-hero-left">
@@ -754,7 +785,6 @@ export default function EventDetail() {
           </div>
         </div>
 
-        {/* Status strip */}
         {ev?.isPublished ? (
           <div className="note" style={{ background: '#eef6ff', border: '1px solid #bfdbfe', color: '#1e40af', marginBottom: 10 }}>
             This event is published (read-only). You can’t modify the lineup.
@@ -767,7 +797,6 @@ export default function EventDetail() {
           </div>
         ) : null}
 
-        {/* Timeline */}
         {scheduleRows.length === 0 ? (
           <div className="empty">—</div>
         ) : (
@@ -777,7 +806,7 @@ export default function EventDetail() {
             maxM={windowRange.maxM}
             onBarClick={canEdit ? (row)=>{ setEditing(row); setModalOpen(true); } : undefined}
             onCancelInvite={onCancelInvite}
-            canCancelInvite={!!(ev?._isOwner)}   // allow owner/admin to see "CANCEL INVITE" (button disables itself if published or not PENDING)
+            canCancelInvite={!!(ev?._isOwner)}
             isPublished={!!ev?.isPublished}
           />
         )}
@@ -791,7 +820,7 @@ export default function EventDetail() {
           onSaved={fetchEvent}
           windowStartHHMM={windowRange.rawStart || null}
           windowEndHHMM={windowRange.rawEnd || null}
-          invitedIds={invitedIds}
+          invitedStatusMap={invitedStatusMap} // <-- ส่ง map สถานะไปแทน
         />
       </section>
     </div>

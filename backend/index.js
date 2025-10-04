@@ -38,7 +38,7 @@ const port = process.env.PORT || 4000;
 
 
 /**
- * ✅ รองรับ FE ที่เรียก /api/* โดยรีไรท์เป็นเส้นทางเดิม
+ *  รองรับ FE ที่เรียก /api/* โดยรีไรท์เป็นเส้นทางเดิม
  *    เช่น /api/groups -> /groups
  *    วาง middleware นี้ไว้ "ก่อน" ประกาศ route ทั้งหมด
  */
@@ -160,7 +160,7 @@ function summarizeReadiness(artistEvents = []) {
     else if (st === 'CANCELED') canceled += 1;
   }
 
-  // ✅ นับ “totalInvited” เฉพาะคนที่ยัง active (PENDING/ACCEPTED)
+  //  นับ “totalInvited” เฉพาะคนที่ยัง active (PENDING/ACCEPTED)
   const totalInvited = accepted + pending;
 
   return {
@@ -172,7 +172,7 @@ function summarizeReadiness(artistEvents = []) {
     declined,
     canceled,
 
-    // ✅ พร้อมเมื่อไม่มี PENDING และยังมีคนในไลน์อัปอย่างน้อย 1
+    //  พร้อมเมื่อไม่มี PENDING และยังมีคนในไลน์อัปอย่างน้อย 1
     isReady: totalInvited > 0 && pending === 0,
   };
 }
@@ -441,7 +441,7 @@ app.post('/googlesignup', async(req, res) =>{
     //Create Cookie like login function
     const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '1d' });
 
-    // ✅ Set cookie
+    //  Set cookie
     res.cookie('token', token, {
       httpOnly: true,
       sameSite: 'Lax',
@@ -748,7 +748,7 @@ app.get('/groups', async (req, res) => {
           a.performer?.user?.profilePhotoUrl ||
           "https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg",
 
-        // ✅ ส่งต่อ photo/video จาก ArtistRecord (ให้หน้า FE ใช้ได้เลย)
+        //  ส่งต่อ photo/video จาก ArtistRecord (ให้หน้า FE ใช้ได้เลย)
         photoUrl: heroPhoto || null,
         videoUrl: heroVideo || null,
 
@@ -920,7 +920,7 @@ app.get('/venues', async (_req, res) => {
   res.json(venues);
 });
 
-// ✅ GET /venues/:id — ใช้ id อย่างเดียว (ไม่ใช้ slug) และส่งค่า number จริงให้ Prisma
+//  GET /venues/:id — ใช้ id อย่างเดียว (ไม่ใช้ slug) และส่งค่า number จริงให้ Prisma
 app.get('/venues/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -930,7 +930,7 @@ app.get('/venues/:id', async (req, res) => {
 
     const venue = await prisma.venue.findUnique({
       // ❌ ห้ามเขียน performerId: Int
-      // ✅ ต้องส่งค่า id จริง
+      //  ต้องส่งค่า id จริง
       where: { performerId: id },
       include: {
         performer: { include: { user: true } },
@@ -1069,6 +1069,64 @@ app.post('/events', authMiddleware, async (req, res) => {
     });
     if (!venue) return res.status(400).json({ error: "Venue profile not found for this user" });
 
+    // ====== ⛔ ป้องกันเวลาชนกันภายใน venue เดียวกัน ======
+    // ต้องมี date + doorOpenTime + endTime และ end > start
+    const dateVal = data.date ? new Date(data.date) : null;
+    const toHHMM = (s) => {
+      if (!s) return null;
+      const m = String(s).match(/^(\d{1,2}):(\d{2})$/);
+      if (!m) return null;
+      const hh = Math.min(23, parseInt(m[1], 10));
+      const mm = Math.min(59, parseInt(m[2], 10));
+      return [hh, mm];
+    };
+    const startHM = toHHMM(data.doorOpenTime);
+    const endHM   = toHHMM(data.endTime);
+
+    if (dateVal && startHM && endHM) {
+      const startAt = new Date(dateVal.getFullYear(), dateVal.getMonth(), dateVal.getDate(), startHM[0], startHM[1], 0, 0);
+      const endAt   = new Date(dateVal.getFullYear(), dateVal.getMonth(), dateVal.getDate(), endHM[0], endHM[1], 0, 0);
+      if (endAt <= startAt) {
+        return res.status(400).json({ error: 'endTime must be later than doorOpenTime' });
+      }
+
+      // หาอีเวนต์วันเดียวกันใน venue เดียวกัน (ยกเว้นตัวเองถ้าเป็นการอัปเดต)
+      const dayStart = new Date(dateVal.getFullYear(), dateVal.getMonth(), dateVal.getDate(), 0, 0, 0, 0);
+      const dayEnd   = new Date(dateVal.getFullYear(), dateVal.getMonth(), dateVal.getDate() + 1, 0, 0, 0, 0);
+
+      const sameDayEvents = await prisma.event.findMany({
+        where: {
+          venueId: venue.performerId,
+          date: { gte: dayStart, lt: dayEnd },
+          ...(data.id ? { id: { not: Number(data.id) } } : {}),
+        },
+        select: { id: true, name: true, doorOpenTime: true, endTime: true, date: true },
+      });
+
+      // overlap: (newStart < existEnd) && (newEnd > existStart)
+      const parseExisting = (ev) => {
+        const hmS = toHHMM(ev.doorOpenTime);
+        const hmE = toHHMM(ev.endTime);
+        if (!hmS || !hmE) return null;
+        const s = new Date(ev.date.getFullYear(), ev.date.getMonth(), ev.date.getDate(), hmS[0], hmS[1], 0, 0);
+        const e = new Date(ev.date.getFullYear(), ev.date.getMonth(), ev.date.getDate(), hmE[0], hmE[1], 0, 0);
+        return { s, e };
+      };
+
+      const overlapped = sameDayEvents.find(ev => {
+        const t = parseExisting(ev);
+        return t && startAt < t.e && endAt > t.s;
+      });
+
+      if (overlapped) {
+        return res.status(409).json({
+          error: `Time overlaps with another event in this venue`,
+          conflictWith: { id: overlapped.id, name: overlapped.name || `Event #${overlapped.id}` }
+        });
+      }
+    }
+    // ====== ⛔ จบการเช็คชนกัน ======
+
     let event;
     let changed = [];
 
@@ -1117,7 +1175,7 @@ app.get('/events', async (req, res) => {
 
     const events = await prisma.event.findMany({
       where: {
-        isPublished: true, // ✅ แสดงเฉพาะงานที่กด Publish แล้ว
+        isPublished: true, //  แสดงเฉพาะงานที่กด Publish แล้ว
       },
       include: {
         venue: {
@@ -1203,7 +1261,7 @@ app.get('/events/:id', async (req, res) => {
     const isInvitedArtist =
       !!(me && me.role === 'ARTIST' && (ev.artistEvents || []).some(ae => ae.artistId === me.id));
 
-    // ✅ ใหม่: ถ้าไม่ใช่เจ้าของ/แอดมิน/ศิลปินที่ถูกเชิญ → ต้องเป็นงานที่ publish แล้วเท่านั้น
+    //  ใหม่: ถ้าไม่ใช่เจ้าของ/แอดมิน/ศิลปินที่ถูกเชิญ → ต้องเป็นงานที่ publish แล้วเท่านั้น
     if (!isOwnerOrAdmin && !isInvitedArtist && !ev.isPublished) {
       return res.status(404).json({ message: 'not found' });
     }
@@ -1542,6 +1600,7 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
       return res.sendStatus(403);
     }
 
+    // HH:MM -> Date ของวันงาน (อ่านเป็น local date ของงาน)
     const h2d = (hhmm) => {
       const m = String(hhmm).match(/^(\d{1,2}):(\d{2})$/);
       if (!m) return null;
@@ -1554,15 +1613,18 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'ช่วงเวลาไม่ถูกต้อง' });
     }
 
-    // overlap check: block only PENDING/ACCEPTED (ปล่อย DECLINED/CANCELED)
+    // ── A) กันชน “ภายในอีเวนต์เดียวกัน”
+    // หา slot อื่นในงานนี้ที่ทับเวลา และไม่ใช่ศิลปินคนเดียวกัน
     const rawOverlaps = await prisma.scheduleSlot.findMany({
       where: {
         eventId: eid,
         NOT: { artistId: aid },
         AND: [{ startAt: { lt: endAt } }, { endAt: { gt: startAt } }],
       },
-      select: { id: true, artistId: true },
+      select: { id: true, artistId: true, startAt: true, endAt: true },
     });
+
+    // วางสถานะจาก artistEvent เพื่อรู้ว่าอันไหนบล็อก (PENDING/ACCEPTED) หรือปล่อยได้ (DECLINED/CANCELED)
     const overlapArtistIds = Array.from(new Set(rawOverlaps.map(s => s.artistId).filter(Boolean)));
     const aeOfOverlaps = overlapArtistIds.length
       ? await prisma.artistEvent.findMany({
@@ -1571,15 +1633,85 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
         })
       : [];
     const statusMap = new Map(aeOfOverlaps.map(ae => [ae.artistId, (ae.status || '').toUpperCase()]));
+
     const blocking = [];
     const releasableSlotIds = [];
     for (const slot of rawOverlaps) {
       const st = (statusMap.get(slot.artistId) || '').toUpperCase();
-      if (st === 'ACCEPTED' || st === 'PENDING') blocking.push(slot);
-      else releasableSlotIds.push(slot.id);
+      if (st === 'ACCEPTED' || st === 'PENDING') {
+        blocking.push(slot);
+      } else {
+        releasableSlotIds.push(slot.id);
+      }
     }
-    if (blocking.length) return res.status(409).json({ message: 'ช่วงเวลาชนกับศิลปินคนอื่น' });
 
+    if (blocking.length) {
+      // ดึงชื่อศิลปินเพื่อแจ้ง user
+      const namesMap = new Map();
+      if (overlapArtistIds.length) {
+        const arts = await prisma.artist.findMany({
+          where: { performerId: { in: overlapArtistIds } },
+          select: {
+            performerId: true,
+            performer: { select: { user: { select: { name: true, email: true } } } },
+          },
+        });
+        for (const a of arts) {
+          const nm = a?.performer?.user?.name || a?.performer?.user?.email || `Artist #${a.performerId}`;
+          namesMap.set(a.performerId, nm);
+        }
+      }
+      const fmt = (d) => {
+        const hh = String(d.getHours()).padStart(2,'0');
+        const mm = String(d.getMinutes()).padStart(2,'0');
+        return `${hh}:${mm}`;
+      };
+      const details = blocking.map(s => ({
+        artistId: s.artistId,
+        artistName: namesMap.get(s.artistId) || `Artist #${s.artistId}`,
+        start: fmt(s.startAt),
+        end: fmt(s.endAt),
+        status: statusMap.get(s.artistId) || 'PENDING',
+      }));
+
+      return res.status(409).json({
+        message: 'มีศิลปินเล่นในช่วงเวลานี้อยู่แล้ว',
+        details, // FE จะนำไปแสดงเป็นรายการได้ เช่น "NewJeans (ACCEPTED) 13:00–14:00"
+      });
+    }
+
+    // ── B) กันศิลปินซ้อนงาน “ข้ามอีเวนต์” (อนุญาตถ้าอีกฝั่งยัง PENDING, แต่บล็อกถ้าอีกฝั่ง ACCEPTED)
+    const crossEvent = await prisma.artistEvent.findFirst({
+      where: {
+        artistId: aid,
+        eventId: { not: eid },
+        status: 'ACCEPTED',              //  บล็อกเฉพาะคิวที่ยืนยันแล้ว
+        slotStartAt: { lt: endAt },
+        slotEndAt:   { gt: startAt },
+      },
+      select: {
+        eventId: true,
+        slotStartAt: true,
+        slotEndAt: true,
+        event: {
+          select: { name: true, venue: { select: { performer: { select: { user: { select: { name: true } } } } } } }
+        }
+      },
+    });
+    if (crossEvent) {
+      const fmt = (d) => {
+        const hh = String(d.getHours()).padStart(2,'0');
+        const mm = String(d.getMinutes()).padStart(2,'0');
+        return `${hh}:${mm}`;
+      };
+      const otherEventName = crossEvent?.event?.name || `Event #${crossEvent.eventId}`;
+      const otherVenueName = crossEvent?.event?.venue?.performer?.user?.name || '';
+      return res.status(409).json({
+        message: `ศิลปินมีคิวที่ยืนยันแล้วทับเวลา: ${otherEventName}${otherVenueName ? ` @${otherVenueName}` : ''} (${fmt(crossEvent.slotStartAt)}–${fmt(crossEvent.slotEndAt)})`,
+      });
+    }
+
+    // ── ดำเนินการเชิญ/อัปเดต slot
     const result = await prisma.$transaction(async (tx) => {
       if (releasableSlotIds.length) {
         await tx.scheduleSlot.deleteMany({ where: { id: { in: releasableSlotIds } } });
@@ -1607,7 +1739,7 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
       return { ae, slot };
     });
 
-    // 🔔 แจ้งเฉพาะ "ศิลปินที่ถูกเชิญ" เท่านั้น — ไม่ fanout ให้ audience ที่ติดตาม ณ จุดนี้แล้ว
+    // แจ้งเฉพาะ "ศิลปินที่ถูกเชิญ"
     try {
       await notify(
         prisma,
@@ -1624,6 +1756,7 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Invite failed', error: e?.message || String(e) });
   }
 });
+
 
 
 // ───────── ยกเลิก "คำเชิญศิลปิน" (เฉพาะตอนยังไม่ publish และสถานะ PENDING) ─────────
@@ -2073,7 +2206,7 @@ app.post('/role-requests/:id/approve', authMiddleware, requireAdmin, async (req,
           await tx.artist.create({ data: artistData });
         }
 
-        // ✅ ถ้ามีสื่อจากใบสมัคร → สร้าง ArtistRecord (เก็บ photo/video ไว้ที่นี่)
+        //  ถ้ามีสื่อจากใบสมัคร → สร้าง ArtistRecord (เก็บ photo/video ไว้ที่นี่)
         const photos = [];
         const videos = [];
         if (appData.photoUrl) photos.push(appData.photoUrl);
