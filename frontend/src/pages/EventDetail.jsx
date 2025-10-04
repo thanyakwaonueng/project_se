@@ -48,107 +48,6 @@ function dtToHHMM(x) {
   } catch { return null; }
 }
 
-/* ========== Reschedule modal (EN) ========== */
-function RescheduleModal({ open, onClose, eventId, initialDateISO, initialDoor, initialEnd, onSaved }) {
-  const [busy, setBusy] = useState(false);
-  const [warn, setWarn] = useState('');
-  const [form, setForm] = useState({
-    date: initialDateISO ? String(initialDateISO).split('T')[0] : '',
-    doorOpenTime: normTime(initialDoor) || '',
-    endTime: normTime(initialEnd) || ''
-  });
-
-  useEffect(() => {
-    if (!open) return;
-    setWarn('');
-    setBusy(false);
-    setForm({
-      date: initialDateISO ? String(initialDateISO).split('T')[0] : '',
-      doorOpenTime: normTime(initialDoor) || '',
-      endTime: normTime(initialEnd) || ''
-    });
-  }, [open, initialDateISO, initialDoor, initialEnd]);
-
-  const validate = () => {
-    if (!form.date) return 'Please choose a new date.';
-    if (!form.doorOpenTime || !form.endTime) return 'Please fill door-open and end time.';
-    const s = toMin(normTime(form.doorOpenTime));
-    const e = toMin(normTime(form.endTime));
-    if (s == null || e == null) return 'Invalid time format (e.g., 19:30).';
-    if (s >= e) return 'Door-open must be earlier than end time.';
-    return '';
-  };
-
-  const submit = async (e) => {
-    e.preventDefault();
-    const msg = validate();
-    if (msg) { setWarn(msg); return; }
-    setBusy(true);
-    try {
-      const payload = {
-        date: new Date(form.date).toISOString(),
-        doorOpenTime: normTime(form.doorOpenTime),
-        endTime: normTime(form.endTime),
-      };
-      await api.post(`/events/${eventId}/reschedule`, payload, { withCredentials: true });
-      onSaved?.();     // refetch
-      onClose?.();     // close
-    } catch (err) {
-      setWarn(extractErrorMessage?.(err, 'Reschedule failed') || 'Reschedule failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (!open) return null;
-  return (
-    <div className="mdl-backdrop" onClick={onClose}>
-      <div className="mdl" onClick={(e)=>e.stopPropagation()}>
-        <h3 style={{marginTop:0}}>Postpone / Reschedule</h3>
-        <div className="note" style={{marginBottom:8, fontSize:13}}>
-          If the event was already published, it will go back to <b>Draft</b> and all invited artists must re-confirm.
-        </div>
-        <form onSubmit={submit} className="frm" style={{ position:'static', borderTop:'none' }}>
-          <div className="grid2">
-            <label>New date
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e)=>setForm(v=>({ ...v, date: e.target.value }))}
-                required
-              />
-            </label>
-            <span />
-            <label>Door open
-              <input
-                type="time"
-                value={form.doorOpenTime}
-                onChange={(e)=>setForm(v=>({ ...v, doorOpenTime: normTime(e.target.value) }))}
-                required
-              />
-            </label>
-            <label>End time
-              <input
-                type="time"
-                value={form.endTime}
-                onChange={(e)=>setForm(v=>({ ...v, endTime: normTime(e.target.value) }))}
-                required
-              />
-            </label>
-          </div>
-          {warn && <div className="warn" style={{marginTop:8}}>{warn}</div>}
-          <div className="act" style={{marginTop:12}}>
-            <button type="button" className="btn" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn primary" disabled={busy}>
-              {busy ? 'Saving…' : 'Confirm'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 /* ========== invite/edit modal (EN) ========== */
 function InviteModal({
   open,
@@ -553,8 +452,7 @@ export default function EventDetail() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
 
-  // new: reschedule + cancel-event UI state
-  const [resModalOpen, setResModalOpen] = useState(false);
+  // cancel-event UI state
   const [deleting, setDeleting] = useState(false);
 
   const fetchEvent = async () => {
@@ -626,10 +524,7 @@ export default function EventDetail() {
     }
   };
 
-  // NEW: show reschedule only when owner/admin AND already published
-  const canReschedule = !!(ev?._isOwner) && !!ev?.isPublished;
-
-  // NEW: delete event allowed for owner/admin
+  // delete event allowed for owner/admin
   const canDeleteEvent = !!(ev?._isOwner);
 
   // schedule rows
@@ -851,11 +746,6 @@ export default function EventDetail() {
                 {publishing ? 'Publishing…' : 'Publish'}
               </button>
             )}
-            {canReschedule && (
-              <button className="btn" onClick={()=>setResModalOpen(true)} title="Postpone / reschedule">
-                Postpone
-              </button>
-            )}
             {canDeleteEvent && (
               <button className="btn danger" onClick={onDeleteEvent} disabled={deleting} title="Delete event">
                 {deleting ? 'Deleting…' : 'Delete Event'}
@@ -902,17 +792,6 @@ export default function EventDetail() {
           windowStartHHMM={windowRange.rawStart || null}
           windowEndHHMM={windowRange.rawEnd || null}
           invitedIds={invitedIds}
-        />
-
-        {/* Reschedule Modal */}
-        <RescheduleModal
-          open={resModalOpen}
-          onClose={()=>setResModalOpen(false)}
-          eventId={ev.id}
-          initialDateISO={ev.date}
-          initialDoor={ev.doorOpenTime}
-          initialEnd={ev.endTime}
-          onSaved={fetchEvent}
         />
       </section>
     </div>
