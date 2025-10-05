@@ -1,15 +1,15 @@
-// frontend/src/pages/VenueEditor.jsx
+// src/pages/VenueEditor.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import MapPicker from '../components/MapPicker';
-import "../css/VenueEditor.css"; // ใช้ CSS แยกไฟล์
+import "../css/VenueEditor.css";
 
 export default function VenueEditor() {
   // ===== basic info =====
   const [name, setName] = useState('');
   const [locationUrl, setLocationUrl] = useState('');
-  const [genre, setGenre] = useState('');                 // single-select (ผ่าน chips)
+  const [genre, setGenre] = useState('');
   const [description, setDescription] = useState('');
   const [capacity, setCapacity] = useState('');
   const [dateOpen, setDateOpen] = useState('');
@@ -21,8 +21,7 @@ export default function VenueEditor() {
   const [ageRestriction, setAgeRestriction] = useState('ALL');
 
   // ===== media/socials =====
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState(''); // avatar URL (ใช้เป็น fallback ถ้าไม่อัปโหลดใหม่)
-  const [photoUrls, setPhotoUrls] = useState('');             // เก็บ URL เดิม (comma-separated) — ยังรองรับไว้
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [facebookUrl, setFacebookUrl] = useState('');
@@ -32,41 +31,65 @@ export default function VenueEditor() {
   const [websiteUrl, setWebsiteUrl] = useState('');
 
   // ===== map picker =====
-  const [location, setLocation] = useState(null); // { lat, lng, address }
+  const [location, setLocation] = useState(null);
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
 
   // ===== status =====
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [hasProfile, setHasProfile] = useState(false); // โหมดแก้ไข
+  const [hasProfile, setHasProfile] = useState(false);
   const [userId, setUserId] = useState(null);
   const navigate = useNavigate();
 
-  // ===== NEW: file states & refs (อัปโหลด) =====
-  const [avatarFile, setAvatarFile]   = useState(null); // รูปโปรไฟล์ (1 ไฟล์)
-  const [imageFiles, setImageFiles]   = useState([]);   // รูปบรรยากาศร้าน (หลายไฟล์)
-  const [videoFiles, setVideoFiles]   = useState([]);   // วิดีโอในร้าน (หลายไฟล์)
-  const [avatarPreview, setAvatarPreview] = useState(''); // แสดงตัวอย่าง avatar
+  // ===== media state (แยกเดิม/ใหม่ + คิวลบ) =====
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState('');
   const avatarInputRef = useRef(null);
 
-  // ===== helper: pickers =====
+  const [existingPhotos, setExistingPhotos] = useState([]);   // string[]
+  const [existingVideos, setExistingVideos] = useState([]);   // string[] (ถ้าจะใช้เก็บ)
+  const [imageFiles, setImageFiles]     = useState([]);       // File[]
+  const [videoFiles, setVideoFiles]     = useState([]);       // File[]
+
+  const [deleteQueue, setDeleteQueue]   = useState([]);       // string[] ของไฟล์เดิมที่ผู้ใช้ลบ
+
   const handlePickAvatar = () => avatarInputRef.current?.click();
   const handleAvatarChange = (e) => {
     const f = e.target.files?.[0] || null;
     setAvatarFile(f);
-    if (f) setAvatarPreview(URL.createObjectURL(f)); // preview ทันที
+    if (f) setAvatarPreview(URL.createObjectURL(f));
   };
-  const onPickImages = (e) => setImageFiles(Array.from(e.target.files || []));
-  const onPickVideos = (e) => setVideoFiles(Array.from(e.target.files || []));
+  const onPickImages = (e) => setImageFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
+  const onPickVideos = (e) => setVideoFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
 
-  // ===== helper: uploaders (ตามรูปแบบที่ให้มา) =====
+  const removeSelectedImage = (idx) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+  const removeSelectedVideo = (idx) => {
+    setVideoFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const removeExistingPhoto = (url) => {
+    setExistingPhotos(prev => prev.filter(u => u !== url));
+    setDeleteQueue(prev => prev.includes(url) ? prev : [...prev, url]);
+  };
+
+  const clearAvatar = () => {
+    if (profilePhotoUrl) {
+      setDeleteQueue(prev => prev.includes(profilePhotoUrl) ? prev : [...prev, profilePhotoUrl]);
+    }
+    setProfilePhotoUrl('');
+    setAvatarFile(null);
+    setAvatarPreview('');
+  };
+
+  // ===== helper: uploaders =====
   const api = axios;
 
-  async function uploadAvatarIfNeeded() {
-    if (!avatarFile) return null;
+  async function uploadOne(file) {
     const form = new FormData();
-    form.append("file", avatarFile);
+    form.append("file", file);
     const { data } = await api.post("/api/upload", form, {
       withCredentials: true,
       headers: { "Content-Type": "multipart/form-data" },
@@ -75,20 +98,15 @@ export default function VenueEditor() {
   }
 
   async function uploadMany(files) {
-    const urls = [];
+    const out = [];
     for (const f of files) {
-      const form = new FormData();
-      form.append("file", f);
-      const { data } = await api.post("/api/upload", form, {
-        withCredentials: true,
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      if (data?.url) urls.push(data.url);
+      const u = await uploadOne(f);
+      if (u) out.push(u);
     }
-    return urls;
+    return out;
   }
 
-  // โหลด /auth/me แล้วเติมฟอร์ม (ถ้ามี venue เดิม)
+  // ===== preload /auth/me =====
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -101,15 +119,14 @@ export default function VenueEditor() {
           return;
         }
         setUserId(me.id);
-
         const v = me?.performerInfo?.venueInfo;
+
         if (v) {
           setHasProfile(true);
 
-          // user/performer/venue fields
           setName(me.name || '');
           setLocationUrl(v?.location?.locationUrl || '');
-          setGenre(v?.genre || ''); // เดิมรองรับ string ตัวเดียว
+          setGenre(v?.genre || '');
           setDescription(v?.description || '');
           setCapacity(v?.capacity ? String(v.capacity) : '');
           setDateOpen(v?.dateOpen ? v.dateOpen.slice(0, 10) : '');
@@ -120,8 +137,13 @@ export default function VenueEditor() {
           setAlcoholPolicy(v?.alcoholPolicy || 'SERVE');
           setAgeRestriction(v?.ageRestriction || 'ALL');
 
-          setProfilePhotoUrl(me?.profilePhotoUrl || '');
-          setPhotoUrls((v?.photoUrls || []).join(', ')); // เดิมยังรองรับไว้ (จะรวมกับอัปโหลดใหม่ตอน save)
+          // ✅ ใช้ avatar ของ "venue" เอง (ไม่ใช่ของ user อีกต่อไป)
+          setProfilePhotoUrl(v?.profilePhotoUrl || '');
+          if (v?.profilePhotoUrl) setAvatarPreview(v.profilePhotoUrl);
+
+          setExistingPhotos(Array.isArray(v?.photoUrls) ? v.photoUrls : []);
+          // ถ้าคุณยังไม่ได้เก็บวิดีโอใน Venue ให้คงว่างไว้
+          setExistingVideos([]);
 
           setContactEmail(me?.performerInfo?.contactEmail || '');
           setContactPhone(me?.performerInfo?.contactPhone || '');
@@ -132,17 +154,10 @@ export default function VenueEditor() {
           setWebsiteUrl(v?.websiteUrl || '');
 
           if (v?.location?.latitude != null && v?.location?.longitude != null) {
-            setLocation({
-              lat: v.location.latitude,
-              lng: v.location.longitude,
-              address: '',
-            });
+            setLocation({ lat: v.location.latitude, lng: v.location.longitude, address: '' });
             setLatitude(String(v.location.latitude));
             setLongitude(String(v.location.longitude));
           }
-
-          // preload avatar preview ถ้ามีรูปเดิม
-          if (me?.profilePhotoUrl) setAvatarPreview(me.profilePhotoUrl);
         } else {
           setHasProfile(false);
         }
@@ -154,7 +169,7 @@ export default function VenueEditor() {
     return () => { alive = false; };
   }, []);
 
-  // เมื่อเปลี่ยนพิกัดจาก Map → mirror ลง lat/lng และ locationUrl
+  // mirror map -> inputs
   useEffect(() => {
     if (location?.lat != null && location?.lng != null) {
       setLatitude(String(location.lat));
@@ -163,39 +178,22 @@ export default function VenueEditor() {
     }
   }, [location]);
 
-  // SAVE: อัปโหลดไฟล์ก่อน แล้วค่อยยิง PUT/POST
+  // ===== SAVE =====
   const save = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      // ===== upload avatar/images/videos ก่อน =====
-      const avatarUploadedUrl = await uploadAvatarIfNeeded(); // string|null
-      const imageUploadedUrls  = await uploadMany(imageFiles); // string[]
-      const videoUploadedUrls  = await uploadMany(videoFiles); // string[]
+      // 1) upload new files
+      const avatarUploaded = avatarFile ? await uploadOne(avatarFile) : null;
+      const imageUploaded  = await uploadMany(imageFiles);
+      const videoUploaded  = await uploadMany(videoFiles); // เผื่อใช้ในอนาคต
 
-      // ===== coords =====
-      const lat =
-        location?.lat != null ? Number(location.lat) :
-        latitude ? parseFloat(latitude) : undefined;
+      // 2) build coords + location
+      const lat = location?.lat != null ? Number(location.lat) : (latitude ? parseFloat(latitude) : undefined);
+      const lng = location?.lng != null ? Number(location.lng) : (longitude ? parseFloat(longitude) : undefined);
 
-      const lng =
-        location?.lng != null ? Number(location.lng) :
-        longitude ? parseFloat(longitude) : undefined;
-
-      // รวม URL เดิมกับที่อัปโหลดใหม่ (เฉพาะรูปภาพ)
-      const existingPhotoUrls = (photoUrls || '')
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
-
-      const mergedPhotoUrls = [
-        ...existingPhotoUrls,
-        ...imageUploadedUrls,
-      ];
-
-      // ===== build location object ให้ตรงกับฝั่งอ่าน =====
       const locationObj =
         lat != null && lng != null
           ? {
@@ -207,14 +205,22 @@ export default function VenueEditor() {
             }
           : undefined;
 
-      // ===== payload =====
-      const raw = {
-        name: (name || '').trim(),
+      // 3) merge photo urls: keep existing (minus removed) + newly uploaded
+      const mergedPhotoUrls = [...existingPhotos, ...imageUploaded];
 
-        locationUrl:
-          (locationUrl || '').trim() ||
-          (lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : undefined),
-        genre: (genre || '').trim(),               // single-select (ผ่าน chips)
+      // ✅ ถ้ามีการอัปโหลด avatar ใหม่ → เพิ่ม avatar เก่าเข้าคิวลบ (ถ้ามีและไม่ซ้ำ)
+      const deleteQueueNext = [...deleteQueue];
+      if (avatarUploaded && profilePhotoUrl && profilePhotoUrl !== avatarUploaded) {
+        if (!deleteQueueNext.includes(profilePhotoUrl)) {
+          deleteQueueNext.push(profilePhotoUrl);
+        }
+      }
+
+      // 4) payload
+      const payloadRaw = {
+        name: (name || '').trim(),
+        locationUrl: (locationUrl || '').trim(),
+        genre: (genre || '').trim(),
         description: (description || '').trim() || undefined,
         capacity: capacity ? parseInt(capacity, 10) : undefined,
         dateOpen: dateOpen ? new Date(dateOpen).toISOString() : undefined,
@@ -226,14 +232,13 @@ export default function VenueEditor() {
         ageRestriction: ageRestriction || undefined,
         websiteUrl: websiteUrl || undefined,
 
-        // avatar: ใช้ที่อัปโหลดได้ก่อน, ถ้าไม่มีก็ fallback เป็นที่มีอยู่
-        profilePhotoUrl: avatarUploadedUrl || profilePhotoUrl || undefined,
+        // ✅ ใช้ avatar ใหม่ถ้ามี ไม่งั้นใช้ตัวเดิม
+        profilePhotoUrl: avatarUploaded || profilePhotoUrl || undefined,
 
-        // media
         photoUrls: mergedPhotoUrls,
-        videoUrls: videoUploadedUrls, // ถ้า backend ยังไม่รองรับ ให้ลบบรรทัดนี้
+        // ถ้า backend ยังไม่รองรับ videoUrls ใน Venue ให้คอมเมนต์บรรทัดนี้ทิ้งได้
+        // videoUrls: [...existingVideos, ...videoUploaded],
 
-        // social/contact
         contactEmail: contactEmail || undefined,
         contactPhone: contactPhone || undefined,
         facebookUrl: facebookUrl || undefined,
@@ -241,21 +246,18 @@ export default function VenueEditor() {
         lineUrl: lineUrl || undefined,
         tiktokUrl: tiktokUrl || undefined,
 
-        // location (เพิ่มแบบ nested ให้ตรงกับของเดิมที่อ่านมา)
         location: locationObj,
-
-        // เก็บแบบเดิมไว้ด้วย (ไม่ลบของเพื่อน)
         latitude: lat,
         longitude: lng,
       };
 
-      // กรอง undefined/ค่าว่าง
       const payload = Object.fromEntries(
-        Object.entries(raw).filter(
+        Object.entries(payloadRaw).filter(
           ([, v]) => v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0),
         ),
       );
 
+      // 5) save venue
       if (hasProfile) {
         if (!userId) throw new Error('Invalid user');
         await axios.put(`/api/venues/${userId}`, payload, {
@@ -269,87 +271,67 @@ export default function VenueEditor() {
         });
       }
 
+      // 6) delete removed files from storage (best-effort)
+      if (deleteQueueNext.length) {
+        try {
+          await axios.post(
+            '/api/storage/delete',
+            { urls: deleteQueueNext },
+            { withCredentials: true }
+          );
+        } catch (e) {
+          // เงียบๆ ไว้ก่อน (ถ้า backend ยังไม่ทำ endpoint นี้)
+          console.warn('delete storage failed (ignored):', e?.response?.data || e?.message);
+        }
+      }
+
       setLoading(false);
       navigate(`/venues/${userId || ''}`);
     } catch (err) {
       setLoading(false);
-      setError(err.response?.data?.error || 'บันทึกไม่สำเร็จ');
+      setError(err?.response?.data?.error || 'บันทึกไม่สำเร็จ');
       console.error('VenueEditor save error:', err);
     }
   };
 
-  // =========================
-  //      R E T U R N
-  // =========================
+  // ===== UI =====
   return (
     <div className="ve-page" aria-busy={loading ? "true" : "false"}>
-      {/* ===== Header (เอาปุ่มด้านบนออก ตามที่ขอ) ===== */}
       <header className="ve-header" style={{ width: "80%", marginInline: "auto" }}>
         <div>
           <h1 className="ve-title ve-title-hero">{hasProfile ? "VENUE SETUP" : "VENUE SETUP"}</h1>
-          {/* <p className="ve-subtitle">Fill out venue information and contact details.</p> */}
         </div>
       </header>
 
       <div className="ve-line" />
 
-      {error && (
-        <div className="ve-alert" role="alert">
-          {error}
-        </div>
-      )}
+      {error && <div className="ve-alert" role="alert">{error}</div>}
 
-      {/* ===== SECTION: Details (รวม Name + Dates + Genre + Description) ===== */}
+      {/* ===== Details ===== */}
       <section className="ve-section">
         <div className="ve-form">
           <h2 className="ve-section-title">Details</h2>
           <div className="ve-grid-2">
             <div className="ve-field ve-col-span-2">
               <label className="ve-label" htmlFor="name">Venue name</label>
-              <input
-                id="name"
-                className="ve-input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nimman Studio"
-              />
+              <input id="name" className="ve-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nimman Studio" />
             </div>
 
             <div className="ve-field ve-col-span-2">
               <div className="ve-grid-3">
                 <div className="ve-field">
                   <label className="ve-label" htmlFor="timeOpen">Opening time</label>
-                  <input
-                    id="timeOpen"
-                    className="ve-input"
-                    type="time"
-                    value={timeOpen}
-                    onChange={(e) => setTimeOpen(e.target.value)}
-                  />
+                  <input id="timeOpen" className="ve-input" type="time" value={timeOpen} onChange={(e) => setTimeOpen(e.target.value)} />
                 </div>
 
                 <div className="ve-field">
                   <label className="ve-label" htmlFor="timeClose">Closing time</label>
-                  <input
-                    id="timeClose"
-                    className="ve-input"
-                    type="time"
-                    value={timeClose}
-                    onChange={(e) => setTimeClose(e.target.value)}
-                  />
+                  <input id="timeClose" className="ve-input" type="time" value={timeClose} onChange={(e) => setTimeClose(e.target.value)} />
                 </div>
 
                 <div className="ve-field">
                   <label className="ve-label" htmlFor="capacity">Capacity</label>
-                  <input
-                    id="capacity"
-                    className="ve-input"
-                    type="number"
-                    inputMode="numeric"
-                    value={capacity}
-                    onChange={(e) => setCapacity(e.target.value)}
-                    placeholder="e.g., 300"
-                  />
+                  <input id="capacity" className="ve-input" type="number" inputMode="numeric" value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="e.g., 300" />
                 </div>
               </div>
             </div>
@@ -376,26 +358,14 @@ export default function VenueEditor() {
 
             <div className="ve-field ve-col-span-2">
               <label className="ve-label" htmlFor="description">Description</label>
-              <textarea
-                id="description"
-                className="ve-textarea"
-                rows={4}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Short description of your venue"
-              />
+              <textarea id="description" className="ve-textarea" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short description of your venue" />
             </div>
 
             <div className="ve-col-span-2">
               <div className="ve-grid-2">
                 <div className="ve-field">
                   <label className="ve-label" htmlFor="ageRestriction">Age restriction</label>
-                  <select
-                    id="ageRestriction"
-                    className="ve-select"
-                    value={ageRestriction}
-                    onChange={(e) => setAgeRestriction(e.target.value)}
-                  >
+                  <select id="ageRestriction" className="ve-select" value={ageRestriction} onChange={(e) => setAgeRestriction(e.target.value)}>
                     <option value="ALL">All ages</option>
                     <option value="18+">18+</option>
                     <option value="20+">20+</option>
@@ -404,13 +374,7 @@ export default function VenueEditor() {
 
                 <div className="ve-field">
                   <label className="ve-label" htmlFor="alcoholPolicy">Alcohol policy</label>
-                  <input
-                    id="alcoholPolicy"
-                    className="ve-input"
-                    value={alcoholPolicy}
-                    onChange={(e) => setAlcoholPolicy(e.target.value)}
-                    placeholder="Serve beer/wine, no spirits, etc."
-                  />
+                  <input id="alcoholPolicy" className="ve-input" value={alcoholPolicy} onChange={(e) => setAlcoholPolicy(e.target.value)} placeholder="Serve beer/wine, no spirits, etc." />
                 </div>
               </div>
             </div>
@@ -419,25 +383,62 @@ export default function VenueEditor() {
         </div>
       </section>
 
-      {/* ===== SECTION: Images & Videos ===== */}
+      {/* ===== Avatar ===== */}
+      <section className="ve-section">
+        <div className="ve-form">
+          <h2 className="ve-section-title">Venue Avatar</h2>
+          <div className="ve-avatarRow">
+            <div className="ve-avatar">
+              {avatarPreview || profilePhotoUrl ? (
+                <img src={avatarPreview || profilePhotoUrl} alt="avatar" />
+              ) : (
+                <div className="ve-avatar-placeholder">No image</div>
+              )}
+            </div>
+            <div className="ve-fileRow">
+              <button type="button" className="ve-fileBtn" onClick={handlePickAvatar}>Choose image</button>
+              {(avatarPreview || profilePhotoUrl) && (
+                <button type="button" className="ve-fileBtn ve-fileBtn-danger" onClick={clearAvatar}>
+                  Remove
+                </button>
+              )}
+              <input ref={avatarInputRef} type="file" accept="image/*" hidden onChange={handleAvatarChange} />
+            </div>
+            <p className="ve-help">Avatar จะถูกอัปโหลดเมื่อกด Save</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Images & Videos ===== */}
       <section className="ve-section">
         <div className="ve-form">
           <h2 className="ve-section-title">Images & Videos</h2>
 
-          <div className="ve-grid">
-            {/* Images */}
+        <div className="ve-grid">
+            {/* Images (existing) */}
             <div className="ve-field-1">
-              <label className="ve-label">Images</label>
+              <label className="ve-label">Existing images</label>
+              {existingPhotos.length ? (
+                <div className="ve-mediaGrid">
+                  {existingPhotos.map((u, i) => (
+                    <div key={`exi-${i}`} className="ve-mediaThumb">
+                      <img src={u} alt={`photo-${i+1}`} />
+                      <button type="button" className="ve-removeBtn" onClick={() => removeExistingPhoto(u)}>Remove</button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="ve-help">No existing images</div>
+              )}
+            </div>
+
+            {/* Images (new) */}
+            <div className="ve-field-1">
+              <label className="ve-label">Add images</label>
               <div className="ve-fileRow">
                 <label className="ve-fileBtn ve-fileBtn-secondary">
                   Choose images
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    hidden
-                    onChange={onPickImages}
-                  />
+                  <input type="file" accept="image/*" multiple hidden onChange={onPickImages} />
                 </label>
               </div>
 
@@ -445,7 +446,10 @@ export default function VenueEditor() {
                 <div className="ve-mediaGrid">
                   {imageFiles.map((f, i) => (
                     <div key={`img-${i}`} className="ve-mediaThumb">
-                      <img src={URL.createObjectURL(f)} alt={`image-${i + 1}`} />
+                      <img src={URL.createObjectURL(f)} alt={`image-${i+1}`} />
+                      <button type="button" className="ve-removeBtn" onClick={() => removeSelectedImage(i)}>
+                        Remove
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -453,19 +457,13 @@ export default function VenueEditor() {
               <p className="ve-help">Images will be uploaded when you click Save.</p>
             </div>
 
-            {/* Videos */}
+            {/* Videos (new) */}
             <div className="ve-field-1">
-              <label className="ve-label">Videos</label>
+              <label className="ve-label">Add videos</label>
               <div className="ve-fileRow">
                 <label className="ve-fileBtn">
                   Choose videos
-                  <input
-                    type="file"
-                    accept="video/*"
-                    multiple
-                    hidden
-                    onChange={onPickVideos}
-                  />
+                  <input type="file" accept="video/*" multiple hidden onChange={onPickVideos} />
                 </label>
               </div>
 
@@ -473,138 +471,73 @@ export default function VenueEditor() {
                 <div className="ve-mediaGrid">
                   {videoFiles.map((f, i) => (
                     <div key={`vid-${i}`} className="ve-mediaThumb">
-                      <video
-                        className="ve-videoThumb"
-                        src={URL.createObjectURL(f)}
-                        controls
-                        preload="metadata"
-                      />
+                      <video className="ve-videoThumb" src={URL.createObjectURL(f)} controls preload="metadata" />
+                      <button type="button" className="ve-removeBtn" onClick={() => removeSelectedVideo(i)}>
+                        Remove
+                      </button>
                     </div>
                   ))}
                 </div>
               )}
-              <p className="ve-help">Supports common video formats (MP4, MOV, etc.).</p>
+              <p className="ve-help">Supports MP4/MOV etc. (จะอัปโหลดตอน Save)</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ===== SECTION: Social & Contact ===== */}
+      {/* ===== Social & Contact ===== */}
       <section className="ve-section">
         <div className="ve-form">
           <h2 className="ve-section-title">Social & Contact</h2>
           <div className="ve-grid ve-grid-2">
             <div className="ve-field">
               <label className="ve-label" htmlFor="websiteUrl">Website</label>
-              <input
-                id="websiteUrl"
-                className="ve-input"
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                placeholder="https://…"
-              />
+              <input id="websiteUrl" className="ve-input" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://…" />
             </div>
             <div className="ve-field">
               <label className="ve-label" htmlFor="contactEmail">Email</label>
-              <input
-                id="contactEmail"
-                className="ve-input"
-                type="email"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-                placeholder="contact@venue.com"
-              />
+              <input id="contactEmail" className="ve-input" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="contact@venue.com" />
             </div>
             <div className="ve-field">
               <label className="ve-label" htmlFor="contactPhone">Phone</label>
-              <input
-                id="contactPhone"
-                className="ve-input"
-                value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
-                placeholder="+66…"
-              />
+              <input id="contactPhone" className="ve-input" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+66…" />
             </div>
             <div className="ve-field">
               <label className="ve-label" htmlFor="facebookUrl">Facebook</label>
-              <input
-                id="facebookUrl"
-                className="ve-input"
-                value={facebookUrl}
-                onChange={(e) => setFacebookUrl(e.target.value)}
-                placeholder="https://facebook.com/…"
-              />
+              <input id="facebookUrl" className="ve-input" value={facebookUrl} onChange={(e) => setFacebookUrl(e.target.value)} placeholder="https://facebook.com/…" />
             </div>
             <div className="ve-field">
               <label className="ve-label" htmlFor="instagramUrl">Instagram</label>
-              <input
-                id="instagramUrl"
-                className="ve-input"
-                value={instagramUrl}
-                onChange={(e) => setInstagramUrl(e.target.value)}
-                placeholder="https://instagram.com/…"
-              />
+              <input id="instagramUrl" className="ve-input" value={instagramUrl} onChange={(e) => setInstagramUrl(e.target.value)} placeholder="https://instagram.com/…" />
             </div>
             <div className="ve-field">
               <label className="ve-label" htmlFor="lineUrl">Line</label>
-              <input
-                id="lineUrl"
-                className="ve-input"
-                value={lineUrl}
-                onChange={(e) => setLineUrl(e.target.value)}
-                placeholder="https://line.me/ti/p/…"
-              />
+              <input id="lineUrl" className="ve-input" value={lineUrl} onChange={(e) => setLineUrl(e.target.value)} placeholder="https://line.me/ti/p/…" />
             </div>
             <div className="ve-field">
               <label className="ve-label" htmlFor="tiktokUrl">TikTok</label>
-              <input
-                id="tiktokUrl"
-                className="ve-input"
-                value={tiktokUrl}
-                onChange={(e) => setTiktokUrl(e.target.value)}
-                placeholder="https://www.tiktok.com/@…"
-              />
+              <input id="tiktokUrl" className="ve-input" value={tiktokUrl} onChange={(e) => setTiktokUrl(e.target.value)} placeholder="https://www.tiktok.com/@…" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* ===== SECTION: Location ===== */}
+      {/* ===== Location ===== */}
       <section className="ve-section">
         <div className="ve-form">
           <h2 className="ve-section-title">Location</h2>
           <div className="ve-grid">
             <div className="ve-field">
               <label className="ve-label" htmlFor="latitude">Latitude</label>
-              <input
-                id="latitude"
-                className="ve-input"
-                type="number"
-                value={latitude}
-                onChange={(e) => setLatitude(e.target.value)}
-                placeholder="18.79"
-              />
+              <input id="latitude" className="ve-input" type="number" value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="18.79" />
             </div>
             <div className="ve-field">
               <label className="ve-label" htmlFor="longitude">Longitude</label>
-              <input
-                id="longitude"
-                className="ve-input"
-                type="number"
-                value={longitude}
-                onChange={(e) => setLongitude(e.target.value)}
-                placeholder="98.97"
-              />
+              <input id="longitude" className="ve-input" type="number" value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="98.97" />
             </div>
             <div className="ve-field ve-col-span-2">
               <label className="ve-label" htmlFor="locationUrl">Location URL</label>
-              <input
-                id="locationUrl"
-                className="ve-input"
-                value={locationUrl}
-                onChange={(e) => setLocationUrl(e.target.value)}
-                placeholder="https://maps…"
-              />
+              <input id="locationUrl" className="ve-input" value={locationUrl} onChange={(e) => setLocationUrl(e.target.value)} placeholder="https://maps…" />
             </div>
           </div>
 
@@ -613,7 +546,6 @@ export default function VenueEditor() {
               lat={latitude ? Number(latitude) : undefined}
               lng={longitude ? Number(longitude) : undefined}
               onPick={({ lat: la, lng: ln }) => {
-                // ✅ อัปเดต location ด้วย เพื่อให้ effect สร้าง locationUrl ให้อัตโนมัติ
                 setLocation({ lat: la, lng: ln, address: '' });
                 setLatitude(String(la));
                 setLongitude(String(ln));
@@ -623,28 +555,13 @@ export default function VenueEditor() {
         </div>
       </section>
 
-      {/* ===== Actions (เฉพาะปุ่มล่าง) ===== */}
-      <form
-        className="ve-section"
-        onSubmit={(e) => {
-          e.preventDefault();
-          save(e);
-        }}
-      >
+      {/* ===== Actions ===== */}
+      <form className="ve-section" onSubmit={(e) => { e.preventDefault(); save(e); }}>
         <div className="ve-actions ve-actions-bottom">
-          <button
-            className="ve-btn ve-btn-secondary"
-            type="button"
-            onClick={() => navigate(-1)}
-            disabled={loading}
-          >
+          <button className="ve-btn ve-btn-secondary" type="button" onClick={() => navigate(-1)} disabled={loading}>
             Cancel
           </button>
-          <button
-            className="ve-btn ve-btn-primary"
-            type="submit"
-            disabled={loading}
-          >
+          <button className="ve-btn ve-btn-primary" type="submit" disabled={loading}>
             {loading ? "Saving…" : "Save"}
           </button>
         </div>

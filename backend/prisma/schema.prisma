@@ -134,7 +134,8 @@ model Venue {
   ageRestriction  AgeRestriction @default(ALL)
   photoUrls       String[]
   websiteUrl      String?
-
+  profilePhotoUrl String?
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -179,6 +179,180 @@ function summarizeReadiness(artistEvents = []) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+// ───────────────────────── CSV + URL helpers (global) ─────────────────────────
+function csvToArray(csvOrNull) {
+  return String(csvOrNull || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+function arrayToCsv(arr) {
+  return (arr || []).map(s => String(s).trim()).filter(Boolean).join(', ');
+}
+
+/** แปลง Supabase public URL -> { bucket, path } 
+ *  เช่น https://<proj>.supabase.co/storage/v1/object/public/<bucket>/<path...>
+ */
+function parseSupabasePublicUrl(url) {
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split('/'); // ["", "storage","v1","object","public","<bucket>", ...path]
+    const idx = parts.findIndex(p => p === 'public');
+    if (idx < 0 || !parts[idx + 1]) return null;
+    const bucket = parts[idx + 1];
+    const path = parts.slice(idx + 2).join('/');
+    if (!bucket || !path) return null;
+    return { bucket, path };
+  } catch {
+    return null;
+  }
+}
+
+
+// ✅ ใช้ handler กลางสำหรับลบไฟล์จาก Supabase + อัปเดต DB (Artist + Venue)
+async function handleStorageDelete(req, res) {
+  try {
+    const urls = Array.isArray(req.body?.urls) ? req.body.urls.filter(Boolean) : [];
+    if (!urls.length) return res.json({ deleted: [], skipped: [] });
+
+    const meId = req.user.id;
+
+    const toRemove = []; // [{ bucket, path, url }]
+    const skipped  = []; // [{ url, reason }]
+
+    for (const url of urls) {
+      // ✅ เป็นของศิลปินหรือสถานที่ของฉันไหม
+      const owned =
+        (await userOwnsArtistMediaUrl(prisma, meId, url)) ||
+        (await userOwnsVenueMediaUrl(prisma, meId, url));
+
+      if (!owned) {
+        skipped.push({ url, reason: 'not-owned' });
+        continue;
+      }
+      // แปลง public url -> bucket/path
+      const parsed = parseSupabasePublicUrl(url);
+      if (!parsed) {
+        skipped.push({ url, reason: 'parse-failed' });
+        continue;
+      }
+      toRemove.push({ ...parsed, url });
+    }
+
+    // group ตาม bucket แล้วยิงลบชุดเดียว
+    const groupByBucket = toRemove.reduce((acc, it) => {
+      (acc[it.bucket] ||= []).push(it);
+      return acc;
+    }, {});
+    const deleted = [];
+
+    for (const [bucket, items] of Object.entries(groupByBucket)) {
+      const paths = items.map(it => it.path);
+      const { error } = await supabase.storage.from(bucket).remove(paths);
+      if (error) {
+        items.forEach(it => skipped.push({ url: it.url, reason: error.message }));
+      } else {
+        items.forEach(it => deleted.push({ url: it.url, bucket: it.bucket, path: it.path }));
+      }
+    }
+
+    // ✅ อัปเดต DB ฝั่งฉัน: ตัด URL ที่ลบสำเร็จออกจาก Artist + Venue
+    if (deleted.length) {
+      const removedSet = new Set(deleted.map(d => d.url));
+
+      // ---- ARTIST (legacy CSV photoUrl/videoUrl) ----
+      const artist = await prisma.artist.findUnique({
+        where: { performerId: meId },
+        select: { photoUrl: true, videoUrl: true },
+      });
+      if (artist) {
+        const nextPhotos = csvToArray(artist.photoUrl).filter(u => !removedSet.has(u));
+        const nextVideos = csvToArray(artist.videoUrl).filter(u => !removedSet.has(u));
+        await prisma.artist.update({
+          where: { performerId: meId },
+          data: {
+            photoUrl: arrayToCsv(nextPhotos),
+            videoUrl: arrayToCsv(nextVideos),
+          },
+        });
+      }
+
+      // ---- VENUE (array photoUrls + single profilePhotoUrl) ----
+      const venue = await prisma.venue.findUnique({
+        where: { performerId: meId },
+        select: { photoUrls: true, profilePhotoUrl: true },
+      });
+      if (venue) {
+        const nextVPhotos = (Array.isArray(venue.photoUrls) ? venue.photoUrls : [])
+          .filter(u => !removedSet.has(u));
+        const nextAvatar = removedSet.has(venue.profilePhotoUrl) ? null : venue.profilePhotoUrl;
+
+        await prisma.venue.update({
+          where: { performerId: meId },
+          data: {
+            photoUrls: nextVPhotos,
+            profilePhotoUrl: nextAvatar,
+          },
+        });
+      }
+    }
+
+    return res.json({ deleted, skipped });
+  } catch (e) {
+    console.error('STORAGE_DELETE error:', e);
+    return res.status(500).json({ error: 'Delete failed' });
+  }
+}
+
+// ✅ FE เรียก POST /api/storage/delete (มี /api rewrite แล้ว) ให้ผูก POST ด้วย
+app.post('/storage/delete', authMiddleware, handleStorageDelete);
+
+// ✅ จะยังรองรับแบบ DELETE เดิมด้วย (เผื่อมีที่ไหนเรียกอยู่)
+app.delete('/storage/delete', authMiddleware, handleStorageDelete);
+
+
+/** ตรวจว่า URL เป็นของศิลปิน (อิงจาก artist.photoUrl / artist.videoUrl ของ userId นั้น) */
+async function userOwnsArtistMediaUrl(prismaClient, userId, url) {
+  const artist = await prismaClient.artist.findUnique({
+    where: { performerId: Number(userId) },
+    select: { photoUrl: true, videoUrl: true },
+  });
+  if (!artist) return false;
+  const all = new Set([
+    ...csvToArray(artist.photoUrl),
+    ...csvToArray(artist.videoUrl),
+  ]);
+  return all.has(url);
+}
+/** ตรวจว่า URL เป็นของสถานที่ของ userId นี้ (เช็คที่ venue.profilePhotoUrl + venue.photoUrls) */
+async function userOwnsVenueMediaUrl(prismaClient, userId, url) {
+  const venue = await prismaClient.venue.findUnique({
+    where: { performerId: Number(userId) },
+    select: { profilePhotoUrl: true, photoUrls: true },
+  });
+  if (!venue) return false;
+
+  const all = new Set([
+    ...(Array.isArray(venue.photoUrls) ? venue.photoUrls : []),
+    venue.profilePhotoUrl || '',
+  ].filter(Boolean));
+
+  return all.has(url);
+}
+
+
+
 /* ---------- Enum normalizers ---------- */
 const AGE_ALLOWED = ['ALL', 'E18', 'E20'];
 function normalizeAgeRestriction(v) {
@@ -538,67 +712,131 @@ app.get('/users/:id', async (req, res) => {
 });
 
 /* ───────────────────────────── ARTISTS (POST = upsert by userId) ────────── */
+/* ───────────────────────────── ARTISTS (POST = upsert by userId) ────────── */
 app.post('/artists', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const data = req.body;
 
-    // Split data into performer fields vs artist fields
+    // ─── helpers (เฉพาะบล็อกนี้ให้จบในตัวเอง) ───
+    const csvToArray = (s) =>
+      (typeof s === 'string' ? s : '')
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
+
+    // FE อาจส่งทั้งแบบ string เดี่ยว (CSV) หรือ array เข้ามา → แปลงให้เป็น array
+    const normalizeMediaList = (vSingleCsv, vArray) => {
+      if (Array.isArray(vArray)) return vArray.filter(Boolean);
+      if (typeof vSingleCsv === 'string') return csvToArray(vSingleCsv);
+      return null; // ไม่ส่งมา → ไม่แตะต้อง
+    };
+
+    // ─── split performer vs artist fields ───
     const performerData = {
-      contactEmail: data.contact.email,
-      contactPhone: data.contact.phone,
-      youtubeUrl: data.links.youtube,
-      tiktokUrl: data.links.tiktok,
-      facebookUrl: data.links.facebook,
-      instagramUrl: data.links.instagram,
-      twitterUrl: data.links.twitter,
-      lineUrl: data.links.line,
+      contactEmail: data?.contact?.email ?? null,
+      contactPhone: data?.contact?.phone ?? null,
+      youtubeUrl:   data?.links?.youtube ?? null,
+      tiktokUrl:    data?.links?.tiktok ?? null,
+      facebookUrl:  data?.links?.facebook ?? null,
+      instagramUrl: data?.links?.instagram ?? null,
+      twitterUrl:   data?.links?.twitter ?? null,
+      lineUrl:      data?.links?.line ?? null,
     };
 
     const artistData = {
-      description: data.description,
-      genre: data.genre,
-      subGenre: data.subGenre,
-      bookingType: data.bookingType,
-      foundingYear: data.foundingYear,
-      label: data.label,
-      isIndependent: data.isIndependent,
-      memberCount: data.memberCount,
-      priceMin: data.priceMin,
-      priceMax: data.priceMax,
-      spotifyUrl: data.links.spotify,
-      appleMusicUrl: data.links.appleMusic,
-      soundcloudUrl: data.links.soundcloud,
-      shazamUrl: data.links.shazam,
-      bandcampUrl: data.links.bandcamp,
+      description:   data?.description ?? null,
+      genre:         data?.genre,                 // required ใน schema
+      subGenre:      data?.subGenre ?? null,
+      bookingType:   data?.bookingType,           // required (enum)
+      foundingYear:  data?.foundingYear ?? null,
+      label:         data?.label ?? null,
+      isIndependent: !!data?.isIndependent,
+      memberCount:   data?.memberCount ?? null,
+      priceMin:      data?.priceMin ?? null,
+      priceMax:      data?.priceMax ?? null,
+
+      // *** อย่าใส่ photoUrl/videoUrl ตรงนี้ เพราะไม่มีคอลัมน์ใน Artist ***
+      spotifyUrl:    data?.links?.spotify ?? null,
+      appleMusicUrl: data?.links?.appleMusic ?? null,
+      soundcloudUrl: data?.links?.soundcloud ?? null,
+      shazamUrl:     data?.links?.shazam ?? null,
+      bandcampUrl:   data?.links?.bandcamp ?? null,
+      rateCardUrl:   data?.rateCardUrl ?? null,
+      epkUrl:        data?.epkUrl ?? null,
+      riderUrl:      data?.riderUrl ?? null,
     };
 
+    // รูป/วิดีโอที่ส่งมาจากหน้า Account Setup (รับทั้ง CSV และ array)
+    const incomingPhotos = normalizeMediaList(data?.photoUrl,  data?.photoUrls);
+    const incomingVideos = normalizeMediaList(data?.videoUrl,  data?.videoUrls);
+
     const result = await prisma.$transaction(async (tx) => {
+      // 1) upsert performer
       const performer = await tx.performer.upsert({
-        where: { userId: userId },
+        where:  { userId },
         update: performerData,
-        create: {
-          userId,
-          ...performerData,
-        },
+        create: { userId, ...performerData },
       });
 
+      // 2) upsert artist (ตาม performerId = userId)
       const artist = await tx.artist.upsert({
-        where: { performerId: userId },
+        where:  { performerId: userId },
         update: artistData,
-        create: {
-          performerId: userId,
-          ...artistData,
-        },
+        create: { performerId: userId, ...artistData },
       });
 
-      return { performer, artist };
+      // 3) ถ้ามี “สื่อ” ส่งมา → เก็บใน ArtistRecord (source="profile")
+      //    แนวคิด: ถ้าเคยมี record profile แล้ว → update ทับ (เพื่อรองรับลบใน FE)
+      //            ถ้ายังไม่มี → create ใหม่
+      let record = null;
+      if (incomingPhotos !== null || incomingVideos !== null) {
+        // หา profile record ล่าสุด
+        const existing = await tx.artistRecord.findFirst({
+          where:   { artistId: userId, source: 'profile' },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        const nextPhotos = incomingPhotos ?? existing?.photoUrls ?? [];
+        const nextVideos = incomingVideos ?? existing?.videoUrls ?? [];
+        const thumb     = nextPhotos?.[0] ?? existing?.thumbnailUrl ?? null;
+
+        if (existing) {
+          record = await tx.artistRecord.update({
+            where: { id: existing.id },
+            data: {
+              title:        existing.title ?? 'Profile Media',
+              description:  existing.description ?? null,
+              thumbnailUrl: thumb,
+              photoUrls:    nextPhotos,
+              videoUrls:    nextVideos,
+              // ไม่จำเป็นต้องแก้ date ทุกครั้ง แต่ถ้าต้องการให้ล่าสุดเสมอ จะตั้ง new Date()
+              // date: new Date(),
+              source: 'profile',
+            },
+          });
+        } else {
+          record = await tx.artistRecord.create({
+            data: {
+              artistId:     userId,
+              title:        'Profile Media',
+              description:  null,
+              thumbnailUrl: thumb,
+              photoUrls:    nextPhotos,
+              videoUrls:    nextVideos,
+              date:         new Date(),
+              source:       'profile',
+            },
+          });
+        }
+      }
+
+      return { performer, artist, mediaRecord: record };
     });
 
     res.status(201).json(result);
-
   } catch (err) {
-    console.error(err);
+    console.error('POST /artists error:', err);
     res.status(500).json({ error: 'Could not create/update artist' });
   }
 });
@@ -691,27 +929,45 @@ app.get('/groups', async (req, res) => {
       },
     });
 
+    const toArray = (csvOrNull) =>
+      (csvOrNull || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+    const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
+
     const groups = artists.map((a) => {
-      // ---- เลือก ArtistRecord ล่าสุด (by date || createdAt) ----
+      // ---- เลือก ArtistRecord ล่าสุด ----
       const records = Array.isArray(a.artistRecords) ? a.artistRecords.slice() : [];
       records.sort((r1, r2) => {
         const d1 = r1.date ? new Date(r1.date).getTime() : 0;
         const d2 = r2.date ? new Date(r2.date).getTime() : 0;
-        // ถ้าไม่มี date ให้ fallback createdAt
         const c1 = new Date(r1.createdAt).getTime();
         const c2 = new Date(r2.createdAt).getTime();
-        const t1 = Math.max(d1, c1);
-        const t2 = Math.max(d2, c2);
-        return t2 - t1; // ล่าสุดมาก่อน
+        return Math.max(d2, c2) - Math.max(d1, c1);
       });
       const latest = records[0];
 
-      // hero photo/ video มาจาก ArtistRecord
-      const heroPhoto =
-        latest?.thumbnailUrl ||
-        (Array.isArray(latest?.photoUrls) && latest.photoUrls.length ? latest.photoUrls[0] : null);
-      const heroVideo =
-        Array.isArray(latest?.videoUrls) && latest.videoUrls.length ? latest.videoUrls[0] : null;
+      // ---- รวมรูป/วิดีโอจาก AccountSetup (CSV) + ArtistRecord ----
+      const photos = uniq([
+        ...toArray(a.photoUrl),             // จาก artist.photoUrl (CSV)
+        ...(latest?.photoUrls || []),      // จาก record ล่าสุด
+        latest?.thumbnailUrl || null,      // เผื่อมี thumbnail แยก
+      ]);
+
+      const videos = uniq([
+        ...toArray(a.videoUrl),
+        ...(latest?.videoUrls || []),
+      ]);
+
+      // ✅ โปรไฟล์จริง (avatar) มาจาก User.profilePhotoUrl
+      const avatar =
+        a.performer?.user?.profilePhotoUrl ||
+        'https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg';
+
+      // ✅ hero/แบนเนอร์ (รูปแรกในแกลเลอรี ถ้าไม่มีให้ fallback เป็น avatar)
+      const heroImage = photos[0] || avatar;
 
       // ---- สร้าง schedule ----
       const schedule = (Array.isArray(a.artistEvents) ? a.artistEvents : [])
@@ -719,15 +975,14 @@ app.get('/groups', async (req, res) => {
           const e = ae.event;
           if (!e) return null;
           const venue = e.venue;
-          const venueName = venue?.performer?.user?.name ?? "Unknown Venue";
+          const venueName = venue?.performer?.user?.name ?? 'Unknown Venue';
           return {
             id: e.id,
             dateISO: e.date.toISOString(),
             title: e.name,
             venue: venueName,
-            // schema จริงใช้ venue.location (ไม่ใช่ venue.venueLocation)
-            city: venue?.location?.locationUrl ? "" : "",
-            ticketUrl: e.ticketLink ?? "#",
+            city: venue?.location?.locationUrl ? '' : '',
+            ticketUrl: e.ticketLink ?? '#',
             performanceRole: ae.role ?? null,
             performanceOrder: ae.order ?? null,
             performanceFee: ae.fee ?? null,
@@ -739,27 +994,34 @@ app.get('/groups', async (req, res) => {
       return {
         id: a.performerId,
         slug:
-          (a.performer?.user?.name ?? "unknown").toLowerCase().replace(/\s+/g, "-") ||
+          (a.performer?.user?.name ?? 'unknown').toLowerCase().replace(/\s+/g, '-') ||
           `artist-${a.performerId}`,
-        name: a.performer?.user?.name ?? "Unnamed Artist",
-        // ถ้าไม่มีรูปใน ArtistRecord ให้ fallback ไปที่รูป user.profilePhotoUrl
-        image:
-          heroPhoto ||
-          a.performer?.user?.profilePhotoUrl ||
-          "https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg",
+        name: a.performer?.user?.name ?? 'Unnamed Artist',
 
-        //  ส่งต่อ photo/video จาก ArtistRecord (ให้หน้า FE ใช้ได้เลย)
-        photoUrl: heroPhoto || null,
-        videoUrl: heroVideo || null,
+        // ✅ ใช้ image = avatar (เข้ากับความหมายรูปโปรไฟล์)
+        image: avatar,
+        avatar,            // เผื่อ FE ใหม่อ้างชัด ๆ
+        heroImage,         // ✅ ใช้เป็นปก/แบนเนอร์ในหน้า artist
 
-        description: a.description ?? "",
-        details: a.genre ?? "",
+        // legacy single fields (เผื่อ FE เก่ายังอ่าน)
+        photoUrl: heroImage || null,
+        videoUrl: videos[0] || null,
+
+        // ✅ ลิสต์เต็มสำหรับแกลเลอรี
+        gallery: {
+          photos,
+          videos,
+        },
+
+        description: a.description ?? '',
+        details: a.genre ?? '',
         genre: a.genre ?? null,
         subGenre: a.subGenre ?? null,
-        genres: [a.genre, a.subGenre].filter(Boolean), // เผื่อ FE อยากใช้เป็นอาเรย์
+        genres: [a.genre, a.subGenre].filter(Boolean),
+
         stats: {
           members: a.memberCount ?? 1,
-          debut: a.foundingYear ? String(a.foundingYear) : "N/A",
+          debut: a.foundingYear ? String(a.foundingYear) : 'N/A',
           followers: String(a.performer?._count?.likedBy ?? 0),
         },
         followersCount: a.performer?._count?.likedBy ?? 0,
@@ -773,103 +1035,123 @@ app.get('/groups', async (req, res) => {
           twitter: a.performer.twitterUrl,
           spotify: a.spotifyUrl || null,
           line: a.performer.lineUrl,
+          appleMusic: a.appleMusicUrl || null,
+          soundcloud: a.soundcloudUrl || null,
+          bandcamp: a.bandcampUrl || null,
+          shazam: a.shazamUrl || null,
         },
 
         schedule,
 
+        // เอกสาร (ถ้าจะโชว์ปุ่มใน Artist.jsx)
+        epk: a.epk || null,       // {downloadUrl,...} ถ้าเก็บแบบ object
+        rider: a.rider || null,
+        rateCard: a.rateCard || null,
+
         techRider: {
-          summary: "",
+          summary: '',
           items: [],
-          downloadUrl: a.riderUrl ?? "",
+          downloadUrl: a.riderUrl ?? '', // legacy rider url
         },
 
         playlistEmbedUrl: a.spotifyUrl
-          ? a.spotifyUrl.replace("open.spotify.com/artist", "open.spotify.com/embed/artist")
+          ? a.spotifyUrl.replace(
+              'open.spotify.com/artist',
+              'open.spotify.com/embed/artist'
+            )
           : null,
       };
     });
 
     res.json(groups);
   } catch (err) {
-    console.error("GET /groups error:", err);
-    res.status(500).json({ error: "Failed to fetch groups" });
+    console.error('GET /groups error:', err);
+    res.status(500).json({ error: 'Failed to fetch groups' });
   }
 });
 
 /* ───────────────────────────── VENUES (POST = upsert by userId) ─────────── */
 app.post('/venues', authMiddleware, async (req, res) => {
   try {
-
     if (!['ORGANIZE', 'ADMIN'].includes(req.user.role)) {
       return res.status(403).json({ error: 'Only ORGANIZE or ADMIN can manage venues' });
     }
+
     const userId = req.user.id;
-    const data = req.body;
+    const data = req.body || {};
 
     const performerData = {
-      contactEmail: data.contactEmail,
-      contactPhone: data.contactPhone,
-      youtubeUrl: data.youtubeUrl,
-      tiktokUrl: data.tiktokUrl,
-      facebookUrl: data.facebookUrl,
-      instagramUrl: data.instagramUrl,
-      lineUrl: data.lineUrl,
+      contactEmail: data.contactEmail ?? null,
+      contactPhone: data.contactPhone ?? null,
+      youtubeUrl:   data.youtubeUrl ?? null,
+      tiktokUrl:    data.tiktokUrl ?? null,
+      facebookUrl:  data.facebookUrl ?? null,
+      instagramUrl: data.instagramUrl ?? null,
+      lineUrl:      data.lineUrl ?? null,
+      twitterUrl:   data.twitterUrl ?? null,
     };
 
     const venueData = {
-  description: data.description ?? null,
-  genre: data.genre ?? null,
-  capacity: Number.isFinite(+data.capacity) ? Math.trunc(+data.capacity) : null,
-  dateOpen: data.dateOpen ? new Date(data.dateOpen) : null,
-  dateClose: data.dateClose ? new Date(data.dateClose) : null,
-  priceRate: normalizePriceRate(data.priceRate),
-  timeOpen: data.timeOpen ?? null,
-  timeClose: data.timeClose ?? null,
-  alcoholPolicy: normalizeAlcoholPolicy(data.alcoholPolicy),
-  ageRestriction: normalizeAgeRestriction(data.ageRestriction),
-  photoUrls: Array.isArray(data.photoUrls) ? data.photoUrls : [],
-  websiteUrl: data.websiteUrl ?? null,
-  shazamUrl: data.shazamUrl ?? null,
-  bandcampUrl: data.bandcampUrl ?? null,
-};
-
-    const venueLocationData = {
-      latitude: data.latitude,
-      longitude: data.longitude,
-      locationUrl: data.locationUrl,
+      description:   data.description ?? null,
+      genre:         data.genre ?? null,
+      capacity:      Number.isFinite(+data.capacity) ? Math.trunc(+data.capacity) : null,
+      dateOpen:      data.dateOpen ? new Date(data.dateOpen) : null,
+      dateClose:     data.dateClose ? new Date(data.dateClose) : null,
+      priceRate:     normalizePriceRate(data.priceRate),
+      timeOpen:      data.timeOpen ?? null,
+      timeClose:     data.timeClose ?? null,
+      alcoholPolicy: normalizeAlcoholPolicy(data.alcoholPolicy),
+      ageRestriction:normalizeAgeRestriction(data.ageRestriction),
+      websiteUrl:    data.websiteUrl ?? null,
+      photoUrls:     Array.isArray(data.photoUrls) ? data.photoUrls : [],
+      // ✅ ใช้ avatar ของ “สถานที่” เอง
+      profilePhotoUrl: Object.prototype.hasOwnProperty.call(data, 'profilePhotoUrl')
+        ? (data.profilePhotoUrl ?? null)   // อนุญาตให้ลบเป็น null
+        : null,                             // create ครั้งแรก ไม่มี -> null
     };
 
-    const existing = await prisma.performer.findUnique({
-      where: { userId },
-      include: { venueInfo: true },
-    });
+    const venueLocationData = {
+      latitude:   data.latitude ?? null,
+      longitude:  data.longitude ?? null,
+      locationUrl:data.locationUrl ?? null,
+    };
 
     const result = await prisma.$transaction(async (tx) => {
+      // ✅ ถ้าส่งชื่อมา ให้ผูกกับ User.name (ชื่อเพจสถานที่)
+      if ((data.name ?? '').trim()) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { name: (data.name || '').trim() },
+        });
+      }
+
+      // upsert performer (contact/social)
       const performer = await tx.performer.upsert({
-        where: { userId },
+        where:  { userId },
         update: performerData,
-        create: {
-          userId,
-          ...performerData,
-        },
+        create: { userId, ...performerData },
       });
 
+      // upsert venue (ข้อมูลหลักของสถานที่)
       const venue = await tx.venue.upsert({
-        where: { performerId: userId },
+        where:  { performerId: userId },
         update: venueData,
-        create: {
-          performerId: userId,
-          ...venueData,
-        },
+        create: { performerId: userId, ...venueData },
+      });
+
+      // ✅ upsert location ให้คู่กับ venue เสมอ
+      await tx.venueLocation.upsert({
+        where:  { venueId: userId },
+        update: venueLocationData,
+        create: { venueId: userId, ...venueLocationData },
       });
 
       return { performer, venue };
     });
 
     res.status(201).json(result);
-
   } catch (err) {
-    console.error(err);
+    console.error('POST /venues error:', err);
     res.status(500).json({ error: 'Could not create/update venue' });
   }
 });
@@ -950,7 +1232,7 @@ app.get('/venues/:id', async (req, res) => {
 /* ───────── PUT /venues/:id (id = performerId) ───────── */
 app.put('/venues/:id', authMiddleware, async (req, res) => {
   try {
-    const id = Number(req.params.id);            // <- performerId / owner userId
+    const id = Number(req.params.id); // performerId / owner userId
     if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
 
     // สิทธิ์: ADMIN ได้หมด / ORGANIZE ต้องแก้เฉพาะของตัวเอง
@@ -960,8 +1242,8 @@ app.put('/venues/:id', authMiddleware, async (req, res) => {
 
     const body = req.body || {};
 
-    // เตรียมข้อมูล (แปลงค่าสำคัญเป็น number ถ้าจำเป็น)
-    const toInt = (v) => (v === '' || v == null ? null : (Number.isFinite(+v) ? Math.trunc(+v) : null));
+    // helper แปลงเลข
+    const toInt   = (v) => (v === '' || v == null ? null : (Number.isFinite(+v) ? Math.trunc(+v) : null));
     const toFloat = (v) => (v === '' || v == null ? null : (Number.isFinite(+v) ? +v : null));
 
     const userData = {
@@ -972,65 +1254,60 @@ app.put('/venues/:id', authMiddleware, async (req, res) => {
     const performerData = {
       contactEmail: body.contactEmail ?? null,
       contactPhone: body.contactPhone ?? null,
-      youtubeUrl: body.youtubeUrl ?? null,
-      tiktokUrl: body.tiktokUrl ?? null,
-      facebookUrl: body.facebookUrl ?? null,
+      youtubeUrl:   body.youtubeUrl ?? null,
+      tiktokUrl:    body.tiktokUrl ?? null,
+      facebookUrl:  body.facebookUrl ?? null,
       instagramUrl: body.instagramUrl ?? null,
-      lineUrl: body.lineUrl ?? null,
-      twitterUrl: body.twitterUrl ?? null,
+      lineUrl:      body.lineUrl ?? null,
+      twitterUrl:   body.twitterUrl ?? null,
     };
 
     const venueData = {
-  description: body.description ?? null,
-  genre: body.genre ?? null,
-  capacity: toInt(body.capacity),
-  dateOpen: body.dateOpen ? new Date(body.dateOpen) : null,
-  dateClose: body.dateClose ? new Date(body.dateClose) : null,
-  priceRate: normalizePriceRate(body.priceRate),
-  timeOpen: body.timeOpen ?? null,
-  timeClose: body.timeClose ?? null,
-  alcoholPolicy: normalizeAlcoholPolicy(body.alcoholPolicy),
-  ageRestriction: normalizeAgeRestriction(body.ageRestriction),
-  websiteUrl: body.websiteUrl ?? null,
-  photoUrls: Array.isArray(body.photoUrls)
-    ? body.photoUrls
-    : (typeof body.photoUrls === 'string'
-        ? body.photoUrls.split(',').map(s => s.trim()).filter(Boolean)
-        : []),
-};
-
-    const locationData = {
-      latitude: toFloat(body.latitude),
-      longitude: toFloat(body.longitude),
-      locationUrl: body.locationUrl ?? null,
+      description:    body.description ?? null,
+      genre:          body.genre ?? null,
+      capacity:       toInt(body.capacity),
+      dateOpen:       body.dateOpen ? new Date(body.dateOpen) : null,
+      dateClose:      body.dateClose ? new Date(body.dateClose) : null,
+      priceRate:      normalizePriceRate(body.priceRate),
+      timeOpen:       body.timeOpen ?? null,
+      timeClose:      body.timeClose ?? null,
+      alcoholPolicy:  normalizeAlcoholPolicy(body.alcoholPolicy),
+      ageRestriction: normalizeAgeRestriction(body.ageRestriction),
+      websiteUrl:     body.websiteUrl ?? null,
+      // ✅ ใช้ body (ไม่ใช่ v) และรองรับ null เพื่อลบรูป
+      profilePhotoUrl: Object.prototype.hasOwnProperty.call(body, 'profilePhotoUrl')
+        ? (body.profilePhotoUrl ?? null)
+        : undefined, // ไม่ส่งมาก็อย่าแตะ
+      photoUrls: Array.isArray(body.photoUrls)
+        ? body.photoUrls
+        : (typeof body.photoUrls === 'string'
+            ? body.photoUrls.split(',').map(s => s.trim()).filter(Boolean)
+            : []),
     };
 
-    // ตรวจว่ามี venue นี้อยู่จริงก่อน
+    const locationData = {
+      latitude:   toFloat(body.latitude),
+      longitude:  toFloat(body.longitude),
+      locationUrl:body.locationUrl ?? null,
+    };
+
+    // ตรวจว่ามี venue นี้จริงก่อน
     const exists = await prisma.venue.findUnique({ where: { performerId: id } });
     if (!exists) return res.status(404).json({ error: 'Venue not found' });
 
     const updated = await prisma.$transaction(async (tx) => {
-      // 1) อัปเดตชื่อบน user
-      await tx.user.update({
-        where: { id },
-        data: userData,
-      });
+      // 1) user.name
+      await tx.user.update({ where: { id }, data: userData });
 
       // 2) performer (ช่องทางติดต่อ/โซเชียล)
-      await tx.performer.update({
-        where: { userId: id },
-        data: performerData,
-      });
+      await tx.performer.update({ where: { userId: id }, data: performerData });
 
-      // 3) venue หลัก (***อย่าใส่ 173 อีกแล้ว***)
-      await tx.venue.update({
-        where: { performerId: id },
-        data: venueData,
-      });
+      // 3) venue หลัก
+      await tx.venue.update({ where: { performerId: id }, data: venueData });
 
-      // 4) location: upsert โดยใช้ venueId = performerId
+      // 4) location: upsert
       await tx.venueLocation.upsert({
-        where: { venueId: id },
+        where:  { venueId: id },
         update: locationData,
         create: { venueId: id, ...locationData },
       });
@@ -1052,6 +1329,7 @@ app.put('/venues/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Could not update venue' });
   }
 });
+
 
 
 /* ───────────────────────────── EVENTS ─────────── */

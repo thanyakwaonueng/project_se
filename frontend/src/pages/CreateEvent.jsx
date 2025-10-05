@@ -1,18 +1,18 @@
 // frontend/src/pages/CreateEvent.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
-// ✅ ใหม่: แยกไฟล์ CSS สำหรับหน้านี้โดยเฉพาะ (prefix: ee- = Event Editor)
+// ✅ แยกไฟล์ CSS สำหรับหน้านี้โดยเฉพาะ (prefix: ee- = Event Editor)
 import "../css/CreateEvent.css";
 
 export default function CreateEvent() {
   const { eventId } = useParams(); // /me/event/:eventId
 
-  // ===== state จากไฟล์เดิม (ไม่ตัด/ไม่เพิ่มฟิลด์) =====
+  // ===== state เดิม =====
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [posterUrl, setPosterUrl] = useState('');
+  const [posterUrl, setPosterUrl] = useState(''); // เก็บ URL โปสเตอร์ (เก่าหรือที่ได้จากอัปโหลดใหม่)
   const [conditions, setConditions] = useState('');
   const [eventType, setEventType] = useState('INDOOR');
   const [ticketing, setTicketing] = useState('FREE');
@@ -30,6 +30,43 @@ export default function CreateEvent() {
 
   const navigate = useNavigate();
 
+  // ===== สถานะไฟล์/อัปโหลด (เหมือนหน้า VenueEditor) =====
+  const [posterFile, setPosterFile] = useState(null);      // File (โปสเตอร์ใหม่)
+  const [posterPreview, setPosterPreview] = useState('');  // objectURL เพื่อพรีวิว
+  const [deleteQueue, setDeleteQueue] = useState([]);      // url[] ของไฟล์เดิมที่จะลบหลังเซฟสำเร็จ
+  const posterInputRef = useRef(null);
+
+  const handlePickPoster = () => posterInputRef.current?.click();
+  const handlePosterChange = (e) => {
+    const f = e.target.files?.[0] || null;
+    setPosterFile(f);
+    if (f) {
+      setPosterPreview(URL.createObjectURL(f));
+    } else {
+      setPosterPreview('');
+    }
+  };
+  const clearPoster = () => {
+    if (posterUrl) {
+      // ถ้ากดลบ จะใส่ url เดิมเข้าคิวลบ
+      setDeleteQueue((prev) => (prev.includes(posterUrl) ? prev : [...prev, posterUrl]));
+    }
+    setPosterUrl('');
+    setPosterFile(null);
+    setPosterPreview('');
+  };
+
+  // ===== helper: upload =====
+  async function uploadOne(file) {
+    const form = new FormData();
+    form.append("file", file);
+    const { data } = await axios.post("/api/upload", form, {
+      withCredentials: true,
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data?.url || null;
+  }
+
   useEffect(() => {
     if (eventId) setHasEvent(true);
   }, [eventId]);
@@ -43,7 +80,8 @@ export default function CreateEvent() {
         const ev = res.data;
         setName(ev.name || '');
         setDescription(ev.description || '');
-        setPosterUrl(ev.posterUrl || '');
+        setPosterUrl(ev.posterUrl || ''); // เก็บ URL โปสเตอร์เดิมไว้
+        setPosterPreview(''); // ให้เริ่มด้วยไม่มีพรีวิว (ถ้าต้องการโชว์รูปเดิมก็ใช้ posterUrl ใน <img> ได้เลย)
         setConditions(ev.conditions || '');
         setEventType(ev.eventType || 'INDOOR');
         setTicketing(ev.ticketing || 'FREE');
@@ -68,11 +106,23 @@ export default function CreateEvent() {
     setLoading(true);
 
     try {
-      // เซฟปกติ (โหมดสร้าง/แก้ไขเหมือนเดิม: แก้ไขให้ส่ง id ไป)
+      // 1) ถ้ามีเลือกโปสเตอร์ใหม่ → อัปโหลดก่อน
+      let uploadedPoster = null;
+      if (posterFile) {
+        uploadedPoster = await uploadOne(posterFile);
+      }
+
+      // 2) ถ้าอัปโหลดใหม่สำเร็จ และมีโปสเตอร์เดิม → ใส่เดิมเข้าคิวลบ
+      const deleteQueueNext = [...deleteQueue];
+      if (uploadedPoster && posterUrl && posterUrl !== uploadedPoster) {
+        if (!deleteQueueNext.includes(posterUrl)) deleteQueueNext.push(posterUrl);
+      }
+
+      // 3) เซฟข้อมูลอีเวนต์
       const raw = {
         name: name.trim(),
         description: description.trim() || undefined,
-        posterUrl: posterUrl.trim() || undefined,
+        posterUrl: (uploadedPoster || posterUrl || '').trim() || undefined, // ใช้รูปใหม่ถ้ามี ไม่งั้นใช้รูปเดิม
         conditions: conditions.trim() || undefined,
         eventType,
         ticketing,
@@ -95,8 +145,21 @@ export default function CreateEvent() {
         headers: { 'Content-Type': 'application/json' },
       });
 
+      // 4) ลบไฟล์เก่าจริง ๆ (best-effort) หลังบันทึกสำเร็จ
+      if (deleteQueueNext.length) {
+        try {
+          await axios.post(
+            '/api/storage/delete',
+            { urls: deleteQueueNext },
+            { withCredentials: true }
+          );
+        } catch (errDel) {
+          console.warn('delete storage failed (ignored):', errDel?.response?.data || errDel?.message);
+        }
+      }
+
       setLoading(false);
-      navigate(`/events/${res.data.id}`); // กลับไปหน้ารายละเอียดงาน
+      navigate(`/events/${res.data.id}`); // ไปหน้ารายละเอียดงาน
     } catch (err) {
       setLoading(false);
       setError(err.response?.data?.error || err.message || 'Failed to save event');
@@ -108,9 +171,6 @@ export default function CreateEvent() {
       {/* ===== Header ===== */}
       <header className="ee-header">
         <h1 className="ee-title">{hasEvent ? 'EDIT EVENT' : 'Create Event'}</h1>
-        {/* <p className="ee-subtitle">
-          Fill out event details and ticketing information.
-        </p> */}
       </header>
 
       <div className="ve-line" />
@@ -152,18 +212,50 @@ export default function CreateEvent() {
               />
             </div>
 
-            {/* แถว 3: Poster URL / Conditions */}
-            <div className="ee-field">
-              <label className="ee-label" htmlFor="posterUrl">Poster URL</label>
-              <input
-                id="posterUrl"
-                className="ee-input"
-                value={posterUrl}
-                onChange={(e) => setPosterUrl(e.target.value)}
-                placeholder="https://…"
-              />
+            {/* ✅ โปสเตอร์: เปลี่ยนจาก input URL -> เป็นอัปโหลดไฟล์ + พรีวิว + ปุ่มลบ */}
+            <div className="ee-field ee-col-span-2">
+              <label className="ee-label">Poster</label>
+
+              <div className="ee-posterRow">
+                <div className="ee-poster">
+                  {posterPreview || posterUrl ? (
+                    <img src={posterPreview || posterUrl} alt="poster" />
+                  ) : (
+                    <div className="ee-poster-placeholder">No poster</div>
+                  )}
+                </div>
+
+                <div className="ee-fileRow">
+                  <button
+                    type="button"
+                    className="ee-fileBtn"
+                    onClick={handlePickPoster}
+                  >
+                    Choose image
+                  </button>
+                  {(posterPreview || posterUrl) && (
+                    <button
+                      type="button"
+                      className="ee-fileBtn ee-fileBtn-danger"
+                      onClick={clearPoster}
+                    >
+                      Remove
+                    </button>
+                  )}
+                  <input
+                    ref={posterInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={handlePosterChange}
+                  />
+                </div>
+
+                <p className="ee-help">โปสเตอร์จะถูกอัปโหลดเมื่อกด Save</p>
+              </div>
             </div>
 
+            {/* แถว: Conditions */}
             <div className="ee-field">
               <label className="ee-label" htmlFor="conditions">Conditions</label>
               <input
@@ -175,7 +267,7 @@ export default function CreateEvent() {
               />
             </div>
 
-            {/* แถว 4: Event Type / Ticketing */}
+            {/* แถว: Event Type / Ticketing */}
             <div className="ee-field">
               <label className="ee-label" htmlFor="eventType">Event Type *</label>
               <select
@@ -206,7 +298,7 @@ export default function CreateEvent() {
               </select>
             </div>
 
-            {/* แถว 5: Ticket Link (เต็มแถว) */}
+            {/* แถว: Ticket Link (เต็มแถว) */}
             <div className="ee-field ee-col-span-2">
               <label className="ee-label" htmlFor="ticketLink">Ticket Link</label>
               <input
@@ -218,7 +310,7 @@ export default function CreateEvent() {
               />
             </div>
 
-            {/* แถว 6: Alcohol / Age (2 ช่อง) */}
+            {/* แถว: Alcohol / Age */}
             <div className="ee-field">
               <label className="ee-label" htmlFor="alcoholPolicy">Alcohol Policy *</label>
               <select
@@ -247,7 +339,7 @@ export default function CreateEvent() {
               </select>
             </div>
 
-            {/* แถว 7: Date / Door open / End time (3 คอลัมน์) */}
+            {/* แถว: Date / Door open / End time */}
             <div className="ee-col-span-2">
               <div className="ee-grid-3">
                 <div className="ee-field">
@@ -286,7 +378,7 @@ export default function CreateEvent() {
               </div>
             </div>
 
-            {/* แถว 8: Genre (เต็มแถว) */}
+            {/* แถว: Genre */}
             <div className="ee-field ee-col-span-2">
               <label className="ee-label" htmlFor="genre">Genre</label>
               <input
@@ -302,10 +394,19 @@ export default function CreateEvent() {
 
         {/* Actions (bottom) */}
         <div className="ee-actions ee-actions-bottom">
-          <button type="button" className="ee-btn ee-btn-secondary" onClick={() => navigate(-1)} disabled={loading}>
+          <button
+            type="button"
+            className="ee-btn ee-btn-secondary"
+            onClick={() => navigate(-1)}
+            disabled={loading}
+          >
             Cancel
           </button>
-          <button type="submit" className="ee-btn ee-btn-primary" disabled={loading}>
+          <button
+            type="submit"
+            className="ee-btn ee-btn-primary"
+            disabled={loading}
+          >
             {loading ? (hasEvent ? 'Updating…' : 'Creating…') : (hasEvent ? 'Update Event' : 'Create Event')}
           </button>
         </div>

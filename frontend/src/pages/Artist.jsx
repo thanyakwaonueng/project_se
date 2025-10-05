@@ -62,35 +62,37 @@ export default function Artist() {
     return () => { alive = false; };
   }, []);
 
-  // ---- mock gallery data ----
-  const GALLERY_SAMPLE = [
-    { type: "image", src: "https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg", alt: "Live at City Hall" },
-    { type: "image", src: "https://images.pexels.com/photos/3359713/pexels-photo-3359713.jpeg", alt: "Backstage moment" },
-    { type: "image", src: "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg", alt: "Studio session" },
-    { type: "image", src: "https://images.pexels.com/photos/21067/pexels-photo.jpg", alt: "Crowd shot" },
-    { type: "image", src: "https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg", alt: "Hall angle" },
-    { type: "video", src: "/media/demo-showcase.mp4", poster: "https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg", alt: "Music video teaser" },
-    { type: "video", src: "/media/behind-the-scenes.mp4", poster: "https://images.pexels.com/photos/210922/pexels-photo-210922.jpeg", alt: "Behind the scenes" },
-    { type: "video", src: "/media/live-clip.mp4", poster: "https://images.pexels.com/photos/3359713/pexels-photo-3359713.jpeg", alt: "Live clip" },
-    { type: "video", src: "/media/studio-talk.mp4", poster: "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg", alt: "Studio talk" },
-    { type: "video", src: "/media/interview.mp4", poster: "https://images.pexels.com/photos/21067/pexels-photo.jpg", alt: "Interview" },
-  ];
+  // Helper แปลงเป็น array
+const toArr = (v) =>
+  Array.isArray(v) ? v :
+  (typeof v === "string" && v) ? v.split(",").map(s => s.trim()).filter(Boolean) : [];
 
-  const imagesAll = useMemo(() => GALLERY_SAMPLE.filter(x => x.type === "image"), []);
-  const videosAll = useMemo(() => GALLERY_SAMPLE.filter(x => x.type === "video"), []);
+const imagesAll = useMemo(() => {
+  const photos =
+    selectedGroup?.gallery?.photos ??
+    toArr(selectedGroup?.photoUrl); // fallback legacy
+  return photos.map((url) => ({ type: "image", src: url, alt: selectedGroup?.name || "Photo" }));
+}, [selectedGroup]);
 
-  const [showAllImages, setShowAllImages] = useState(false);
-  const [showAllVideos, setShowAllVideos] = useState(false);
+const videosAll = useMemo(() => {
+  const videos =
+    selectedGroup?.gallery?.videos ??
+    toArr(selectedGroup?.videoUrl); // fallback legacy
+  return videos.map((url) => ({ type: "video", src: url, poster: selectedGroup?.image || undefined, alt: selectedGroup?.name || "Video" }));
+}, [selectedGroup]);
 
-  const imagesToShow = showAllImages ? imagesAll : imagesAll.slice(0, 4);
-  const videosToShow = showAllVideos ? videosAll : videosAll.slice(0, 4);
+const [showAllImages, setShowAllImages] = useState(false);
+const [showAllVideos, setShowAllVideos] = useState(false);
 
-  const hasMoreImages = imagesAll.length > 4 && !showAllImages;
-  const hasMoreVideos = videosAll.length > 4 && !showAllVideos;
+const imagesToShow = showAllImages ? imagesAll : imagesAll.slice(0, 4);
+const videosToShow = showAllVideos ? videosAll : videosAll.slice(0, 4);
 
-  const [lightbox, setLightbox] = useState({ open: false, index: 0 });
-  const openLightbox = (idx) => setLightbox({ open: true, index: idx });
-  const closeLightbox = () => setLightbox({ open: false, index: 0 });
+const hasMoreImages = imagesAll.length > 4 && !showAllImages;
+const hasMoreVideos = videosAll.length > 4 && !showAllVideos;
+
+const [lightbox, setLightbox] = useState({ open: false, index: 0 });
+const openLightbox = (idx) => setLightbox({ open: true, index: idx });
+const closeLightbox = () => setLightbox({ open: false, index: 0 });
 
   useEffect(() => {
     if (!lightbox.open) return;
@@ -236,6 +238,36 @@ export default function Artist() {
     if (!list.length && selectedGroup.details) list.push(selectedGroup.details);
     return Array.from(new Set(list.filter(Boolean)));
   }, [selectedGroup]);
+// --- helper สำหรับเช็ค genre ---
+const norm = (s) => String(s || "").trim().toLowerCase();
+const hasGenre = (g, target) => {
+  const t = norm(target);
+  const pool = [
+    g?.genre,
+    g?.subGenre,
+    ...(Array.isArray(g?.genres) ? g.genres : []),
+    g?.details, // เผื่อบางอันเก็บไว้ตรงนี้
+  ]
+    .map(norm)
+    .filter(Boolean);
+  return pool.includes(t);
+};
+
+// --- เลือกลิสต์ "ศิลปินอื่น" ตามแนวเพลงแรกของศิลปินปัจจุบัน ---
+const otherArtists = useMemo(() => {
+  if (!selectedGroup) return [];
+  const meId = selectedGroup.id;
+  const primary = groupGenres[0]; // ใช้แนวตัวแรกเป็นหัวข้อ
+  // ถ้ามีแนว → หาในแนวเดียวกัน
+  if (primary) {
+    const same = groups
+      .filter((g) => g.id !== meId && hasGenre(g, primary))
+      .slice(0, 12);
+    if (same.length) return same;
+  }
+  // fallback: ถ้าไม่เจอเลย เอาศิลปินอื่นๆ แบบทั่วไป
+  return groups.filter((g) => g.id !== meId).slice(0, 12);
+}, [groups, selectedGroup, groupGenres]);
 
   const fmtCompact = (n) => {
     const num = Number(n || 0);
@@ -268,7 +300,7 @@ export default function Artist() {
   const getDocUrl = (g, key) => {
     // key: 'epk' | 'rider' | 'rateCard'
     const obj = g?.[key];
-    const legacy = g?.[`${key}Url`] || (key === 'epk' ? g?.techRider?.downloadUrl : null);
+    const legacy = g?.[`${key}Url`] || (key === 'rider' ? g?.techRider?.downloadUrl : null);
     return obj?.downloadUrl || legacy || null;
   };
 
@@ -632,16 +664,16 @@ export default function Artist() {
 
             {/* ---------- Lightbox (เฉพาะรูป) ---------- */}
             {lightbox.open && (
-              <div className="lightbox" role="dialog" aria-modal="true" onClick={closeLightbox}>
-                <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
-                  <img
-                    src={(showAllImages ? imagesAll : imagesToShow)[lightbox.index]?.src}
-                    alt={(showAllImages ? imagesAll : imagesToShow)[lightbox.index]?.alt || ""}
-                  />
-                  <button className="lightbox-close" type="button" onClick={closeLightbox} aria-label="Close">×</button>
-                </div>
-              </div>
-            )}
+  <div className="lightbox" role="dialog" aria-modal="true" onClick={closeLightbox}>
+    <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
+      <img
+        src={(showAllImages ? imagesAll : imagesToShow)[lightbox.index]?.src}
+        alt={(showAllImages ? imagesAll : imagesToShow)[lightbox.index]?.alt || ""}
+      />
+      <button className="lightbox-close" type="button" onClick={closeLightbox} aria-label="Close">×</button>
+    </div>
+  </div>
+)}
           </section>
 
 
@@ -649,22 +681,42 @@ export default function Artist() {
 
           {/* OTHER (mock) */}
           <section className="other-sec">
-            <div className="other-head">
-              <h3 className="other-title">OTHER</h3>
-              <div className="other-sub">Artists in <b>{groupGenres[0] || "Pop"}</b></div>
-            </div>
+  <div className="other-head">
+    <h3 className="other-title">OTHER</h3>
+    <div className="other-sub">
+      Artists in <b>{groupGenres[0] || "All genres"}</b>
+    </div>
+  </div>
 
-            <div className="other-strip" role="list">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <a key={`mock-${i}`} href="#" className="other-card" role="listitem" onClick={(e)=>e.preventDefault()}>
-                  <div className="other-thumb">
-                    <img src="/img/fallback.jpg" alt="artist" loading="lazy" onError={(e)=>e.currentTarget.src="/img/fallback.jpg"} />
-                  </div>
-                  <div className="other-name">{(groupGenres[0] || "Pop") + " Artist " + (i+1)}</div>
-                </a>
-              ))}
-            </div>
-          </section>
+  {otherArtists.length ? (
+    <div className="other-strip" role="list">
+      {otherArtists.map((a) => (
+        <Link
+          key={a.id}
+          to={`/artists/${a.id}`}
+          className="other-card"
+          role="listitem"
+          title={a.name}
+        >
+          <div className="other-thumb">
+            <img
+              src={a.image || a.photoUrl || "/img/fallback.jpg"}
+              alt={a.name}
+              loading="lazy"
+              onError={(e) => (e.currentTarget.src = "/img/fallback.jpg")}
+            />
+          </div>
+          <div className="other-name">{a.name}</div>
+        </Link>
+      ))}
+    </div>
+  ) : (
+    <div className="a-empty" style={{ padding: 12 }}>
+      No related artists found.
+    </div>
+  )}
+</section>
+
         </section>
       </>
     )}

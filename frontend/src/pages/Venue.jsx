@@ -6,6 +6,40 @@ import "../css/Venue.css";
 
 const FALLBACK_IMG = "/img/fallback.jpg";
 
+/* ---------- helpers ---------- */
+const asDate = (v) => (v ? new Date(v) : null);
+const fmtDate = (v) => {
+  const d = asDate(v);
+  return d ? d.toLocaleDateString() : "—";
+};
+const fmtTime = (v) => (v ? v : "—");
+
+// robust to array / csv / null
+const toArr = (v) => {
+  if (Array.isArray(v)) return v.filter(Boolean);
+  if (typeof v === "string") {
+    return v
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
+// add cache-busting for static public URLs (เช่น supabase public object) เวลาเพิ่งอัปโหลดใหม่
+const bust = (url) => {
+  if (!url) return url;
+  try {
+    const u = new URL(url, window.location.origin);
+    u.searchParams.set("v", Date.now().toString());
+    return u.toString();
+  } catch {
+    // relative path
+    const sep = url.includes("?") ? "&" : "?";
+    return url + sep + "v=" + Date.now();
+  }
+};
+
 const parseLatLng = (locationUrl, lat, lng) => {
   if (typeof lat === "number" && typeof lng === "number") return { lat, lng };
   if (!locationUrl) return null;
@@ -13,13 +47,6 @@ const parseLatLng = (locationUrl, lat, lng) => {
   if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
   return null;
 };
-
-const asDate = (v) => (v ? new Date(v) : null);
-const fmtDate = (v) => {
-  const d = asDate(v);
-  return d ? d.toLocaleDateString() : "—";
-};
-const fmtTime = (v) => (v ? v : "—");
 
 export default function Venue() {
   // /venues/:id  (id = performerId/userId ของเจ้าของ venue)
@@ -60,11 +87,10 @@ export default function Venue() {
           return;
         }
 
-        // ✅ backend ส่ง include performer{user}, location, events
+        // ✅ backend ควร include performer{user}, location, events
         const v = (await api.get(`/venues/${vid}`, { withCredentials: true })).data;
         if (!alive) return;
-        if (!v) setVenueData(null);
-        else setVenueData(v);
+        setVenueData(v || null);
       } catch (e) {
         if (!alive) return;
         setErr(
@@ -89,16 +115,27 @@ export default function Venue() {
     );
   }, [venueData]);
 
-  // รูปหลัก (ตามเดิม)
+  /* ---------- HERO IMAGE: ใช้ venue.profilePhotoUrl ก่อน! ---------- */
   const heroImg = useMemo(() => {
     const v = venueData;
     if (!v) return FALLBACK_IMG;
-    return (
-      v.performer?.user?.profilePhotoUrl ||
-      v.bannerUrl ||
-      v.coverImage ||
-      FALLBACK_IMG
-    );
+
+    // 1) รูปโปรไฟล์ของ Venue (บันทึกจาก VenueEditor)
+    if (v.profilePhotoUrl) return bust(v.profilePhotoUrl);
+
+    // 2) รูปแรกจากแกลเลอรี venue.photoUrls
+    const photos = toArr(v.photoUrls);
+    if (photos.length) return bust(photos[0]);
+
+    // 3) ตกมาใช้ user.profilePhotoUrl (ค่าเดิมก่อน migrate)
+    if (v.performer?.user?.profilePhotoUrl) return bust(v.performer.user.profilePhotoUrl);
+
+    // 4) เผื่อบางโปรเจกต์ยังมี banner/cover เดิม
+    if (v.bannerUrl) return bust(v.bannerUrl);
+    if (v.coverImage) return bust(v.coverImage);
+
+    // 5) fallback
+    return FALLBACK_IMG;
   }, [venueData]);
 
   // จุดแผนที่
@@ -136,7 +173,7 @@ export default function Venue() {
   // ✅ ใครมองเห็น Draft ได้บ้าง (เจ้าของ/ADMIN เท่านั้น)
   const canSeeDrafts = (me?.role === "ADMIN") || canEdit;
 
-  // ✅ Upcoming events: โชว์เฉพาะที่ "publish แล้ว" สำหรับผู้ชมทั่วไป
+  // ✅ Upcoming events: โชว์เฉพาะที่ publish แล้ว (ถ้าไม่ใช่เจ้าของ/ADMIN)
   const eventsUpcoming = useMemo(() => {
     const list = Array.isArray(venueData?.events) ? venueData.events : [];
     const today = new Date();
@@ -144,7 +181,7 @@ export default function Venue() {
 
     return list
       .filter((ev) => ev?.date && !isNaN(new Date(ev.date)) && new Date(ev.date) >= todayMid)
-      .filter((ev) => ev?.isPublished || canSeeDrafts) // ⬅️ สำคัญ: กรอง Draft ออก
+      .filter((ev) => ev?.isPublished || canSeeDrafts)
       .sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [venueData, canSeeDrafts]);
 
@@ -169,12 +206,11 @@ export default function Venue() {
 
   if (!venueData) return null;
 
-  // แกลเลอรี (ตามเดิม)
-  const gallery = (venueData.photoUrls || venueData.photos || "")
-    .toString()
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  /* ---------- GALLERY: รองรับ array หรือ csv ---------- */
+  const gallery = toArr(venueData.photoUrls);
+
+  // ถ้ามี videoUrls ในสคีม่า/หลังบ้าน
+  const videos = toArr(venueData.videoUrls);
 
   // โซเชียล/คอนแทกต์จาก performer
   const socials = venueData.performer || {};
@@ -196,7 +232,7 @@ export default function Venue() {
               {displayName}
             </h1>
 
-            {/* 🔧 ปุ่มแก้ไข → กลับไป route เดิม /venue/edit */}
+            {/* 🔧 ปุ่มแก้ไข */}
             {canEdit && (
               <Link to={`/venue/edit`} className="vn-btn-img">
                 <img src="/img/edit-text.png" alt="Edit" />
@@ -227,6 +263,7 @@ export default function Venue() {
 
         <div className="vn-hero-media">
           <img
+            key={heroImg}            /* บังคับ re-render เมื่อ url เปลี่ยน */
             src={heroImg}
             alt={displayName}
             loading="lazy"
@@ -424,7 +461,7 @@ export default function Venue() {
         </div>
       </section>
 
-      {/* ===== GALLERY ===== */}
+      {/* ===== GALLERY (Photos) ===== */}
       {gallery.length > 0 && (
         <section className="vn-section">
           <div className="vn-section-title">Gallery</div>
@@ -432,13 +469,33 @@ export default function Venue() {
             {gallery.map((src, i) => (
               <div key={i} className="vn-thumb">
                 <img
-                  src={src}
+                  src={bust(src)}
                   alt={`photo ${i + 1}`}
                   loading="lazy"
                   onError={(e) => {
                     e.currentTarget.style.opacity = 0;
                   }}
                 />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ===== VIDEOS (optional) ===== */}
+      {videos.length > 0 && (
+        <section className="vn-section">
+          <div className="vn-section-title">Videos</div>
+          <div className="vn-gallery">
+            {videos.map((src, i) => (
+              <div key={`v-${i}`} className="vn-thumb">
+                <video
+                  className="vn-videoThumb"
+                  controls
+                  preload="metadata"
+                >
+                  <source src={src} />
+                </video>
               </div>
             ))}
           </div>

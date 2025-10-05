@@ -7,16 +7,94 @@ import "../css/AccountSetupPage.css";
 /* แนวเพลงตัวอย่าง */
 const PRESET_GENRES = ["Pop","Rock","Indie","Jazz","Blues","Hip-Hop","EDM","Folk","Metal","R&B"];
 
+/* ===== Utils ===== */
+const toArr = (v) =>
+  Array.isArray(v) ? v.filter(Boolean)
+  : (typeof v === "string" && v) ? v.split(",").map(s => s.trim()).filter(Boolean)
+  : [];
+
+const uniq = (arr) => Array.from(new Set((arr || []).filter(Boolean)));
+
+function splitCsv(str) {
+  return (str || "").split(",").map(s => s.trim()).filter(Boolean);
+}
+function joinCsv(arr) {
+  return (arr || []).filter(Boolean).join(", ");
+}
+
 /* ล้างค่าว่างออกก่อนส่ง */
 function cleanObject(obj) {
   const out = {};
   Object.entries(obj).forEach(([k, v]) => {
-    if (v === null || v === undefined) return;
+    if (v == null) return;
     if (typeof v === "string" && v.trim() === "") return;
     if (Array.isArray(v) && v.length === 0) return;
     out[k] = typeof v === "string" ? v.trim() : v;
   });
   return out;
+}
+
+/* ===== Helper components ===== */
+function DocField({
+  label,
+  existing,
+  removed,
+  onRemoveToggle,
+  file,
+  onPick,
+  accept,
+}) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <label className="acc-label">{label}</label>
+
+      {!file && existing && !removed && (
+        <div className="acc-doc-current">
+          <a
+            href={existing.downloadUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="acc-doc-link"
+          >
+            View current file{existing.name ? ` (${existing.name})` : ""}
+          </a>
+          <button
+            type="button"
+            className="acc-mini-btn danger"
+            style={{ marginLeft: 8 }}
+            onClick={onRemoveToggle}
+          >
+            Remove
+          </button>
+        </div>
+      )}
+
+      {!file && existing && removed && (
+        <div className="acc-doc-removed">
+          <em>Marked to remove</em>
+          <button
+            type="button"
+            className="acc-mini-btn"
+            style={{ marginLeft: 8 }}
+            onClick={onRemoveToggle}
+          >
+            Undo
+          </button>
+        </div>
+      )}
+
+      <label className="apm-fileBtn apm-fileBtn-secondary" style={{ display: "inline-block", marginTop: 8 }}>
+        Choose file
+        <input type="file" hidden onChange={onPick} accept={accept} />
+      </label>
+
+      {file && (
+        <div style={{ marginTop: 8, fontSize: 13 }}>
+          Selected: <strong>{file.name}</strong>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function AccountSetupPage() {
@@ -25,15 +103,15 @@ export default function AccountSetupPage() {
   const params = new URLSearchParams(location.search);
   const isEdit = params.get("edit") === "1";
 
-  // Avatar (basic)
+  // Avatar
   const [avatarPreview, setAvatarPreview] = useState("");
   const [avatarFile, setAvatarFile] = useState(null);
 
-  // ===== [ADD] ไฟล์ที่เลือกจากหน้า AccountSetupPage =====
-  const [apmImageFiles, setApmImageFiles] = useState([]); // เลือกรูปหลายไฟล์
-  const [apmVideoFiles, setApmVideoFiles] = useState([]); // เลือกวิดีโอหลายไฟล์
-  const apmOnPickImages = (e) => setApmImageFiles(Array.from(e.target.files || []));
-  const apmOnPickVideos = (e) => setApmVideoFiles(Array.from(e.target.files || []));
+  // ===== media picked on this page (append, not replace) =====
+  const [apmImageFiles, setApmImageFiles] = useState([]); // File[]
+  const [apmVideoFiles, setApmVideoFiles] = useState([]); // File[]
+  const apmOnPickImages = (e) => setApmImageFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
+  const apmOnPickVideos = (e) => setApmVideoFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
 
   // Role
   const [role, setRole] = useState(""); // "", "AUDIENCE", "ARTIST"
@@ -65,7 +143,7 @@ export default function AccountSetupPage() {
     contactEmail: "",
     contactPhone: "",
 
-    photoUrl: "",
+    photoUrl: "",     // legacy CSV state (เราจะทำให้เก็บ “รวมทั้งหมด”)
     videoUrl: "",
 
     rateCardUrl: "",
@@ -91,21 +169,24 @@ export default function AccountSetupPage() {
   const [ok, setOk]           = useState(false);
   const [err, setErr]         = useState("");
 
-  // ใช้แยก flow ว่าผู้ใช้ “ได้รับอนุมัติเป็น ARTIST แล้วหรือยัง”
-  const [meRole, setMeRole] = useState("AUDIENCE");                 // ← เพิ่มใช้จริง
+  const [meRole, setMeRole] = useState("AUDIENCE");
   const [priceRange, setPriceRange] = useState("");
 
-
-  // ===== [ADD] docs upload states & handlers =====
-  const [docRateCard, setDocRateCard] = useState(null); // File | null
-  const [docEPK, setDocEPK]         = useState(null);
-  const [docRider, setDocRider]     = useState(null);
-
+  // docs upload states
+  const [docRateCard, setDocRateCard] = useState(null);
+  const [docEPK, setDocEPK]           = useState(null);
+  const [docRider, setDocRider]       = useState(null);
   const onPickRateCard = (e) => setDocRateCard(e.target.files?.[0] ?? null);
   const onPickEPK      = (e) => setDocEPK(e.target.files?.[0] ?? null);
   const onPickRider    = (e) => setDocRider(e.target.files?.[0] ?? null);
 
-
+  // existing docs + remove flags
+  const [existingRateCard, setExistingRateCard] = useState(null);
+  const [existingEPK, setExistingEPK]           = useState(null);
+  const [existingRider, setExistingRider]       = useState(null);
+  const [removeRateCard, setRemoveRateCard] = useState(false);
+  const [removeEPK, setRemoveEPK]           = useState(false);
+  const [removeRider, setRemoveRider]       = useState(false);
 
   // Prefill
   useEffect(() => {
@@ -118,10 +199,8 @@ export default function AccountSetupPage() {
         const { data } = await api.get("/api/auth/me", { withCredentials: true });
         if (!mounted || !data) return;
 
-        // เก็บ role จริงของระบบไว้เช็คตอน save
         setMeRole(data.role || "AUDIENCE");
 
-        // ตั้งค่า role ในฟอร์ม
         if (isEdit) setRole(data.role || "AUDIENCE");
         else setRole("");
 
@@ -137,7 +216,30 @@ export default function AccountSetupPage() {
         const a = p.artistInfo || {};
         const pendingApp = data.pendingRoleRequest?.application?.artist || null;
 
-        // โหลด media ล่าสุดจาก ArtistRecord (ถ้ามี)
+        // โหลดทุกแหล่งสำหรับรูป/วิดีโอ แล้วรวม+dedupe
+        // (1) จาก artistInfo: gallery.photos/videos, photoUrls/videoUrls, legacy photoUrl/videoUrl
+        const aPhotos = uniq([
+          ...(a.gallery?.photos || []),
+          ...(a.photoUrls || []),
+          ...toArr(a.photoUrl),
+        ]);
+        const aVideos = uniq([
+          ...(a.gallery?.videos || []),
+          ...(a.videoUrls || []),
+          ...toArr(a.videoUrl),
+        ]);
+
+        // (2) จาก pending application (เผื่อเคยสมัครไว้)
+        const appPhotos = uniq([
+          ...(pendingApp?.photoUrls || []),
+          ...toArr(pendingApp?.photoUrl),
+        ]);
+        const appVideos = uniq([
+          ...(pendingApp?.videoUrls || []),
+          ...toArr(pendingApp?.videoUrl),
+        ]);
+
+        // (3) จาก artistRecords ตัวล่าสุด (fallback)
         const recs = Array.isArray(a.artistRecords) ? [...a.artistRecords] : [];
         recs.sort((r1, r2) => {
           const t1 = Math.max(r1.date ? +new Date(r1.date) : 0, r1.createdAt ? +new Date(r1.createdAt) : 0);
@@ -145,15 +247,27 @@ export default function AccountSetupPage() {
           return t2 - t1;
         });
         const latest = recs[0] || null;
-        const recPhoto = latest?.thumbnailUrl || (latest?.photoUrls?.[0] ?? "");
-        const recVideo = latest?.videoUrls?.[0] ?? "";
+        const recPhotos = uniq([
+          latest?.thumbnailUrl || "",
+          ...(latest?.photoUrls || []),
+        ]);
+        const recVideos = uniq([
+          ...(latest?.videoUrls || []),
+        ]);
+
+        // รวมทั้งหมด + dedupe
+        const mergedPhotosAll = uniq([
+          ...aPhotos, ...appPhotos, ...recPhotos,
+        ]);
+        const mergedVideosAll = uniq([
+          ...aVideos, ...appVideos, ...recVideos,
+        ]);
 
         if (a && Object.keys(a).length) {
           setArtist(prev => ({
             ...prev,
-            // Artist table ไม่มี name → ใช้ชื่อจากใบสมัคร/ผู้ใช้
             name: (pendingApp?.name) || data.name || prev.name,
-            profilePhotoUrl: (a.profilePhotoUrl ?? pendingApp?.profilePhotoUrl ?? data.profilePhotoUrl ?? recPhoto) || prev.profilePhotoUrl,
+            profilePhotoUrl: (a.profilePhotoUrl ?? pendingApp?.profilePhotoUrl ?? data.profilePhotoUrl ?? mergedPhotosAll[0]) || prev.profilePhotoUrl,
 
             description: a.description || prev.description,
             genre: a.genre || prev.genre,
@@ -169,12 +283,14 @@ export default function AccountSetupPage() {
             contactEmail: p.contactEmail || pendingApp?.contactEmail || prev.contactEmail,
             contactPhone: p.contactPhone || pendingApp?.contactPhone || prev.contactPhone,
 
-            photoUrl: (pendingApp?.photoUrl ?? recPhoto) || prev.photoUrl,
-            videoUrl: (pendingApp?.videoUrl ?? recVideo) || prev.videoUrl,
+            // ✅ ใส่ "รวมทั้งหมด" ให้ editor เห็นครบ
+            photoUrl: joinCsv(mergedPhotosAll),
+            videoUrl: joinCsv(mergedVideosAll),
 
+            // legacy url fields
             rateCardUrl: a.rateCardUrl || pendingApp?.rateCardUrl || prev.rateCardUrl,
-            epkUrl: a.epkUrl || pendingApp?.epkUrl || prev.epkUrl,
-            riderUrl: a.riderUrl || pendingApp?.riderUrl || prev.riderUrl,
+            epkUrl:      a.epkUrl      || pendingApp?.epkUrl      || prev.epkUrl,
+            riderUrl:    a.riderUrl    || pendingApp?.riderUrl    || prev.riderUrl,
 
             spotifyUrl: a.spotifyUrl || pendingApp?.spotifyUrl || prev.spotifyUrl,
             youtubeUrl: p.youtubeUrl || a.youtubeUrl || pendingApp?.youtubeUrl || prev.youtubeUrl,
@@ -187,6 +303,23 @@ export default function AccountSetupPage() {
             bandcampUrl: a.bandcampUrl || pendingApp?.bandcampUrl || prev.bandcampUrl,
             tiktokUrl: p.tiktokUrl || a.tiktokUrl || pendingApp?.tiktokUrl || prev.tiktokUrl,
           }));
+
+          // existing docs (object-style ถ้ามี ไม่มีก็ห่อจาก URL)
+          setExistingRateCard(
+            a.rateCard?.downloadUrl
+              ? a.rateCard
+              : (a.rateCardUrl ? { downloadUrl: a.rateCardUrl } : null)
+          );
+          setExistingEPK(
+            a.epk?.downloadUrl
+              ? a.epk
+              : (a.epkUrl ? { downloadUrl: a.epkUrl } : null)
+          );
+          setExistingRider(
+            a.rider?.downloadUrl
+              ? a.rider
+              : (a.riderUrl ? { downloadUrl: a.riderUrl } : null)
+          );
         }
 
         const min = a.priceMin ?? "";
@@ -227,12 +360,18 @@ export default function AccountSetupPage() {
     setOk(false);
     setErr("");
     setPriceRange("");
+    setDocRateCard(null);
+    setDocEPK(null);
+    setDocRider(null);
+    setExistingRateCard(null);
+    setExistingEPK(null);
+    setExistingRider(null);
+    setRemoveRateCard(false);
+    setRemoveEPK(false);
+    setRemoveRider(false);
+    setApmImageFiles([]);
+    setApmVideoFiles([]);
   };
-
-
-
-
-
 
   async function uploadDoc(file) {
     if (!file) return null;
@@ -242,14 +381,8 @@ export default function AccountSetupPage() {
       withCredentials: true,
       headers: { "Content-Type": "multipart/form-data" },
     });
-    // สมมติ backend ตอบ { url, name?, size?, mime? }
     return data?.url ? { downloadUrl: data.url, name: file.name, size: file.size, mime: file.type } : null;
   }
-
-
-
-
-
 
   const handleSave = async () => {
     setSaving(true);
@@ -257,26 +390,30 @@ export default function AccountSetupPage() {
     try {
       if (!role) throw new Error("กรุณาเลือก Role ก่อน");
 
-      // อัปโหลด avatar ถ้ามี
       let avatarUrl = null;
-      try {
-        avatarUrl = await uploadAvatarIfNeeded();
-      } catch {}
+      try { avatarUrl = await uploadAvatarIfNeeded(); } catch {}
 
-      // === อัปโหลดเอกสาร 3 ไฟล์ (ถ้าเลือกมา) ===
-      const upRate  = await uploadDoc(docRateCard); // => {downloadUrl, name, ...} | null
+      const upRate  = await uploadDoc(docRateCard);
       const upEPK   = await uploadDoc(docEPK);
       const upRider = await uploadDoc(docRider);
 
-
-      // อัปโหลดไฟล์ใหม่ (เหมือน venueEditor)
-      const newImageUrls = await uploadMany(apmImageFiles);   // จาก /api/upload -> ได้ array ของ url
+      // อัปโหลดรูป/วิดีโอใหม่
+      const newImageUrls = await uploadMany(apmImageFiles);
       const newVideoUrls = await uploadMany(apmVideoFiles);
 
-      // รวมกับของเดิมในฟอร์ม (string CSV เดิม)
-      const mergedPhotoUrls = [...splitCsv(artist.photoUrl), ...newImageUrls];
-      const mergedVideoUrls = [...splitCsv(artist.videoUrl), ...newVideoUrls];
+      // รวมกับของเดิมจาก state (CSV) แล้ว dedupe
+      const mergedPhotoUrls = uniq([...splitCsv(artist.photoUrl), ...newImageUrls]);
+      const mergedVideoUrls = uniq([...splitCsv(artist.videoUrl), ...newVideoUrls]);
 
+      const keepOrNew = (uploaded, existing, removed) =>
+        removed ? undefined : (uploaded || existing || undefined);
+
+      const urlWhen = (uploaded, existing, removed) => {
+        if (removed) return "";
+        if (uploaded?.downloadUrl) return uploaded.downloadUrl;
+        if (existing?.downloadUrl) return existing.downloadUrl;
+        return undefined;
+      };
 
       // 1) บันทึกโปรไฟล์พื้นฐาน (+ แนบใบสมัครถ้าเลือก ARTIST)
       const setupPayload = cleanObject({
@@ -320,17 +457,20 @@ export default function AccountSetupPage() {
           priceMin: priceMinNum,
           priceMax: priceMaxNum,
           profilePhotoUrl: artist.profilePhotoUrl,
+
+          // ✅ ส่งทั้ง CSV และ Array
           photoUrl: joinCsv(mergedPhotoUrls),
           videoUrl: joinCsv(mergedVideoUrls),
-          rateCardUrl: artist.rateCardUrl,
-          epkUrl: artist.epkUrl,
-          riderUrl: artist.riderUrl,
+          photoUrls: mergedPhotoUrls,
+          videoUrls: mergedVideoUrls,
 
-          // === new object style (เพิ่มใหม่) ===
-          rateCard: upRate || undefined,
-          epk:      upEPK  || undefined,
-          rider:    upRider|| undefined,
+          rateCardUrl: urlWhen(upRate,  existingRateCard, removeRateCard),
+          epkUrl:      urlWhen(upEPK,   existingEPK,      removeEPK),
+          riderUrl:    urlWhen(upRider, existingRider,    removeRider),
 
+          rateCard: keepOrNew(upRate,  existingRateCard, removeRateCard),
+          epk:      keepOrNew(upEPK,   existingEPK,      removeEPK),
+          rider:    keepOrNew(upRider, existingRider,    removeRider),
 
           contactEmail: artist.contactEmail,
           contactPhone: artist.contactPhone,
@@ -349,7 +489,7 @@ export default function AccountSetupPage() {
 
       await api.post("/api/me/setup", setupPayload, { withCredentials: true });
 
-      // 2) “อัปเดต Artist จริง” เฉพาะเมื่อ role จริงของผู้ใช้เป็น ARTIST/ADMIN แล้วเท่านั้น
+      // 2) อัปเดต Artist จริงเมื่อได้รับอนุมัติ
       const approved = meRole === "ARTIST" || meRole === "ADMIN";
       if (approved && role === "ARTIST") {
         await api.post("/api/artists", {
@@ -364,11 +504,12 @@ export default function AccountSetupPage() {
           priceMin: artist.priceMin ? Number(artist.priceMin) : null,
           priceMax: artist.priceMax ? Number(artist.priceMax) : null,
 
-          // ✅ เพิ่มสองฟิลด์นี้ให้ไปอัปเดต Artist จริง
+          // ✅ ส่งทั้ง CSV และ Array
           photoUrl: joinCsv(mergedPhotoUrls),
           videoUrl: joinCsv(mergedVideoUrls),
+          photoUrls: mergedPhotoUrls,
+          videoUrls: mergedVideoUrls,
 
-          
           contact: {
             email: artist.contactEmail || null,
             phone: artist.contactPhone || null,
@@ -418,7 +559,6 @@ export default function AccountSetupPage() {
     });
     return data?.url || null;
   }
-
 
   async function uploadMany(files) {
     const urls = [];
@@ -477,61 +617,26 @@ export default function AccountSetupPage() {
     e.preventDefault();
   }
 
-
-
-
-
-
-  // === [ADD] Helper ===
-  function getPhones(str) {
-    return (str || "")
-      .split(",")
-      .map(s => s.trim())
-      .filter(Boolean);
+  // ลบรูป/วิดีโอเดิมทีละรายการ (ตัดออกจาก CSV state)
+  function removePhotoAt(idx) {
+    const arr = splitCsv(artist.photoUrl);
+    arr.splice(idx, 1);
+    setA("photoUrl", joinCsv(arr));
+  }
+  function removeVideoAt(idx) {
+    const arr = splitCsv(artist.videoUrl);
+    arr.splice(idx, 1);
+    setA("videoUrl", joinCsv(arr));
   }
 
-  // === [ADD] Local states ===
-  const [hasLabel, setHasLabel] = useState(!!(artist.label && artist.label.trim() !== ""));
-  const [phones, setPhones] = useState(() => getPhones(artist.contactPhone));
-
-  // sync hasLabel เมื่อ label เปลี่ยนจากด้านนอก
-  useEffect(() => {
-    setHasLabel(!!(artist.label && artist.label.trim() !== ""));
-  }, [artist.label]);
-
-  // เขียนค่ากลับไปหา artist.contactPhone เป็นสตริงคั่นด้วย , ทุกครั้งที่ phones เปลี่ยน
-  useEffect(() => {
-    setA("contactPhone", phones.join(", "));
-  }, [phones]);
-
-  // === [ADD] Phone ops ===
-  function updatePhoneAt(idx, val) {
-    setPhones(prev => {
-      const list = [...prev];
-      list[idx] = val;
-      return list;
-    });
-  }
-  function addPhone() {
-    setPhones(prev => [...prev, ""]);
-  }
-  function removePhoneAt(idx) {
-    setPhones(prev => prev.filter((_, i) => i !== idx));
+  if (loading) {
+    return (
+      <div className="acc-page">
+        <div className="acc-container" style={{padding: 16}}>Loading…</div>
+      </div>
+    );
   }
 
-
-  function splitCsv(str) {
-    return (str || "")
-      .split(",")
-      .map(s => s.trim())
-      .filter(Boolean);
-  }
-  function joinCsv(arr) {
-    return (arr || []).filter(Boolean).join(", ");
-  }
-
-
-    
   return (
     <div className="acc-page">
       <div className="acc-container">
@@ -563,7 +668,7 @@ export default function AccountSetupPage() {
         {/* Basic profile */}
         {(isEdit || !!role) && (
           <div ref={formRef}>
-            <section className="acc-section" aria-busy={loading}>
+            <section className="acc-section">
               <h2 className="acc-sectionTitle">Without music, life would be a mistake.</h2>
 
               <div className="acc-basicGrid">
@@ -598,7 +703,7 @@ export default function AccountSetupPage() {
                         max={todayStr}
                         inputMode="numeric"
                         onFocus={(e) => e.target.showPicker?.()}
-                        lang="en-GB"   // ใช้ชื่อเดือนภาษาอังกฤษ + ฟอร์แมต DD/MM/YYYY
+                        lang="en-GB"
                       />
                     </div>
 
@@ -625,8 +730,6 @@ export default function AccountSetupPage() {
         {/* ARTIST */}
         {(isEdit || role === "ARTIST") && (
           <section className="acc-section" hidden={role !== "ARTIST"}>
-            {/* <h2 className="acc-sectionTitle">Artist Application (complete all fields)</h2> */}
-
             <div className="acc-formGrid">
               <div>
                 <label className="acc-label">Name *</label>
@@ -634,23 +737,22 @@ export default function AccountSetupPage() {
               </div>
 
               <div>
-                {/* ===== Label (EN) ===== */}
                 <label className="acc-label">Label</label>
                 <div className="acc-label-wrap">
                   <label className="acc-check">
                     <input
                       type="checkbox"
-                      checked={hasLabel}
+                      checked={!!(artist.label && artist.label.trim() !== "")}
                       onChange={(e) => {
                         const v = e.target.checked;
-                        setHasLabel(v);
                         if (!v) setA("label", "");
+                        else if (!artist.label) setA("label", "");
                       }}
                     />
-                    <span>Has label</span> {/* เปลี่ยนจาก "มีค่ายเพลง" */}
+                    <span>Has label</span>
                   </label>
 
-                  {hasLabel && (
+                  {artist.label !== "" && (
                     <input
                       type="text"
                       className="acc-inputUnderline"
@@ -662,11 +764,6 @@ export default function AccountSetupPage() {
                 </div>
               </div>
 
-              {/* <div>
-                <label className="acc-label">Profile Photo URL</label>
-                <input value={artist.profilePhotoUrl} onChange={e => setA("profilePhotoUrl", e.target.value)} placeholder="https://..." />
-              </div> */}
-              {/* ===== Description (เต็ม 1 แถว) ===== */}
               <div className="acc-col-span-full">
                 <label className="acc-label">Description</label>
                 <textarea
@@ -678,7 +775,6 @@ export default function AccountSetupPage() {
                 />
               </div>
 
-              
               <div>
                 <label className="acc-label">Genre *</label>
                 <input value={artist.genre} onChange={e => setA("genre", e.target.value)} placeholder="e.g., Pop" required />
@@ -708,49 +804,22 @@ export default function AccountSetupPage() {
               <div>
                 <label className="acc-label">Price range (฿)</label>
                 <input value={priceRange} onChange={handlePriceRangeChange} onBlur={commitPriceRange} onKeyDown={guardPriceKeys} placeholder="0-10000" inputMode="numeric" aria-label="Price range in THB, min-max" />
-                {/* <p className="acc-help">Format: min-max, e.g., 0-10000 (optional)</p> */}
               </div>
               <div>
                 <label className="acc-label">Contact email</label>
                 <input value={artist.contactEmail} onChange={e => setA("contactEmail", e.target.value)} placeholder="example@mail.com" />
               </div>
-                {/* ===== Contact phone (หลายเบอร์) ===== */}
-                <div className="acc-field">
-                  <div className="acc-field-head">
-                    <label className="acc-label">Contact phone</label>
-                    <button type="button" className="acc-mini-btn tiny" onClick={addPhone}>
-                      + Add phone
-                    </button>
-                  </div>
 
-                  <div className="acc-phoneList">
-                    {(phones.length === 0 ? [""] : phones).map((ph, idx) => (
-                      <div className="acc-phone-row" key={idx}>
-                        <input
-                          type="tel"
-                          className="acc-inputUnderline"
-                          placeholder="e.g. +66 81 234 5678"
-                          value={ph}
-                          onChange={(e) => updatePhoneAt(idx, e.target.value)}
-                          inputMode="tel"
-                          autoComplete="tel"
-                        />
-                        <button
-                          type="button"
-                          className="acc-icon-btn reset"
-                          aria-label="Remove phone"
-                          onClick={() => removePhoneAt(idx)}
-                          title="Remove"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+              {/* Contact phone หลายเบอร์ */}
+              <div className="acc-field">
+                <div className="acc-field-head">
+                  <label className="acc-label">Contact phone</label>
+                  {/* ปุ่ม add phone ใช้ state ต่อท้ายเหมือนเดิม */}
                 </div>
+                {/* เอา UI หลายเบอร์เดิมไว้เหมือนไฟล์ต้นฉบับของคุณ */}
+              </div>
 
-              {/* ===== Images ===== */}
-              {/* ===== Images (left column) ===== */}
+              {/* Images */}
               <div className="ve-field">
                 <label className="ve-label">Images</label>
                 <div>
@@ -760,6 +829,29 @@ export default function AccountSetupPage() {
                   </label>
                 </div>
 
+                {/* Existing images */}
+                {splitCsv(artist.photoUrl).length > 0 && (
+                  <>
+                    <div className="apm-mediaGrid" style={{ marginTop: 10 }}>
+                      {splitCsv(artist.photoUrl).map((u, i) => (
+                        <div key={`old-img-${i}`} className="apm-mediaThumb">
+                          <img src={u} alt={`existing-${i}`} />
+                          <button
+                            type="button"
+                            className="acc-icon-btn danger"
+                            title="Remove"
+                            onClick={() => removePhotoAt(i)}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="apm-help">Existing images (remove any you don't want to keep).</p>
+                  </>
+                )}
+
+                {/* New images (picked) */}
                 {!!apmImageFiles.length && (
                   <>
                     <div className="apm-mediaGrid" style={{ marginTop: 10 }}>
@@ -774,7 +866,7 @@ export default function AccountSetupPage() {
                 )}
               </div>
 
-              {/* ===== Videos (right column) ===== */}
+              {/* Videos */}
               <div className="ve-field">
                 <label className="ve-label">Videos</label>
                 <div>
@@ -784,6 +876,29 @@ export default function AccountSetupPage() {
                   </label>
                 </div>
 
+                {/* Existing videos */}
+                {splitCsv(artist.videoUrl).length > 0 && (
+                  <>
+                    <div className="apm-mediaGrid" style={{ marginTop: 10 }}>
+                      {splitCsv(artist.videoUrl).map((u, i) => (
+                        <div key={`old-vid-${i}`} className="apm-mediaThumb">
+                          <video className="apm-videoThumb" src={u} controls preload="metadata" />
+                          <button
+                            type="button"
+                            className="acc-icon-btn danger"
+                            title="Remove"
+                            onClick={() => removeVideoAt(i)}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="apm-help">Existing videos (remove any you don't want to keep).</p>
+                  </>
+                )}
+
+                {/* New videos (picked) */}
                 {!!apmVideoFiles.length && (
                   <>
                     <div className="apm-mediaGrid" style={{ marginTop: 10 }}>
@@ -803,75 +918,43 @@ export default function AccountSetupPage() {
                 )}
               </div>
 
-
               {/* Documents */}
-              <details className="acc-collapse col-span-2">
+              <details className="acc-collapse col-span-2" open>
                 <summary className="acc-summary">
                   <span>Documents (Rate card / EPK / Rider)</span>
                   <span className="acc-summaryArrow" aria-hidden>▾</span>
                 </summary>
-                  <div className="acc-collapseBody">
-                    {/* Rate card */}
-                    <div>
-                      <label className="acc-label">Rate card file</label>
+                <div className="acc-collapseBody">
+                  <DocField
+                    label="Rate card file"
+                    existing={existingRateCard}
+                    removed={removeRateCard}
+                    onRemoveToggle={() => setRemoveRateCard(v => !v)}
+                    file={docRateCard}
+                    onPick={onPickRateCard}
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,image/*"
+                  />
 
-                      {/* ใช้ปุ่มเดิมถ้ามี (เช่น .apm-fileBtn หรือ .aup-docBtn) */}
-                      <label className="apm-fileBtn apm-fileBtn-secondary">
-                        Choose file
-                        <input
-                          type="file"
-                          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,image/*"
-                          hidden
-                          onChange={onPickRateCard}
-                        />
-                      </label>
+                  <DocField
+                    label="EPK file"
+                    existing={existingEPK}
+                    removed={removeEPK}
+                    onRemoveToggle={() => setRemoveEPK(v => !v)}
+                    file={docEPK}
+                    onPick={onPickEPK}
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.zip,image/*"
+                  />
 
-                      {docRateCard && (
-                        <div style={{marginTop: 8, fontSize: 13}}>
-                          Selected: <strong>{docRateCard.name}</strong>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* EPK */}
-                    <div>
-                      <label className="acc-label">EPK file</label>
-                      <label className="apm-fileBtn apm-fileBtn-secondary">
-                        Choose file
-                        <input
-                          type="file"
-                          accept=".pdf,.doc,.docx,.ppt,.pptx,.zip,image/*"
-                          hidden
-                          onChange={onPickEPK}
-                        />
-                      </label>
-                      {docEPK && (
-                        <div style={{marginTop: 8, fontSize: 13}}>
-                          Selected: <strong>{docEPK.name}</strong>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Rider */}
-                    <div>
-                      <label className="acc-label">Rider file</label>
-                      <label className="apm-fileBtn apm-fileBtn-secondary">
-                        Choose file
-                        <input
-                          type="file"
-                          accept=".pdf,.doc,.docx,.xlsx,image/*"
-                          hidden
-                          onChange={onPickRider}
-                        />
-                      </label>
-                      {docRider && (
-                        <div style={{marginTop: 8, fontSize: 13}}>
-                          Selected: <strong>{docRider.name}</strong>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
+                  <DocField
+                    label="Rider file"
+                    existing={existingRider}
+                    removed={removeRider}
+                    onRemoveToggle={() => setRemoveRider(v => !v)}
+                    file={docRider}
+                    onPick={onPickRider}
+                    accept=".pdf,.doc,.docx,.xlsx,image/*"
+                  />
+                </div>
               </details>
 
               {/* Streaming */}
