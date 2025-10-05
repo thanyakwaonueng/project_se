@@ -72,48 +72,48 @@ export default function Navbar() {
 
 
   // LanguageDropdown (เหมือนเดิม)
-  function LanguageDropdown() {
-    const [language, setLanguage] = useState('th');
-    const handleSelect = (lang) => {
-      setLanguage(lang);
-      closeMobileMenu();
-    };
+  // function LanguageDropdown() {
+  //   const [language, setLanguage] = useState('th');
+  //   const handleSelect = (lang) => {
+  //     setLanguage(lang);
+  //     closeMobileMenu();
+  //   };
 
-    return (
-      <div className="dropdown">
-        <button
-          className="language-dropdown-btn navbar-menu-link w-inline-block d-flex align-items-center"
-          type="button"
-          id="languageDropdown"
-          data-bs-toggle="dropdown"
-          aria-expanded="false"
-          style={{ color: '#1c1c1c', textDecoration: 'none' }}
-        >
-          <img
-            src={language === 'th' ? '/img/thailand.png' : '/img/united-kingdom.png'}
-            alt={language === 'th' ? 'Thai' : 'English'}
-            style={{ width: 18, height: 18, marginRight: 8 }}
-          />
-          {language === 'th' ? 'TH' : 'EN'}
-        </button>
+  //   return (
+  //     <div className="dropdown">
+  //       <button
+  //         className="language-dropdown-btn navbar-menu-link w-inline-block d-flex align-items-center"
+  //         type="button"
+  //         id="languageDropdown"
+  //         data-bs-toggle="dropdown"
+  //         aria-expanded="false"
+  //         style={{ color: '#1c1c1c', textDecoration: 'none' }}
+  //       >
+  //         <img
+  //           src={language === 'th' ? '/img/thailand.png' : '/img/united-kingdom.png'}
+  //           alt={language === 'th' ? 'Thai' : 'English'}
+  //           style={{ width: 18, height: 18, marginRight: 8 }}
+  //         />
+  //         {language === 'th' ? 'TH' : 'EN'}
+  //       </button>
 
-        <ul className="dropdown-menu" aria-labelledby="languageDropdown">
-          <li>
-            <button className="dropdown-item d-flex align-items-center" onClick={() => handleSelect('th')}>
-              <img src="/img/thailand.png" alt="Thai" style={{ width: 18, height: 18, marginRight: 8 }} />
-              Thai
-            </button>
-          </li>
-          <li>
-            <button className="dropdown-item d-flex align-items-center" onClick={() => handleSelect('en')}>
-              <img src="/img/united-kingdom.png" alt="English" style={{ width: 18, height: 18, marginRight: 8 }} />
-              English
-            </button>
-          </li>
-        </ul>
-      </div>
-    );
-  }
+  //       <ul className="dropdown-menu" aria-labelledby="languageDropdown">
+  //         <li>
+  //           <button className="dropdown-item d-flex align-items-center" onClick={() => handleSelect('th')}>
+  //             <img src="/img/thailand.png" alt="Thai" style={{ width: 18, height: 18, marginRight: 8 }} />
+  //             Thai
+  //           </button>
+  //         </li>
+  //         <li>
+  //           <button className="dropdown-item d-flex align-items-center" onClick={() => handleSelect('en')}>
+  //             <img src="/img/united-kingdom.png" alt="English" style={{ width: 18, height: 18, marginRight: 8 }} />
+  //             English
+  //           </button>
+  //         </li>
+  //       </ul>
+  //     </div>
+  //   );
+  // }
 
   // Desktop Auth Buttons (เดิม)
   function AuthButtons({ user, loading }) {
@@ -246,14 +246,14 @@ export default function Navbar() {
             <div className="navbar-auth-section">
               {user ? (
                 <>
-                  <LanguageDropdown />
+                  {/* <LanguageDropdown /> */}
                   <NotificationBell /> {/* 🔔 Desktop dropdown */}
                   <AuthButtons user={user} loading={loading} />
                 </>
               ) : (
                 <>
                   <AuthButtons user={user} loading={loading} />
-                  <LanguageDropdown />
+                  {/* <LanguageDropdown /> */}
                 </>
               )}
             </div>

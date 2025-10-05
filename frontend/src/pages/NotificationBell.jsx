@@ -356,10 +356,10 @@ export default function NotificationBell({ mobileMode = false }) {
           color: inherit;
         }
 
-        .nbell-btn:hover {
-          background-color: rgba(139, 139, 139, 0.3);
-          transform: scale(1.05);
-        }
+        // .nbell-btn:hover {
+        //   background-color: rgba(139, 139, 139, 0.3);
+        //   transform: scale(1.05);
+        // }
 
         .nbell-badge {
           position: absolute;

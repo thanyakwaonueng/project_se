@@ -77,7 +77,9 @@
   /* transform: scale(1.08); */
   /* filter: grayscale(100%) brightness(120%) contrast(90%); เทาอ่อน */
   opacity: 0.95;    
-  background-color: rgba(139, 139, 139, 0.2);
+  /* background-color: rgba(139, 139, 139, 0.2); */
+  background-color: rgba(139, 139, 139, 0.3);
+  /* transform: scale(1.05); */
 }
 
 
