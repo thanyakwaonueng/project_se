@@ -7,17 +7,19 @@ export default function NotificationBell({ mobileMode = false }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [hover, setHover] = useState(false);
-  const [loading, setLoading] = useState(false);       // ✅ เพิ่ม
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // โหลด notifications
+  // Load notifications
   const load = async () => {
     if (!user) return;
     try {
       const { data } = await api.get('/notifications?unread=1', { withCredentials: true });
       setItems(data || []);
-    } catch {}
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    }
   };
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function NotificationBell({ mobileMode = false }) {
     return () => clearInterval(t);
   }, [user?.id]);
 
-  // ปิดเมื่อคลิกนอกระฆัง (เฉพาะ desktop)
+  // Close when clicking outside (desktop only)
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (mobileMode) return;
@@ -41,28 +43,34 @@ export default function NotificationBell({ mobileMode = false }) {
     try {
       await api.post(`/notifications/${id}/read`, {}, { withCredentials: true });
       setItems((prev) => prev.filter((x) => x.id !== id));
-    } catch {}
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
   };
 
-  // ✅ เพิ่ม: Mark all read
   const markAllRead = async () => {
     try {
       setLoading(true);
       await api.post('/notifications/read_all', {}, { withCredentials: true });
       setItems([]);
-    } catch {} finally {
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    } finally {
       setLoading(false);
     }
   };
 
-  // ✅ เพิ่ม: ไปหน้ารีวิวคำขอบทบาท (ใช้ใน mobileMode)
   const goReview = async (notifId) => {
-    try { await api.post(`/notifications/${notifId}/read`, {}, { withCredentials: true }); } catch {}
+    try { 
+      await api.post(`/notifications/${notifId}/read`, {}, { withCredentials: true }); 
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
     setOpen(false);
     navigate('/admin/role_requests');
   };
 
-  // ===== helper: ตรวจชนิดโนติและ CTA ที่เหมาะสม =====
+  // Helper functions for notification types
   const isArtist = user?.role === 'ARTIST';
   const isOrganizer = user?.role === 'ORGANIZE' || user?.role === 'ADMIN';
   const isAdmin = user?.role === 'ADMIN';
@@ -174,13 +182,12 @@ export default function NotificationBell({ mobileMode = false }) {
   const count = items.length;
   const badgeText = count > 99 ? '99+' : String(count);
 
-  // ===== Mobile
+  // ===== Mobile Version =====
   if (mobileMode) {
     return (
       <div className="mobile-notification-section">
-        <a
-          href="#"
-          className="mobile-menu-link"
+        <button
+          className="mobile-notification-btn"
           onClick={(e) => {
             e.preventDefault();
             const next = !open;
@@ -188,62 +195,71 @@ export default function NotificationBell({ mobileMode = false }) {
             if (next) load();
           }}
         >
-          NOTIFICATIONS
-          {count > 0 && <span className="nbell-badge-mobile">{badgeText}</span>}
-          <span style={{ fontSize: '0.6em', marginLeft: 4 }}>{open ? '▲' : '▼'}</span>
-        </a>
+          <div className="mobile-notification-content">
+            <span className="mobile-notification-text">NOTIFICATIONS</span>
+            {count > 0 && <span className="nbell-badge-mobile">{badgeText}</span>}
+            <span className="mobile-notification-arrow">{open ? '▲' : '▼'}</span>
+          </div>
+        </button>
 
         {open && (
-          <div className="mobile-submenu" style={{ paddingLeft: '15px' }}>
-            {!items.length ? (
-              <div className="dropdown-item-text">{loading ? 'Loading…' : 'No notifications'}</div>
-            ) : (
-              items.map((n) => (
-                <div key={n.id} className="dropdown-item-text" style={{ whiteSpace: 'pre-wrap' }}>
-                  <div style={{ fontWeight: 600 }}>{n.message}</div>
-                  <div style={{ fontSize: 12, color: '#666' }}>{new Date(n.createdAt).toLocaleString()}</div>
-                  <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
-                    {user?.role === 'ADMIN' && n.type === 'role_request.new' && (
-                      <button className="btn btn-sm btn-primary" onClick={() => goReview(n.id)}>Review</button>
-                    )}
-                    <button className="btn btn-sm btn-outline-secondary" onClick={() => markRead(n.id)}>Mark read</button>
-                  </div>
-                  <hr />
+          <div className="mobile-notification-panel">
+            <div className="mobile-notification-header">
+              <h4>Notifications</h4>
+              {count > 0 && (
+                <button 
+                  className="btn-mark-all-read" 
+                  onClick={markAllRead} 
+                  disabled={loading}
+                >
+                  {loading ? '...' : 'Mark all read'}
+                </button>
+              )}
+            </div>
+            
+            <div className="mobile-notification-list">
+              {!items.length ? (
+                <div className="mobile-notification-empty">
+                  {loading ? 'Loading…' : 'No notifications'}
                 </div>
-              ))
-            )}
-            {!!items.length && (
-              <button className="btn btn-sm btn-outline-secondary" onClick={markAllRead} disabled={loading}>
-                Mark all read
-              </button>
-            )}
+              ) : (
+                items.map((n) => (
+                  <div key={n.id} className="mobile-notification-item">
+                    <div className="mobile-notification-message">{n.message}</div>
+                    <div className="mobile-notification-time">
+                      {new Date(n.createdAt).toLocaleString()}
+                    </div>
+                    <div className="mobile-notification-actions">
+                      {user?.role === 'ADMIN' && n.type === 'role_request.new' && (
+                        <button 
+                          className="btn-action-primary" 
+                          onClick={() => goReview(n.id)}
+                        >
+                          Review
+                        </button>
+                      )}
+                      <button 
+                        className="btn-action-secondary" 
+                        onClick={() => markRead(n.id)}
+                      >
+                        Mark read
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
       </div>
     );
   }
 
-  // ===== Desktop
+  // ===== Desktop Version =====
   return (
-    <div className="dropdown nbell">
+    <div className="nbell-container">
       <button
         className="nbell-btn"
-        type="button"
-        style={{
-          position: 'relative',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 36,
-          height: 36,
-          padding: 0,
-          border: 'none',
-          outline: 'none',
-          cursor: 'pointer',
-          backgroundColor: hover ? '#8b8b8b30' : 'transparent',
-          borderRadius: '50%',
-          transition: 'background-color 0.2s ease',
-        }}
         onClick={() => {
           const next = !open;
           setOpen(next);
@@ -254,9 +270,7 @@ export default function NotificationBell({ mobileMode = false }) {
         aria-label={count ? `Notifications ${badgeText} unread` : 'Notifications'}
         aria-expanded={open}
       >
-        <svg className="nbell-icon" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"
-          style={{ display: 'block', transition: 'opacity 0.2s ease', opacity: hover ? 0.85 : 1 }}
-        >
+        <svg className="nbell-icon" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
           <path
             d="M15 17H9c-2 0-3.5-1.2-3.5-2.7 0-.3.1-.6.2-.9C6.5 12.2 7 10.8 7 9c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.8.5 3.2 1.3 4.4.2.3.2.6.2.9 0 1.5-1.5 2.7-3.5 2.7Z"
             fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
@@ -265,74 +279,393 @@ export default function NotificationBell({ mobileMode = false }) {
         </svg>
 
         {count > 0 && (
-          <span
-            className="nbell-badge"
-            style={{
-              position: 'absolute',
-              top: -4,
-              right: -6,
-              minWidth: 18,
-              height: 18,
-              padding: '0 5px',
-              background: '#d32f2f',
-              color: '#fff',
-              borderRadius: 999,
-              fontSize: 11,
-              lineHeight: '18px',
-              textAlign: 'center',
-              fontWeight: 700,
-              boxShadow: '0 0 0 2px #fff',
-              pointerEvents: 'none', // ✅ กัน badge มาบังคลิกปุ่ม
-            }}
-          >
+          <span className="nbell-badge">
             {badgeText}
           </span>
         )}
       </button>
 
       {open && (
-        <div
-          className={`dropdown-menu dropdown-menu-end nbell-menu show`}  // ✅ ให้ Bootstrap โชว์
-          style={{ display: 'block' }}                                    // ✅ บังคับกันธีมอื่น
-        >
-          <div className="nbell-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h5 style={{ margin: 0 }}>Notifications</h5>
+        <div className="nbell-dropdown">
+          <div className="nbell-header">
+            <h3>Notifications</h3>
             {count > 0 && (
-              <button className="btn btn-sm btn-outline-secondary" onClick={markAllRead} disabled={loading}>
-                Mark all read
+              <button 
+                className="nbell-mark-all-btn" 
+                onClick={markAllRead} 
+                disabled={loading}
+              >
+                {loading ? '...' : 'Mark all read'}
               </button>
             )}
           </div>
 
-          {!items.length ? (
-            <div className="nbell-empty">{loading ? 'Loading…' : 'No notifications'}</div>
-          ) : (
-            items.map((n) => {
-              const actions = ctaFor(n);
-              return (
-                <div key={n.id} className="nbell-item">
-                  <h6>{n.title || n.message || 'Notification'}</h6>
-                  <div className="meta">{new Date(n.createdAt).toLocaleString()}</div>
-                  {!!actions.length && (
-                    <div className="nbell-row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-                      {actions.map((a, i) => (
-                        <button
-                          key={i}
-                          className={`btn btn-sm ${a.outline ? 'btn-outline-secondary' : 'btn-primary'}`}
-                          onClick={a.onClick}
-                        >
-                          {a.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <hr />
-                </div>
-              );
-            })
-          )}
+          <div className="nbell-content">
+            {!items.length ? (
+              <div className="nbell-empty">
+                {loading ? 'Loading…' : 'No notifications'}
+              </div>
+            ) : (
+              items.map((n) => {
+                const actions = ctaFor(n);
+                return (
+                  <div key={n.id} className="nbell-item">
+                    <div className="nbell-item-title">{n.title || n.message || 'Notification'}</div>
+                    <div className="nbell-item-time">{new Date(n.createdAt).toLocaleString()}</div>
+                    {actions.length > 0 && (
+                      <div className="nbell-actions">
+                        {actions.map((a, i) => (
+                          <button
+                            key={i}
+                            className={`nbell-action-btn ${a.outline ? 'nbell-action-outline' : 'nbell-action-primary'}`}
+                            onClick={a.onClick}
+                          >
+                            {a.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
+
+      <style jsx>{`
+        .nbell-container {
+          position: relative;
+          display: inline-block;
+        }
+
+        .nbell-btn {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 44px;
+          height: 44px;
+          padding: 0;
+          border: none;
+          outline: none;
+          cursor: pointer;
+          background-color: ${hover ? 'rgba(139, 139, 139, 0.2)' : 'transparent'};
+          border-radius: 50%;
+          transition: all 0.2s ease;
+          color: inherit;
+        }
+
+        .nbell-btn:hover {
+          background-color: rgba(139, 139, 139, 0.3);
+          transform: scale(1.05);
+        }
+
+        .nbell-badge {
+          position: absolute;
+          top: -2px;
+          right: -2px;
+          min-width: 20px;
+          height: 20px;
+          padding: 0 6px;
+          background: #d32f2f;
+          color: #fff;
+          border-radius: 999px;
+          font-size: 11px;
+          line-height: 20px;
+          text-align: center;
+          font-weight: 700;
+          box-shadow: 0 0 0 2px #fff;
+          pointer-events: none;
+        }
+
+        .nbell-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          width: 380px;
+          max-width: 90vw;
+          background: #fff;
+          border: 1px solid #e0e0e0;
+          border-radius: 12px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+          z-index: 1000;
+          margin-top: 8px;
+          overflow: hidden;
+        }
+
+        .nbell-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 20px;
+          border-bottom: 1px solid #f0f0f0;
+          background: #fafafa;
+        }
+
+        .nbell-header h3 {
+          margin: 0;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #333;
+        }
+
+        .nbell-mark-all-btn {
+          background: none;
+          border: none;
+          color: #666;
+          cursor: pointer;
+          font-size: 0.9rem;
+          padding: 4px 8px;
+          border-radius: 4px;
+          transition: all 0.2s ease;
+        }
+
+        .nbell-mark-all-btn:hover:not(:disabled) {
+          background: #e0e0e0;
+          color: #333;
+        }
+
+        .nbell-mark-all-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .nbell-content {
+          max-height: 400px;
+          overflow-y: auto;
+        }
+
+        .nbell-empty {
+          padding: 32px 20px;
+          text-align: center;
+          color: #666;
+          font-style: italic;
+        }
+
+        .nbell-item {
+          padding: 16px 20px;
+          border-bottom: 1px solid #f5f5f5;
+          transition: background-color 0.2s ease;
+        }
+
+        .nbell-item:hover {
+          background-color: #f8f9fa;
+        }
+
+        .nbell-item:last-child {
+          border-bottom: none;
+        }
+
+        .nbell-item-title {
+          font-weight: 500;
+          margin-bottom: 4px;
+          color: #333;
+          line-height: 1.4;
+        }
+
+        .nbell-item-time {
+          font-size: 0.8rem;
+          color: #666;
+          margin-bottom: 8px;
+        }
+
+        .nbell-actions {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .nbell-action-btn {
+          padding: 6px 12px;
+          border: 1px solid;
+          border-radius: 6px;
+          font-size: 0.8rem;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .nbell-action-primary {
+          background: #007bff;
+          border-color: #007bff;
+          color: white;
+        }
+
+        .nbell-action-primary:hover {
+          background: #0056b3;
+          border-color: #0056b3;
+        }
+
+        .nbell-action-outline {
+          background: transparent;
+          border-color: #6c757d;
+          color: #6c757d;
+        }
+
+        .nbell-action-outline:hover {
+          background: #6c757d;
+          color: white;
+        }
+
+        /* Mobile Styles */
+        .mobile-notification-section {
+          width: 100%;
+        }
+
+        .mobile-notification-btn {
+          width: 100%;
+          background: none;
+          border: none;
+          cursor: pointer;
+          text-align: left;
+          color: inherit;
+        }
+
+        .mobile-notification-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-bottom: 1px solid #000000; 
+          color: #1c1c1c;              
+          text-decoration: none;       
+          font-weight: 500;              
+          font-size: 16px;         
+          padding: 0.5rem 0;             
+          transition: background 0.2s ease;
+        }
+
+        .mobile-notification-text {
+          font-weight: 500;
+        }
+
+        .nbell-badge-mobile {
+          background: #d32f2f;
+          color: white;
+          border-radius: 999px;
+          padding: 2px 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          min-width: 20px;
+          text-align: center;
+        }
+
+        .mobile-notification-arrow {
+          font-size: 0.7rem;
+          color: #666;
+        }
+
+        .mobile-notification-panel {
+          background: #f8f9fa;
+          border-top: 1px solid #e9ecef;
+        }
+
+        .mobile-notification-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 16px;
+          background: white;
+          border-bottom: 1px solid #e9ecef;
+        }
+
+        .mobile-notification-header h4 {
+          margin: 0;
+          font-size: 1rem;
+          font-weight: 600;
+        }
+
+        .btn-mark-all-read {
+          background: none;
+          border: none;
+          color: #666;
+          cursor: pointer;
+          border-radius: 4px;
+          transition: all 0.2s ease;
+        }
+
+        .btn-mark-all-read:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .mobile-notification-list {
+          max-height: 60vh;
+          overflow-y: auto;
+        }
+
+        .mobile-notification-empty {
+          padding: 24px 16px;
+          text-align: center;
+          color: #666;
+          font-style: italic;
+          background: white;
+        }
+
+        .mobile-notification-item {
+          padding: 16px;
+          background: white;
+          border-bottom: 1px solid #f0f0f0;
+        }
+
+        .mobile-notification-message {
+          font-weight: 500;
+          margin-bottom: 8px;
+          line-height: 1.4;
+        }
+
+        .mobile-notification-time {
+          font-size: 0.8rem;
+          color: #666;
+          margin-bottom: 12px;
+        }
+
+        .mobile-notification-actions {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .btn-action-primary {
+          background: #007bff;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-size: 0.9rem;
+          cursor: pointer;
+        }
+
+        .btn-action-secondary {
+          background: transparent;
+          color: #666;
+          border: 1px solid #666;
+          padding: 8px 16px;
+          border-radius: 6px;
+          font-size: 0.9rem;
+          cursor: pointer;
+        }
+
+        @media (max-width: 480px) {
+
+          .btn-mark-all-read {
+            font-size: 9px;
+          }
+          .nbell-dropdown {
+            width: 95vw;
+            right: -10px;
+          }
+          
+          .mobile-notification-actions {
+            flex-direction: column;
+          }
+          
+          .btn-action-primary,
+          .btn-action-secondary {
+            flex: 1;
+            text-align: center;
+          }
+        }
+      `}</style>
     </div>
   );
 }
