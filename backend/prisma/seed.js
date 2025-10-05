@@ -16,6 +16,12 @@ function makeUtcSameClock(dateLike, hhmm = '19:00') {
   const [hh, mm] = String(hhmm).split(':').map(n => parseInt(n, 10));
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), hh, mm, 0));
 }
+// ✅ บันทึกวันที่งานเป็น “เที่ยงวัน UTC” เพื่อล็อกวันให้ตรงทั่วโลก
+function dateUtcNoonInThisMonth(day) {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), day, 12, 0, 0));
+}
+
 const VENUE_PICS = [
   "https://picsum.photos/id/1011/800/600","https://picsum.photos/id/1015/800/600","https://picsum.photos/id/1025/800/600",
   "https://picsum.photos/id/1035/800/600","https://picsum.photos/id/1043/800/600","https://picsum.photos/id/1050/800/600",
@@ -27,7 +33,9 @@ const EVENT_POSTERS = [
   "https://picsum.photos/id/243/800/600","https://picsum.photos/id/244/800/600","https://picsum.photos/id/245/800/600",
   "https://picsum.photos/id/246/800/600",
 ];
-const pickVenuePhotos = (n = 4) => Array.from({length:n}, () => VENUE_PICS[Math.floor(Math.random()*VENUE_PICS.length)]);
+const pickVenuePhotos = (n = 4) =>
+  Array.from({ length: n }, () => VENUE_PICS[Math.floor(Math.random() * VENUE_PICS.length)]);
+
 const socialLinks = (name) => {
   const q = encodeURIComponent(name);
   return {
@@ -54,6 +62,7 @@ const docLinks = (slug) => ({
   epkUrl:`https://files.example.com/${slug}/epk.pdf`,
   riderUrl:`https://files.example.com/${slug}/rider.pdf`,
 });
+
 const OFFICIAL_ARTISTS = [
   { email:'newjeans@example.com', name:'NewJeans',  genre:'K-POP', bookingType:'FULL_BAND', profilePhotoUrl:'https://picsum.photos/id/250/640/400' },
   { email:'iu@example.com',       name:'IU',        genre:'K-POP', bookingType:'SOLO',      profilePhotoUrl:'https://picsum.photos/id/251/640/400' },
@@ -62,7 +71,7 @@ const OFFICIAL_ARTISTS = [
   { email:'ado@example.com',      name:'Ado',       genre:'J-POP', bookingType:'SOLO',      profilePhotoUrl:'https://picsum.photos/id/254/640/400' },
   { email:'yoasobi@example.com',  name:'YOASOBI',   genre:'J-POP', bookingType:'DUO',       profilePhotoUrl:'https://picsum.photos/id/255/640/400' },
   { email:'billie@example.com',   name:'Billie Eilish', genre:'Pop', bookingType:'SOLO',    profilePhotoUrl:'https://picsum.photos/id/256/640/400' },
-  { email:'taylor@example.com',   name:'Taylor Swift', genre:'Pop', bookingType:'SOLO',     profilePhotoUrl:'https://picsum.photos/id/257/640/400' },
+  { email:'taylor@example.com',   name:'Taylor Swift',  genre:'Pop', bookingType:'SOLO',    profilePhotoUrl:'https://picsum.photos/id/257/640/400' },
 ];
 const PENDING_ARTISTS = [
   { email:'echonova@example.com',     name:'Echo Nova',       profilePhotoUrl:'https://picsum.photos/id/250/640/400' },
@@ -84,10 +93,13 @@ const FAKE_NAMES = [
 ];
 const GENRES = ['Pop','Rock','Indie','Hip-hop','R&B','EDM','Jazz','Blues','Metal','Folk','Country','Lo-fi','K-POP','J-POP'];
 const BOOKING_TYPES = ['FULL_BAND','TRIO','DUO','SOLO'];
-const PRICE_RATES = ['BUDGET','STANDARD','PREMIUM','VIP','LUXURY'];
+// ✨ ต้องตรง backend: PRICE_ALLOWED = ['BUDGET','STANDARD','PREMIUM','VIP']
+const PRICE_RATES = ['BUDGET','STANDARD','PREMIUM','VIP'];
+
 const rand = (arr) => arr[Math.floor(Math.random()*arr.length)];
 const randInt = (a,b) => a + Math.floor(Math.random()*(b-a+1));
 const maybe = (p=0.5) => Math.random() < p;
+
 const toMin = (hhmm) => {
   const m = String(hhmm||'').match(/^(\d{1,2}):(\d{2})$/);
   if (!m) return null;
@@ -123,65 +135,65 @@ async function main() {
     data: { email:'fan@example.com', passwordHash:await bcrypt.hash('password123',10), role:'AUDIENCE', isVerified:true, name:'Super Fan' }
   });
 
-    /* ---------- pending artists (~10) ---------- */
+  /* ---------- pending artists (~10) ---------- */
   for (const pa of PENDING_ARTISTS){
     const user = await prisma.user.create({
       data: { email: pa.email, passwordHash:await bcrypt.hash('password123',10), role:'AUDIENCE', isVerified:true, name:pa.name, profilePhotoUrl:pa.profilePhotoUrl }
     });
 
     const r = "I’m an independent artist who produces and releases original tracks. \
-    I’d like an artist profile so I can share my work, connect with listeners, \
-    and collaborate with other musicians."
+I’d like an artist profile so I can share my work, connect with listeners, \
+and collaborate with other musicians.";
 
     const artistApplication  = {
-          name: user.name,
-          description: null,
-          genre: "POP",
-          subGenre: "ROCK",
-          bookingType: "SOLO",
-          foundingYear: null,
-          label: null,
-          isIndependent: null,
-          memberCount: null,
-          priceMin: null,
-          priceMax: null,
-          profilePhotoUrl: user.profilePhotoUrl,
-          photoUrl: null,
-          videoUrl: null,
-          rateCardUrl: null,
-          epkUrl: null,
-          riderUrl: null,
-          contactEmail: user.email,
-          contactPhone: "000-000-0000",
-          spotifyUrl: null,
-          youtubeUrl: "https://www.youtube.com/",
-          appleMusicUrl: null,
-          facebookUrl: null,
-          instagramUrl: null,
-          twitterUrl: null,
-          soundcloudUrl: null,
-          shazamUrl: null,
-          bandcampUrl: null,
-          tiktokUrl: null,
-        };
+      name: user.name,
+      description: null,
+      genre: "POP",
+      subGenre: "ROCK",
+      bookingType: "SOLO",
+      foundingYear: null,
+      label: null,
+      isIndependent: null,
+      memberCount: null,
+      priceMin: null,
+      priceMax: null,
+      profilePhotoUrl: user.profilePhotoUrl,
+      photoUrl: null,
+      videoUrl: null,
+      rateCardUrl: null,
+      epkUrl: null,
+      riderUrl: null,
+      contactEmail: user.email,
+      contactPhone: "000-000-0000",
+      spotifyUrl: null,
+      youtubeUrl: "https://www.youtube.com/",
+      appleMusicUrl: null,
+      facebookUrl: null,
+      instagramUrl: null,
+      twitterUrl: null,
+      soundcloudUrl: null,
+      shazamUrl: null,
+      bandcampUrl: null,
+      tiktokUrl: null,
+    };
 
     const createdRoleRequest = await prisma.roleRequest.create({
       data: { userId: user.id, requestedRole: "ARTIST", reason: r, application : artistApplication}
-    })
+    });
 
     const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
-          await Promise.all(
-            admins.map((a) =>
-              prisma.notification.create({
-                data: {
-                  userId: a.id,
-                  type: 'role_request.new',
-                  message: `New role request: ${user.email} -> ARTIST`,
-                  data: { roleRequestId: createdRoleRequest.id },
-                },
-              })
-            )
-          );
+    await Promise.all(
+      admins.map((a) =>
+        prisma.notification.create({
+          data: {
+            userId: a.id,
+            type: 'role_request.new',
+            message: `New role request: ${user.email} -> ARTIST`,
+            data: { roleRequestId: createdRoleRequest.id },
+          },
+        })
+      )
+    );
   }
   console.log('✅ Pending Artists = 10');
 
@@ -327,6 +339,7 @@ async function main() {
         alcoholPolicy: 'SERVE',
         ageRestriction: maybe(0.1) ? 'E20' : 'ALL',
         photoUrls: pickVenuePhotos(randInt(3,5)),
+        profilePhotoUrl: pickVenuePhotos(1)[0],
         websiteUrl: maybe(0.8) ? `https://www.${v.name.toLowerCase().replace(/[^a-z0-9]+/g,'')}.example` : null,
       }
     });
@@ -340,22 +353,22 @@ async function main() {
 
   /* ---------- events (this month) ---------- */
   const plans = [
-    { name:'Nimman Indie Night',       venue:'Nimman Studio',        date:dInThisMonth(3,20,0),  type:'INDOOR',  ticketing:'FREE',           genre:'Indie',   door:'19:00', end:'22:30', publish:true },
-    { name:'Ping Riverside Jazz',      venue:'Ping Riverside Stage', date:dInThisMonth(4,19,30), type:'OUTDOOR', ticketing:'ONSITE_SALES',   genre:'Jazz',    door:'18:30', end:'21:30', publish:true },
-    { name:'Old City Acoustic Eve',    venue:'Old City Arena',       date:dInThisMonth(6,18,30), type:'INDOOR',  ticketing:'DIRECT_CONTACT', genre:'Acoustic',door:'18:00', end:'21:00', publish:false },
-    { name:'Tha Phae Folk Friday',     venue:'Tha Phae Courtyard',   date:dInThisMonth(7,19,0),  type:'OUTDOOR', ticketing:'DONATION',       genre:'Folk',    door:'18:00', end:'22:00', publish:true },
-    { name:'Warehouse Beats',          venue:'Chang Klan Warehouse', date:dInThisMonth(9,21,0),  type:'INDOOR',  ticketing:'ONSITE_SALES',   genre:'EDM',     door:'20:00', end:'00:30', publish:false },
-    { name:'Santitham Loft Session',   venue:'Santitham Loft',       date:dInThisMonth(10,20,0), type:'INDOOR',  ticketing:'FREE',           genre:'Lo-fi',   door:'19:00', end:'22:00', publish:true },
-    { name:'Sunset Pop at One Nimman', venue:'One Nimman Terrace',   date:dInThisMonth(11,18,0), type:'OUTDOOR', ticketing:'FREE',           genre:'Pop',     door:'17:30', end:'20:30', publish:true },
-    { name:'Crossover Night',          venue:'Wat Gate Pavilion',    date:dInThisMonth(12,19,30),type:'INDOOR',  ticketing:'DIRECT_CONTACT', genre:'Crossover',door:'19:00', end:'22:00', publish:false },
-    { name:'Riverside Blues Jam',      venue:'Ping Riverside Stage', date:dInThisMonth(14,19,0), type:'OUTDOOR', ticketing:'DONATION',       genre:'Blues',   door:'18:00', end:'21:00', publish:true },
-    { name:'Nimman Live Showcase',     venue:'Nimman Studio',        date:dInThisMonth(15,20,0), type:'INDOOR',  ticketing:'TICKET_MELON',   genre:'Mixed',   door:'19:00', end:'23:00', ticketLink:'https://ticketmelon.com', publish:true },
-    { name:'Indigo Night Market Stage',venue:'One Nimman Terrace',   date:dInThisMonth(17,18,30),type:'OUTDOOR', ticketing:'FREE',           genre:'Indie',   door:'18:00', end:'21:30', publish:false },
-    { name:'Loft Ambient Evening',     venue:'Santitham Loft',       date:dInThisMonth(18,19,30),type:'INDOOR',  ticketing:'FREE',           genre:'Ambient', door:'19:00', end:'22:00', publish:true },
-    { name:'Warehouse Hip-Hop Clash',  venue:'Chang Klan Warehouse', date:dInThisMonth(20,21,0), type:'INDOOR',  ticketing:'ONSITE_SALES',   genre:'Hip-hop', door:'20:00', end:'00:30', publish:true },
-    { name:'Old City Rock Revival',    venue:'Old City Arena',       date:dInThisMonth(22,19,0), type:'INDOOR',  ticketing:'DIRECT_CONTACT', genre:'Rock',    door:'18:30', end:'22:00', publish:false },
-    { name:'Folk Under Lanterns',      venue:'Tha Phae Courtyard',   date:dInThisMonth(24,19,0), type:'OUTDOOR', ticketing:'DONATION',       genre:'Folk',    door:'18:00', end:'21:30', publish:true },
-    { name:'Classics by the River',    venue:'Wat Gate Pavilion',    date:dInThisMonth(26,19,0), type:'INDOOR',  ticketing:'DIRECT_CONTACT', genre:'Classical',door:'18:30', end:'21:00', publish:true },
+    { name:'Nimman Indie Night',       venue:'Nimman Studio',        date: dateUtcNoonInThisMonth(3),  type:'INDOOR',  ticketing:'FREE',           genre:'Indie',    door:'19:00', end:'22:30', publish:true },
+    { name:'Ping Riverside Jazz',      venue:'Ping Riverside Stage', date: dateUtcNoonInThisMonth(4),  type:'OUTDOOR', ticketing:'ONSITE_SALES',   genre:'Jazz',     door:'18:30', end:'21:30', publish:true },
+    { name:'Old City Acoustic Eve',    venue:'Old City Arena',       date: dateUtcNoonInThisMonth(6),  type:'INDOOR',  ticketing:'DIRECT_CONTACT', genre:'Acoustic', door:'18:00', end:'21:00', publish:false },
+    { name:'Tha Phae Folk Friday',     venue:'Tha Phae Courtyard',   date: dateUtcNoonInThisMonth(7),  type:'OUTDOOR', ticketing:'DONATION',       genre:'Folk',     door:'18:00', end:'22:00', publish:true },
+    { name:'Warehouse Beats',          venue:'Chang Klan Warehouse', date: dateUtcNoonInThisMonth(9),  type:'INDOOR',  ticketing:'ONSITE_SALES',   genre:'EDM',      door:'20:00', end:'00:30', publish:false },
+    { name:'Santitham Loft Session',   venue:'Santitham Loft',       date: dateUtcNoonInThisMonth(10), type:'INDOOR',  ticketing:'FREE',           genre:'Lo-fi',    door:'19:00', end:'22:00', publish:true },
+    { name:'Sunset Pop at One Nimman', venue:'One Nimman Terrace',   date: dateUtcNoonInThisMonth(11), type:'OUTDOOR', ticketing:'FREE',           genre:'Pop',      door:'17:30', end:'20:30', publish:true },
+    { name:'Crossover Night',          venue:'Wat Gate Pavilion',    date: dateUtcNoonInThisMonth(12), type:'INDOOR',  ticketing:'DIRECT_CONTACT', genre:'Crossover',door:'19:00', end:'22:00', publish:false },
+    { name:'Riverside Blues Jam',      venue:'Ping Riverside Stage', date: dateUtcNoonInThisMonth(14), type:'OUTDOOR', ticketing:'DONATION',       genre:'Blues',    door:'18:00', end:'21:00', publish:true },
+    { name:'Nimman Live Showcase',     venue:'Nimman Studio',        date: dateUtcNoonInThisMonth(15), type:'INDOOR',  ticketing:'TICKET_MELON',   genre:'Mixed',    door:'19:00', end:'23:00', ticketLink:'https://ticketmelon.com', publish:true },
+    { name:'Indigo Night Market Stage',venue:'One Nimman Terrace',   date: dateUtcNoonInThisMonth(17), type:'OUTDOOR', ticketing:'FREE',           genre:'Indie',    door:'18:00', end:'21:30', publish:false },
+    { name:'Loft Ambient Evening',     venue:'Santitham Loft',       date: dateUtcNoonInThisMonth(18), type:'INDOOR',  ticketing:'FREE',           genre:'Ambient',  door:'19:00', end:'22:00', publish:true },
+    { name:'Warehouse Hip-Hop Clash',  venue:'Chang Klan Warehouse', date: dateUtcNoonInThisMonth(20), type:'INDOOR',  ticketing:'ONSITE_SALES',   genre:'Hip-hop',  door:'20:00', end:'00:30', publish:true },
+    { name:'Old City Rock Revival',    venue:'Old City Arena',       date: dateUtcNoonInThisMonth(22), type:'INDOOR',  ticketing:'DIRECT_CONTACT', genre:'Rock',     door:'18:30', end:'22:00', publish:false },
+    { name:'Folk Under Lanterns',      venue:'Tha Phae Courtyard',   date: dateUtcNoonInThisMonth(24), type:'OUTDOOR', ticketing:'DONATION',       genre:'Folk',     door:'18:00', end:'21:30', publish:true },
+    { name:'Classics by the River',    venue:'Wat Gate Pavilion',    date: dateUtcNoonInThisMonth(26), type:'INDOOR',  ticketing:'DIRECT_CONTACT', genre:'Classical',door:'18:30', end:'21:00', publish:true },
   ];
 
   const events = [];
@@ -406,7 +419,7 @@ async function main() {
       const startAt  = makeUtcSameClock(ev.date, startStr);
       const endAt    = makeUtcSameClock(ev.date, endStr);
 
-      // ถ้า event publish → บังคับ ACCEPTED ทั้งหมดให้สมจริง (ไม่มี pending ในงานที่ประกาศแล้ว)
+      // ถ้า event publish → บังคับ ACCEPTED ทั้งหมดให้สมจริง
       const st = ev.isPublished ? 'ACCEPTED' : rand(['ACCEPTED','PENDING','DECLINED','ACCEPTED','PENDING']);
 
       if (st === 'ACCEPTED') {
@@ -446,11 +459,11 @@ async function main() {
     for (let i=0;i<target;i++){
       try {
         await prisma.likePerformer.create({ data: { userId: shuffled[i].id, performerId: artist.performerId }});
-      } catch { /* unique dup safe */ }
+      } catch {}
     }
   }
 
-  // ให้ event มีคนกดสนใจ/ถูกใจ 8–95 (เดิม)
+  // ให้ event มีคนกดสนใจ/ถูกใจ 8–95
   for (const ev of events) {
     const target = randInt(8, 95);
     const shuffled = likerUsers.slice().sort(()=>Math.random()-0.5);
@@ -465,14 +478,12 @@ async function main() {
       by: ['performerId'],
       _count: { performerId: true }
     });
-    // set >0
     for (const c of counts) {
       await prisma.performer.update({
         where: { userId: c.performerId },
         data:  { followersCount: c._count.performerId }
       }).catch(()=>{});
     }
-    // set 0 for who has none
     const allPerf = await prisma.performer.findMany({ select: { userId:true }});
     const hasIds = new Set(counts.map(c=>c.performerId));
     for (const p of allPerf) {
@@ -481,7 +492,7 @@ async function main() {
       }
     }
     console.log('👥 Denormalized followersCount updated (if column exists).');
-  } catch (e) {
+  } catch {
     console.log('ℹ️ Skip followersCount denormalization (no column?)');
   }
 
@@ -498,7 +509,10 @@ async function main() {
 
   if (publishedEvents.length) {
     const ev = rand(publishedEvents);
-    const newDate = dInThisMonth(Math.min(28, new Date(ev.date).getDate() + 2), 20, 0);
+    // ✅ เลื่อนเป็น “เที่ยงวัน UTC” ของอีก 2 วันถัดไป
+    const base = new Date(ev.date);
+    const day = Math.min(28, base.getUTCDate() + 2);
+    const newDate = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), day, 12, 0, 0));
     const aes = await prisma.artistEvent.findMany({ where: { eventId: ev.id } });
     for (const ae of aes) {
       const perf = await prisma.performer.findUnique({ where: { userId: ae.artistId } });

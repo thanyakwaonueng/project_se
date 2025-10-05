@@ -889,6 +889,7 @@ app.get('/artists/:id', async (req, res) => {
 });
 
 
+// REPLACE WHOLE HANDLER
 app.get('/groups', async (req, res) => {
   try {
     let meId = null;
@@ -912,20 +913,6 @@ app.get('/groups', async (req, res) => {
           },
         },
         artistRecords: true,
-        artistEvents: {
-          include: {
-            event: {
-              include: {
-                venue: {
-                  include: {
-                    performer: { include: { user: true } },
-                    location: true,
-                  },
-                },
-              },
-            },
-          },
-        },
       },
     });
 
@@ -951,9 +938,9 @@ app.get('/groups', async (req, res) => {
 
       // ---- รวมรูป/วิดีโอจาก AccountSetup (CSV) + ArtistRecord ----
       const photos = uniq([
-        ...toArray(a.photoUrl),             // จาก artist.photoUrl (CSV)
-        ...(latest?.photoUrls || []),      // จาก record ล่าสุด
-        latest?.thumbnailUrl || null,      // เผื่อมี thumbnail แยก
+        ...toArray(a.photoUrl),
+        ...(latest?.photoUrls || []),
+        latest?.thumbnailUrl || null,
       ]);
 
       const videos = uniq([
@@ -969,7 +956,12 @@ app.get('/groups', async (req, res) => {
       // ✅ hero/แบนเนอร์ (รูปแรกในแกลเลอรี ถ้าไม่มีให้ fallback เป็น avatar)
       const heroImage = photos[0] || avatar;
 
-      // ---- สร้าง schedule ----
+      // ---- เอกสาร: รวมทั้ง object-style และ legacy URL ----
+      const epkObj      = a.epk      || (a.epkUrl      ? { downloadUrl: a.epkUrl }         : null);
+      const riderObj    = a.rider    || (a.riderUrl    ? { downloadUrl: a.riderUrl }       : null);
+      const rateCardObj = a.rateCard || (a.rateCardUrl ? { downloadUrl: a.rateCardUrl }    : null);
+
+      // ---- สร้าง schedule (คงของเดิม) ----
       const schedule = (Array.isArray(a.artistEvents) ? a.artistEvents : [])
         .map((ae) => {
           const e = ae.event;
@@ -998,10 +990,9 @@ app.get('/groups', async (req, res) => {
           `artist-${a.performerId}`,
         name: a.performer?.user?.name ?? 'Unnamed Artist',
 
-        // ✅ ใช้ image = avatar (เข้ากับความหมายรูปโปรไฟล์)
         image: avatar,
-        avatar,            // เผื่อ FE ใหม่อ้างชัด ๆ
-        heroImage,         // ✅ ใช้เป็นปก/แบนเนอร์ในหน้า artist
+        avatar,
+        heroImage,
 
         // legacy single fields (เผื่อ FE เก่ายังอ่าน)
         photoUrl: heroImage || null,
@@ -1043,15 +1034,20 @@ app.get('/groups', async (req, res) => {
 
         schedule,
 
-        // เอกสาร (ถ้าจะโชว์ปุ่มใน Artist.jsx)
-        epk: a.epk || null,       // {downloadUrl,...} ถ้าเก็บแบบ object
-        rider: a.rider || null,
-        rateCard: a.rateCard || null,
+        // ✅ เอกสาร — ให้ทั้ง object และ legacy URL
+        epk: epkObj,
+        rider: riderObj,
+        rateCard: rateCardObj,
 
+        epkUrl: a.epkUrl || null,
+        riderUrl: a.riderUrl || null,
+        rateCardUrl: a.rateCardUrl || null,
+
+        // เผื่อ FE อ่านจาก techRider แบบเดิม (riderUrl)
         techRider: {
           summary: '',
           items: [],
-          downloadUrl: a.riderUrl ?? '', // legacy rider url
+          downloadUrl: (a.riderUrl ?? riderObj?.downloadUrl ?? '') || '',
         },
 
         playlistEmbedUrl: a.spotifyUrl
