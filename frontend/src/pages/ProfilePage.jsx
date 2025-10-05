@@ -20,7 +20,7 @@ export default function ProfilePage() {
   // Artist schedule
   const [aePending, setAePending] = useState([]);
   const [aeAccepted, setAeAccepted] = useState([]);
-  const [aeDeclined, setAeDeclined] = useState([]);
+  // const [aeDeclined, setAeDeclined] = useState([]);
 
   // Organizer schedule (raw /myevents)
   const [orgEvents, setOrgEvents] = useState([]);
@@ -98,12 +98,12 @@ export default function ProfilePage() {
         const [p, a, d] = await Promise.all([
           axios.get(`/api/artist-events/pending/${myId}`,  { withCredentials: true }),
           axios.get(`/api/artist-events/accepted/${myId}`, { withCredentials: true }),
-          axios.get(`/api/artist-events/declined/${myId}`, { withCredentials: true }),
+          // axios.get(`/api/artist-events/declined/${myId}`, { withCredentials: true }),
         ]);
         if (!alive) return;
         setAePending(Array.isArray(p.data) ? p.data : []);
         setAeAccepted(Array.isArray(a.data) ? a.data : []);
-        setAeDeclined(Array.isArray(d.data) ? d.data : []);
+        // setAeDeclined(Array.isArray(d.data) ? d.data : []);
       } catch (e) {
         console.error("Load my artist schedule error:", e);
       }
@@ -243,7 +243,7 @@ export default function ProfilePage() {
       }));
   }, [orgEvents]);
 
-  const oeDeclined = useMemo(() => [], []); // ไม่มีข้อมูลยกเลิกจาก /myevents ตอนนี้
+  // const oeDeclined = useMemo(() => [], []); // ไม่มีข้อมูลยกเลิกจาก /myevents ตอนนี้
 
   /* ===== helpers (not hooks) ===== */
   function fmtDate(iso) {
@@ -352,7 +352,7 @@ export default function ProfilePage() {
             datasets={[
               { rows: aeAccepted, status: "accepted" },
               { rows: aePending,  status: "pending"  },
-              { rows: aeDeclined, status: "declined" },
+              // { rows: aeDeclined, status: "declined" },
             ]}
             fmtDate={fmtDate}
             fmtTimeHM={fmtTimeHM}
@@ -366,11 +366,12 @@ export default function ProfilePage() {
             datasets={[
               { rows: oeAccepted, status: "accepted" }, // published
               { rows: oePending,  status: "pending"  }, // draft
-              { rows: oeDeclined, status: "declined" }, // (currently none)
+              // { rows: oeDeclined, status: "declined" }, // (currently none)
             ]}
             fmtDate={fmtDate}
             fmtTimeHM={fmtTimeHM}
-            labelMap={{ accepted: "Published", pending: "Draft", declined: "Canceled" }}
+            labelMap={{ accepted: "Published", pending: "Pending"}}
+            // labelMap={{ accepted: "Published", pending: "Pending", declined: "Declined" }}
           />
         )}
 
@@ -541,7 +542,8 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM, labelMap }) {
     return cells;
   };
 
-  const prettyDefault = { accepted: "Accepted", pending: "Pending", declined: "Declined" };
+  // const prettyDefault = { accepted: "Accepted", pending: "Pending", declined: "Declined" };
+  const prettyDefault = { accepted: "Accepted", pending: "Pending"};
   const labels = { ...prettyDefault, ...(labelMap || {}) };
 
   return (
@@ -585,7 +587,7 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM, labelMap }) {
         <div className="cal-legend">
           <span className="dot dot-acc" /> {labels.accepted}
           <span className="dot dot-pen" /> {labels.pending}
-          <span className="dot dot-dec" /> {labels.declined}
+          {/* <span className="dot dot-dec" /> {labels.declined} */}
         </div>
       </div>
 
