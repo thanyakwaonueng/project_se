@@ -327,6 +327,22 @@ export default function Artist() {
     return obj?.downloadUrl || legacy || null;
   };
 
+  // ===== กฎการมองเห็นเอกสารศิลปิน (EPK/Rider/Rate card)
+  // อ้างอิงสคีม่า: Artist.performerId == Performer.userId == User.id
+  // ใน payload /api/groups ส่วนใหญ่ใช้ id = performerId
+  const ownerId =
+    selectedGroup?.performerId ??
+    selectedGroup?.userId ??
+    selectedGroup?.ownerId ??
+    selectedGroup?.id ??
+    null;
+
+  const isOwner =
+    user?.id && ownerId && String(user.id) === String(ownerId);
+
+  const canSeeArtistDocs =
+    isOwner || user?.role === "ADMIN" || user?.role === "ORGANIZE";
+
   // 小 component สำหรับ player ให้คงอัตราส่วน 16:9
   const PlayerCard = ({ url, poster, title }) => {
     if (!url) return null;
@@ -339,7 +355,7 @@ export default function Artist() {
             width="100%"
             height="100%"
             style={{ position: "absolute", top: 0, left: 0 }}
-            light={poster || true}              // ถ้ามี poster ใช้เป็นภาพปก; ถ้าไม่มี react-player จะดึง thumbnail เอง (บางแพลตฟอร์ม)
+            light={poster || true}              // ถ้ามี poster ใช้เป็นภาพปก; ถ้าไม่มี react-player จะดึง thumbnail เอง
             playing={false}
             config={{
               file: {
@@ -481,30 +497,32 @@ export default function Artist() {
                 <h1 className="title">{selectedGroup?.name || "Artist"}</h1>
                 <p className="desc">{(selectedGroup?.description || "").trim() || "No description."}</p>
 
-                {/* เอกสารศิลปิน — 3 ปุ่มบรรทัดเดียว */}
-                <div className="doc-row">
-                  {[
-                    { label: "EPK",       url: getDocUrl(selectedGroup, "epk") },
-                    { label: "Rider",     url: getDocUrl(selectedGroup, "rider") },
-                    { label: "Rate card", url: getDocUrl(selectedGroup, "rateCard") },
-                  ].map(({ label, url }) => (
-                    url ? (
-                      <a key={label} className="epk-pill" href={url} target="_blank" rel="noreferrer" aria-label={`Open ${label}`}>
-                        <span>{label}</span>
-                        <span className="epk-dot" aria-hidden="true">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </span>
-                      </a>
-                    ) : (
-                      <button key={label} className="epk-pill is-disabled" disabled aria-disabled="true">
-                        <span>{label}</span>
-                        <span className="epk-dot" aria-hidden="true">–</span>
-                      </button>
-                    )
-                  ))}
-                </div>
+                {/* เอกสารศิลปิน — 3 ปุ่มบรรทัดเดียว (แสดงเฉพาะ ADMIN / ORGANIZE / เจ้าของศิลปิน) */}
+                {canSeeArtistDocs && (
+                  <div className="doc-row">
+                    {[
+                      { label: "EPK",       url: getDocUrl(selectedGroup, "epk") },
+                      { label: "Rider",     url: getDocUrl(selectedGroup, "rider") },
+                      { label: "Rate card", url: getDocUrl(selectedGroup, "rateCard") },
+                    ].map(({ label, url }) => (
+                      url ? (
+                        <a key={label} className="epk-pill" href={url} target="_blank" rel="noreferrer" aria-label={`Open ${label}`}>
+                          <span>{label}</span>
+                          <span className="epk-dot" aria-hidden="true">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                              <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </span>
+                        </a>
+                      ) : (
+                        <button key={label} className="epk-pill is-disabled" disabled aria-disabled="true">
+                          <span>{label}</span>
+                          <span className="epk-dot" aria-hidden="true">–</span>
+                        </button>
+                      )
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* กลาง: รูป + เส้น + GENRE */}
@@ -731,7 +749,7 @@ export default function Artist() {
                     >
                       <div className="other-thumb">
                         <img
-                          src={a.image || a.photoUrl || "/img/fallback.jpg"}
+                          src={a.image || "/img/fallback.jpg"}
                           alt={a.name}
                           loading="lazy"
                           onError={(e) => (e.currentTarget.src = "/img/fallback.jpg")}
