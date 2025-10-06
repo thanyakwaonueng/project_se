@@ -80,7 +80,6 @@ export default function Signup() {
     flow: "auth-code",
     scope: "openid email profile",
     onSuccess: async (accesstoken) => { //ทำการขอเป็น access token
-      console.log("Response: ", accesstoken)
       try {
         // ส่ง code ไปให้ backend แลก id_token + access_token พร้อม login ไปเลย
         await axios.post("/api/googlesignup", {code: accesstoken.code,}, {withCredentials: true});

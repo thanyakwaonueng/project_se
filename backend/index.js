@@ -9,6 +9,7 @@ const cookieParser = require('cookie-parser');
 const { PrismaClient } = require('./generated/prisma');
 const prisma = new PrismaClient();
 const nodemailer = require('nodemailer')
+const validator = require('validator')
 const { OAuth2Client } = require('google-auth-library')
 //const { requireRole } = require('./authz');
 
@@ -21,6 +22,7 @@ const upload = multer({ storage: storage })
 const { createClient } = require('@supabase/supabase-js')
 const path = require('path');
 const fs = require('fs');
+const { error } = require('console');
 
 // Supabase client (service role key, backend-only)
 const supabase = createClient(
@@ -490,12 +492,7 @@ app.get('/auth/me', authMiddleware, async (req, res) => {
   }
 });
 
-/*------------Function for checking email by using Regex-----------*/
-function validateEmail(email) {
-  const regex =
-    /^(([^<>()[\]\.,;:\s@\"]+(\.[^<>()[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
-  return regex.test(email);
-}
+
 
 
 
@@ -516,7 +513,7 @@ app.post('/verifyOTP', async (req, res) => {
   console.log("Verifying OTP...")
   try {
     const { email, otp } = req.body
-    if (!validateEmail(email)) {
+    if (!validator.isEmail(email)) {
       return res.status(400).json({ error: 'Invalid email!' });
     }
 
@@ -548,7 +545,7 @@ app.post("/resendOTP", async (req, res) => {
   console.log("Resending OTP...")
   try {
     const { email } = req.body
-    if (!validateEmail(email)) {
+    if (!validator.isEmail(email)) {
       return res.status(400).json({ error: 'Invalid email!' });
     }
     const user = await prisma.user.findUnique({ where: { email } })
@@ -664,7 +661,7 @@ app.post('/users', async (req, res) => {
 
     email = (email || '').trim().toLowerCase();
 
-    if (!validateEmail(email)) {
+    if (!validator.isEmail(email)) {
       return res.status(400).json({ error: 'Invalid email!' });
     }
     if (!password || password.length < 6) {
@@ -711,7 +708,57 @@ app.get('/users/:id', async (req, res) => {
   user ? res.json(user) : res.status(404).send('User not found');
 });
 
-/* ───────────────────────────── ARTISTS (POST = upsert by userId) ────────── */
+function validatePlatformurl(url, platform){
+  if (!url) return true; // ถ้าไม่กรอก ก็ไม่ต้อง validate
+
+  // 1. ต้องเป็น URL จริง
+  if (!validator.isURL(url)) return false;
+
+  // 2. ตรวจ domain ตาม platform
+  const parsed = new URL(url);
+  const host = parsed.hostname.toLowerCase();
+
+  switch (platform) {
+    case "youtube":
+      return host.includes("youtube.com") || host.includes("youtu.be");
+    case "facebook":
+      return host.includes("facebook.com");
+    case "tiktok":
+      return host.includes("tiktok.com");
+    case "instagram":
+      return host.includes("instagram.com");
+    case "twitter":
+      return host.includes("twitter.com") || host.includes("x.com"); // Twitter เปลี่ยนเป็น X แล้ว
+    case "line":
+      return host.includes("line.me");
+    case "spotify":
+      return host.includes("spotify.com")
+    case "apple":
+      return host.includes("music.apple.com")
+    case "shazam":
+      return  host.includes("shazam.com")
+    case "soundcloud":
+      return host.includes("soundcloud.com")
+    case "bandcamp":
+      return host.includes("bandcamp.com")
+    default:
+      return false;
+  }
+}
+
+function isThaiPhoneNumber(phone) { //ฟังก์ชั่นตรวจสอบเบอร์มือถือกับเบอร์บ้านในไทย
+  if (!phone) return false;
+
+  // ตรวจสอบเบอร์มือถือ (06, 08, 09)
+  const isMobile = validator.isMobilePhone(phone, 'th-TH');
+
+  // ตรวจสอบเบอร์บ้าน (02, 03, 04, 05, 07, 0X รวม 9–10 หลัก)
+  const landlinePattern = /^0[2-7]\d{7,8}$/; 
+
+  return isMobile || landlinePattern.test(phone);
+}
+
+
 /* ───────────────────────────── ARTISTS (POST = upsert by userId) ────────── */
 app.post('/artists', authMiddleware, async (req, res) => {
   try {
@@ -744,6 +791,56 @@ app.post('/artists', authMiddleware, async (req, res) => {
       lineUrl:      data?.links?.line ?? null,
     };
 
+    //Validate from FrontEnd
+    const hasContact = (performerData.contactEmail && performerData.contactEmail.trim() !== "") ||
+                        (performerData.contactPhone && performerData.contactPhone.trim() !== "");
+    const hasSample = [data.links.spotify, data.links.youtube, data.links.appleMusic, data.links.soundcloud,
+                      data.links.bandcampUrl, data.links.tiktok, data.links.shazam
+                      ].some(v => v && v.trim() !== "");
+    if (!hasSample){
+      return res.status(400).json({error:"ใส่ลิงก์เพลง/ตัวอย่างผลงานอย่างน้อย 1 ช่อง"});
+    }
+    if(!hasContact){
+      return res.status(400).json({error: "ใส่ช่องทางติดต่ออย่างน้อย 1 อย่าง (อีเมลหรือเบอร์)"})
+    }
+
+    //Validate PerformerData Area
+    //Email
+    if(performerData.contactEmail && !validator.isEmail(performerData.contactEmail)){
+      return res.status(400).json({error: "รูปแบบอีเมลไม่ถูกต้อง"})
+    }
+
+    //Phone number
+    if(performerData.contactPhone){
+      //แยกเบอร์โทรใส่ Array พร้อมลบ '-'
+      const phone_array = performerData.contactPhone.split(',').map(p => p.trim().replace(/[^0-9+]/g, "")).filter(p => p !=="")
+      for(const phone of phone_array){
+        if(!isThaiPhoneNumber(phone)){
+          return res.status(400).json({error: "เบอร์โทรศัพท์ไม่ถูกต้อง"})
+        }
+      }
+      //performerData.contactPhone = phone_array.join(',')
+    }
+    
+
+    //URL Social Media
+    if(performerData.youtubeUrl && !validatePlatformurl(performerData.youtubeUrl, 'youtube')){ //Youtube
+      return res.status(400).json({error: "ลิ้งก์ Youtube ไม่ถูกต้อง!"})
+    }
+    if(performerData.tiktokUrl && !validatePlatformurl(performerData.tiktokUrl, 'tiktok')){ //Tiktok
+      return res.status(400).json({error: "ลิ้งก์ Tiktok ไม่ถูกต้อง!"})
+    }
+    if(performerData.facebookUrl && !validatePlatformurl(performerData.facebookUrl, 'facebook')){ //Facebook
+      return res.status(400).json({error: "ลิ้งก์ Facebook ไม่ถูกต้อง!"})
+    }
+    if(performerData.instagramUrl && !validatePlatformurl(performerData.instagramUrl, 'instagram')){ //Instagram
+      return res.status(400).json({error: "ลิ้งก์ Instagram ไม่ถูกต้อง!"})
+    }
+    if(performerData.twitterUrl && !validatePlatformurl(performerData.twitterUrl, 'twitter')){ //Twitter / X
+      return res.status(400).json({error: "ลิ้งก์ Twitter(X) ไม่ถูกต้อง!"})
+    }
+    
+
     const artistData = {
       description:   data?.description ?? null,
       genre:         data?.genre,                 // required ใน schema
@@ -770,7 +867,80 @@ app.post('/artists', authMiddleware, async (req, res) => {
     // รูป/วิดีโอที่ส่งมาจากหน้า Account Setup (รับทั้ง CSV และ array)
     const incomingPhotos = normalizeMediaList(data?.photoUrl,  data?.photoUrls);
     const incomingVideos = normalizeMediaList(data?.videoUrl,  data?.videoUrls);
+   
+    //Validate incomingPhoto and Video
+    for(photo_link of incomingPhotos){
+      if(!validator.isURL(photo_link)){
+        return res.status(400).json({error: "Photo link ไม่ถูกต้อง"})
+      }
+    }
+    for(video_link of incomingVideos){
+      if(!validator.isURL(video_link)){
+        return res.status(400).json({error: "Video link ไม่ถูกต้อง"})
+      }
+    }
+    //Validate artistData Area
+    const allow_bookingtype = ["FULL_BAND", "TRIO", "DUO", "SOLO"]
+    const current_year = new Date().getFullYear()
 
+    if(artistData.description.length > 250){
+      return res.status(400).json({error: "Description ควรน้อยกว่า 250 ตัวอักษร"})
+    }
+    if(!artistData.genre){ //Genre
+      return res.status(400).json({error: "โปรดใส่ Genre ของวงดนตรีของคุณ"})
+    }
+    if(!artistData.bookingType || !allow_bookingtype.includes(artistData.bookingType)){ //Booking type
+      return res.status(400).json({error: "โปรดใส่ Booking type ให้ถูกต้อง"})
+    }
+    
+    if(typeof (artistData.foundingYear) !== "number" || !Number.isInteger(artistData.foundingYear)){ //FoundingYear
+      return res.status(400).json({error: "ค่า foundingYear ต้องเป็น interger"})
+    }else{
+      if(artistData.foundingYear < 1900){
+        return res.status(400).json({error: "ปีก่อไม่ควรน้อยกว่า 1900"})
+      }
+      if(artistData.foundingYear > current_year){
+        return res.status(400).json({error: "ปีก่อตั้งไม่ควรอยู่ในอนาคต"})
+      }
+    }
+    if(!artistData.memberCount){ //MemberCount
+      return 'กรุณากรอกจำนวนสมาชิกในวง'
+    }else{
+      if(artistData.memberCount <= 0){
+        return "สมาชิกในวงควรมีอย่างน้อย 1 คนขึ้นไป"
+      }else if(artistData.bookingType ==="SOLO" && artistData.memberCount !== 1){
+        return "วงที่เป็น SOLO ควรใส่จำนวนสมาชิก 1 คน!"
+      }else if(artistData.bookingType ==="DUO" && artistData.memberCount !== 2){
+        return "วงที่เป็น DUO ควรใส่จำนวนสมาชิก 2 คน!"
+      }else if(artistData.bookingType ==="TRIO" && artistData.memberCount !== 3){
+        return "วงที่เป็น TRIO ควรใส่จำนวนสมาชิก 3 คน!"
+      } else if(artistData.bookingType ==="FULL_BAND" && artistData.memberCount < 4){
+        return "วงที่เป็น FULL_BAND ควรใส่จำนวนสมาชิก 4 คนขึ้นไป! (หากน้อยกว่านี้ควรเลือก Booking type ให้ถูกต้อง)"
+      }
+    }
+
+    if((!artistData.priceMin && artistData.priceMax) || (artistData.priceMin && !artistData.priceMax)){ //Price Range
+      return res.status(400).json({error: 'กรุณาใส่ช่วงราคาให้ถูกต้อง'})
+    }else if(artistData.priceMin && artistData.priceMax && (artistData.priceMax < artistData.priceMin)){ 
+      return res.status(400).json({error: "ช่วงราคาน้อยสุดไม่ควรมากกว่าช่วงราคามากที่สุด"})
+    }
+    //URl validate
+    if(artistData.spotifyUrl && !validatePlatformurl(artistData.spotifyUrl, 'spotify')){ //Spotify
+      return res.status(400).json({error: "ลิ้งก์ Spotify ไม่ถูกต้อง!"})
+    }
+    if(artistData.appleMusicUrl && !validatePlatformurl(artistData.appleMusicUrl, 'apple')){ //Apple music
+      return res.status(400).json({error: "ลิ้งก์ Apple Music ไม่ถูกต้อง!"})
+    }
+    if(artistData.soundcloudUrl && !validatePlatformurl(artistData.soundcloudUrl, 'soundcloud')){ //Soundcloud
+      return res.status(400).json({error: "ลิ้งก์ SoundCloud ไม่ถูกต้อง!"})
+    }
+    if(artistData.shazamUrl && !validatePlatformurl(artistData.shazamUrl, 'shazam')){ //Shazam
+      return res.status(400).json({error: "ลิ้งก์ Shazam ไม่ถูกต้อง!"})
+    }
+    if(artistData.bandcampUrl && !validatePlatformurl(artistData.bandcampUrl, 'bandcamp')){ //Bandcamp
+      return res.status(400).json({error: "ลิ้งก์ Bandcamp ไม่ถูกต้อง!"})
+    }
+    
     const result = await prisma.$transaction(async (tx) => {
       // 1) upsert performer
       const performer = await tx.performer.upsert({
@@ -1238,8 +1408,8 @@ app.put('/venues/:id', authMiddleware, async (req, res) => {
 
     const body = req.body || {};
 
-    // helper แปลงเลข
-    const toInt   = (v) => (v === '' || v == null ? null : (Number.isFinite(+v) ? Math.trunc(+v) : null));
+    // เตรียมข้อมูล (แปลงค่าสำคัญเป็น number ถ้าจำเป็น)
+    const toInt = (v) => (v === '' || v == null ? null : (Number.isFinite(+v) ? Math.trunc(+v) : null));
     const toFloat = (v) => (v === '' || v == null ? null : (Number.isFinite(+v) ? +v : null));
 
     const userData = {
@@ -1257,6 +1427,7 @@ app.put('/venues/:id', authMiddleware, async (req, res) => {
       lineUrl:      body.lineUrl ?? null,
       twitterUrl:   body.twitterUrl ?? null,
     };
+
 
     const venueData = {
       description:    body.description ?? null,
@@ -2809,6 +2980,122 @@ app.get('/notifications/unread_count', authMiddleware, async (req, res) => {
 
 /* ───────────── ONBOARDING / EDIT PROFILE ───────────── */
 /*  รับ artistApplication + desiredRole และเก็บลง RoleRequest.application */
+function validate_artistapp(artistApplication){
+  const allow_bookingtype = ["FULL_BAND", "TRIO", "DUO", "SOLO"]
+  const current_year = new Date().getFullYear()
+  console.log(artistApplication)
+  //Validate from FrontEnd
+  const hasContact = (artistApplication.contactEmail && artistApplication.contactEmail.trim() !== "") ||
+                        (artistApplication.contactPhone && artistApplication.contactPhone.trim() !== "");
+  const hasSample = [artistApplication.spotifyUrl, artistApplication.youtubeUrl, artistApplication.appleMusicUrl, 
+    artistApplication.soundcloudUrl,artistApplication.bandcampUrl, artistApplication.tiktokUrl, artistApplication.shazamUrl
+                      ].some(v => v && v.trim() !== "");
+  if (!hasSample){
+    return "ใส่ลิงก์เพลง/ตัวอย่างผลงานอย่างน้อย 1 ช่อง"
+  }
+  if(!hasContact){
+    return  "ใส่ช่องทางติดต่ออย่างน้อย 1 อย่าง (อีเมลหรือเบอร์)"
+  }
+
+  if(!artistApplication.name){
+    return "กรุณากรอกชื่อวง"
+  } else if(artistApplication.name >50){
+    return "ชื่อวงต้องยาวน้อยกว่า 50 ตัวอักษร"
+  }
+  if(artistApplication.description){
+    if(artistApplication.description.length > 250){
+      return "ความยาวของ Description ควรน้อยกว่า 250 ตัวอักษร"
+    }
+  }
+  if(!artistApplication.genre){
+    return "กรุณากรอก Genre ของวง"
+  }
+  if(!artistApplication.bookingType || !allow_bookingtype.includes(artistApplication.bookingType)){ //Booking type
+    return "โปรดใส่ Booking type ให้ถูกต้อง"
+  }
+  if(typeof (artistApplication.foundingYear) !== "number" || !Number.isInteger(artistApplication.foundingYear)){ //FoundingYear
+      return "ค่า foundingYear ต้องเป็น interger"
+  }else{
+      if(artistApplication.foundingYear < 1900){
+        return "ปีก่อตั้งไม่ควรน้อยกว่า 1900"
+      }
+      if(artistApplication.foundingYear > current_year){
+        return "ปีก่อตั้งไม่ควรอยู่ในอนาคต"
+      }
+  }
+  if(!artistApplication.memberCount){ //MemberCount
+      return 'กรุณากรอกจำนวนสมาชิกในวง'
+  }else{
+    if(artistApplication.memberCount <= 0){
+      return "สมาชิกในวงควรมีอย่างน้อย 1 คนขึ้นไป"
+    }else if(artistApplication.bookingType ==="SOLO" && artistApplication.memberCount !== 1){
+      return "วงที่เป็น SOLO ควรใส่จำนวนสมาชิก 1 คน!"
+    }else if(artistApplication.bookingType ==="DUO" && artistApplication.memberCount !== 2){
+      return "วงที่เป็น DUO ควรใส่จำนวนสมาชิก 2 คน!"
+    }else if(artistApplication.bookingType ==="TRIO" && artistApplication.memberCount !== 3){
+      return "วงที่เป็น TRIO ควรใส่จำนวนสมาชิก 3 คน!"
+    } else if(artistApplication.bookingType ==="FULL_BAND" && artistApplication.memberCount < 4){
+      return "วงที่เป็น FULL-BAND ควรใส่จำนวนสมาชิก 4 คนขึ้นไป! (หากน้อยกว่านี้ควรเลือก Booking type ให้ถูกต้อง)"
+    }
+  }
+  if((!artistApplication.priceMin && artistApplication.priceMax) || (artistApplication.priceMin && !artistApplication.priceMax)){
+    return "กรุณากรอก Price Range ให้ถูกต้อง"
+  } else if(artistApplication.priceMin && artistApplication.priceMax && (artistApplication.priceMax < artistApplication.priceMin)){ //Price range
+      return "ช่วงราคาไม่ถูกต้อง"
+  }
+  
+
+  //Email
+  if(artistApplication.contactEmail && !validator.isEmail(artistApplication.contactEmail)){
+    return "รูปแบบอีเมลไม่ถูกต้อง"
+  }
+  //Phone number
+  if(artistApplication.contactPhone){
+      //แยกเบอร์โทรใส่ Array
+      const phone_array = artistApplication.contactPhone.split(',').map(p => p.trim().replace(/[^0-9+]/g, "")).filter(p => p !=="")
+      for(const phone of phone_array){
+        if(!isThaiPhoneNumber(phone)){
+          return "เบอร์โทรศัพท์ไม่ถูกต้อง"
+        }
+      }
+      artistApplication.contactPhone = phone_array.join(',')
+    }
+
+  //Social Media
+  if(artistApplication.youtubeUrl && !validatePlatformurl(artistApplication.youtubeUrl, 'youtube')){ //Youtube
+    return "ลิ้งก์ Youtube ไม่ถูกต้อง!"
+  }
+  if(artistApplication.tiktokUrl && !validatePlatformurl(artistApplication.tiktokUrl, 'tiktok')){ //Tiktok
+    return "ลิ้งก์ Tiktok ไม่ถูกต้อง!"
+  }
+  if(artistApplication.facebookUrl && !validatePlatformurl(artistApplication.facebookUrl, 'facebook')){ //Facebook
+    return "ลิ้งก์ Facebook ไม่ถูกต้อง!"
+  }
+  if(artistApplication.instagramUrl && !validatePlatformurl(artistApplication.instagramUrl, 'instagram')){ //Instagram
+    return "ลิ้งก์ Instagram ไม่ถูกต้อง!"
+  }
+  if(artistApplication.twitterUrl && !validatePlatformurl(artistApplication.twitterUrl, 'twitter')){ //Twitter / X
+    return "ลิ้งก์ Twitter(X) ไม่ถูกต้อง!"
+  }
+
+  //URl validate
+    if(artistApplication.spotifyUrl && !validatePlatformurl(artistApplication.spotifyUrl, 'spotify')){ //Spotify
+      return "ลิ้งก์ Spotify ไม่ถูกต้อง!"
+    }
+    if(artistApplication.appleMusicUrl && !validatePlatformurl(artistApplication.appleMusicUrl, 'apple')){ //Apple music
+      return "ลิ้งก์ Apple Music ไม่ถูกต้อง!"
+    }
+    if(artistApplication.soundcloudUrl && !validatePlatformurl(artistApplication.soundcloudUrl, 'soundcloud')){ //Soundcloud
+      return "ลิ้งก์ SoundCloud ไม่ถูกต้อง!"
+    }
+    if(artistApplication.shazamUrl && !validatePlatformurl(artistApplication.shazamUrl, 'shazam')){ //Shazam
+      return "ลิ้งก์ Shazam ไม่ถูกต้อง!"
+    }
+    if(artistApplication.bandcampUrl && !validatePlatformurl(artistApplication.bandcampUrl, 'bandcamp')){ //Bandcamp
+      return "ลิ้งก์ Bandcamp ไม่ถูกต้อง!"
+    }
+  return ""
+}
 // ---------- REPLACE: /me/setup ----------
 app.post('/me/setup', authMiddleware, async (req, res) => {
   try {
@@ -2820,13 +3107,38 @@ app.post('/me/setup', authMiddleware, async (req, res) => {
       desiredRole,          // 'ARTIST' หรือ undefined
       artistApplication,    // ฟอร์มศิลปินเต็มจาก FE (จะเก็บลง RoleRequest.application)
     } = req.body;
-
+    
     // normalize favoriteGenres -> string[]
     const genres = Array.isArray(favoriteGenres)
       ? favoriteGenres.map(String).map(s => s.trim()).filter(Boolean)
       : typeof favoriteGenres === 'string'
         ? favoriteGenres.split(',').map(s => s.trim()).filter(Boolean)
         : [];
+
+    //Validate Area
+    if(!name){ //Empty name
+      return res.status(400).json({error: "กรุณาใส่ username ของคุณ"})
+    } else if(name.length > 50){
+      return res.status(400).json({error: "username ต้องยาวน้อยกว่า 50 ตัวอักษร"})
+    }
+
+    const today = new Date()
+    const birthday_date = new Date(birthday)
+    if(!birthday){ //Empty birthday
+      return res.status(400).json({error: "กรุณาใส่วันเกิดของคุณ"})
+    } else if(isNaN(birthday_date.getTime())){ //Check format
+      return res.status(400).json({error: "วันเกิดไม่ถูกต้อง"})
+    } else if(birthday_date > today){ //Prevent anyone born from the future
+      return res.status(400).json({error:"วันเกิดไม่สามารถเป็นวันในอนาคตได้"})
+    }
+
+    const allowedGenres = ["Pop", "Rock", "Indie", "Jazz", "Blues",
+    "Hip-Hop", "EDM", "Folk", "Metal", "R&B"]
+    for(const gen of genres){ //Check ว่า genres ที่ได้มามีอยู่ใน list ที่กำหนดไหม
+      if(!allowedGenres.includes(gen)){
+        return res.status(400).json({error: `Invalid genres: ${gen}`})
+      }
+    }
 
     // update เฉพาะฟิลด์ที่มีจริงใน UserProfile
     await prisma.user.update({
@@ -2857,6 +3169,12 @@ app.post('/me/setup', authMiddleware, async (req, res) => {
         const pending = await prisma.roleRequest.findFirst({
           where: { userId: req.user.id, status: 'PENDING' },
         });
+        
+        //Validate artistApplication
+        const artistapp_error = validate_artistapp(artistApplication)
+        if(artistapp_error !== ""){
+          return res.status(400).json({error: artistapp_error})
+        }
 
         if (!pending) {
           // สร้างคำขอใหม่ + แนบใบสมัครลง JSON
@@ -3023,6 +3341,36 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     const file = req.file;
     const caption = req.body.caption || '';
     if (!file) return res.status(400).json({ error: 'No file uploaded' });
+
+    // ตรวจ mimetype (ชนิดไฟล์)
+    const allowedMimeTypes = [
+      // images
+      "image/jpeg", "image/png", "image/gif",
+      // documents
+      "application/pdf",
+      // videos
+      "video/mp4", "video/quicktime", "video/x-msvideo", "video/x-matroska"
+    ];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      return res.status(400).json({ error: 'ประเภทของไฟล์ที่อัพโหลดไม่ถูกต้อง' });
+    }
+
+    // ตรวจขนาดไฟล์ 
+    const maxSizeMB = 50; // 50 MB Limit for Supabase
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      return res.status(400).json({ error: `ไฟล์ขนาดใหญ่เกินไป ขนาดไฟล์ของคุณ: ${maxSizeMB}MB` });
+    }
+
+    // ตรวจนามสกุลไฟล์ (เพื่อความปลอดภัยเพิ่ม)
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExts = [".jpg", ".jpeg", ".png", //Picture
+                        ".pdf", //Document
+                        ".mp4", ".mov", ".avi", ".mkv"]; //Video
+    if (!allowedExts.includes(ext)) {
+      return res.status(400).json({ error: `Invalid file extension (${ext})` });
+    }
+
 
     const fileName = `${Date.now()}-${file.originalname}`;
     const bucketName = 'project-se-file-server';
