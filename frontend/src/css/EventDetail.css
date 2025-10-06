@@ -414,7 +414,7 @@
 }
 
 .bs-name {
-  font-weight: 600;
+  font-weight: 500;
   color: #231f20;
 }
 
@@ -515,25 +515,6 @@
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ==============================================================
    HERO แบบภาพพื้นหลังเข้ม + วางโปสเตอร์ด้านขวา
    ============================================================== */
@@ -545,10 +526,7 @@
   min-height: 320px;
   background-size: cover;
   background-position: center;
-  margin-bottom: 18px;
-    /* เพิ่มความมืดด้วย blend */
-  /* background-color: #0a0a0a; 
-  background-blend-mode: multiply;  */
+  margin-bottom: 30px;
 }
 
 /* เลเยอร์ทับให้ภาพมืดลง */
@@ -556,8 +534,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.8));
+  background: linear-gradient(to bottom, rgba(23, 23, 23, 0.8), rgba(0,0,0,0.8));
 }
 
 /* HERO container */
@@ -566,15 +543,16 @@
   display: grid;
   grid-template-columns: 1fr 360px;
   gap: 16px;
-  /* เดิมเป็น align-items: center; → ให้ยืดเต็มสูง */
   align-items: stretch;         
-  padding: 18px;
-  min-height: 320px;            /* ให้มีความสูงขั้นต่ำเท่ากับกรอบพื้นหลัง */
+  padding: 50px;
+  min-height: 320px;
 }
-
 
 .ed-hero-left {
   color: #f5f6f7;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .ed-title-row {
@@ -582,68 +560,390 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  margin-bottom: 20px;
 }
 
 .ed-title {
   font-size: 40px;
-  font-weight: 600;
+  font-weight: bold;
   line-height: 1.1;
   margin: 0;
   color: #ffffff;
   text-shadow: 0 2px 10px rgba(0,0,0,.35);
+  text-transform: uppercase;
 }
 
 .ed-meta {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 6px 12px;
+  display: flex;
   align-items: center;
-  margin-top: 20px;
+  gap: 12px;
+  margin-top: 12px;
   color: #e9e9ea;
   font-size: 16px;
 }
-.ed-k { 
-    color: #d1d5db; 
-    font-weight: 600; 
-    letter-spacing: .3px; 
+
+.ed-icon {
+  width: 25px;
+  height: 25px;
+  object-fit: contain;
+}
+
+.ed-v { 
+  color: #ffffff; 
+  font-size: 18px;
 }
 
 .ed-v a { 
-  color: #cbd5ff; 
+  color: #dedede; 
+  font-size: 18px;
 }
-
 
 .ed-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 12px;
+  margin-top: 24px;
 }
-.ed-followers { color: #e9e9ea; font-size: 14px; }
 
+.ed-action-btn {
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
 
-/* คอลัมน์ขวา (โปสเตอร์) ให้ยืดเต็มสูงของ .ed-hero-inner */
+.ed-action-btn.primary {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.ed-action-btn.secondary {
+  background-color: transparent;
+  color: #ffffff;
+  border: 1px solid #ffffff;
+}
+
+.ed-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* คอลัมน์ขวา (โปสเตอร์) */
 .ed-hero-right {
-  display: flex;                /* ให้ลูก (img) ยืดสูงได้ */
-  align-self: stretch;          /* กันกรณี override อื่น ๆ */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;      
+  height: 360px;             
+  box-sizing: border-box;
 }
 
-
-/* รูปโปสเตอร์ด้านขวา */
 .ed-hero-right img {
   width: 100%;
-  height: 100%;                 /* สำคัญ: ยืดเต็มความสูง */
-  object-fit: cover;            /* ครอบภาพไม่ให้บิด */
+  height: 100%;
+  object-fit: contain;  
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.35);
-  background: #0f0f12;
+  /* box-shadow: 0 8px 24px rgba(0,0,0,.35); */
 }
 
+.ev-chip {
+  font-size: 12px; 
+  color: #292929;
+  background-color: #d2d2d2;
+  border: 1px solid #e9e9e9; 
+  border-radius: 999px; 
+  padding: 5px 10px; 
+  white-space: nowrap;
+}
+
+.ev-chip-transparent {
+  font-size: 12px; 
+  color: #d2d2d2;
+  border: 1px solid #d2d2d2; 
+  border-radius: 999px; 
+  padding: 5px 10px; 
+  white-space: nowrap;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ed-hero-inner {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 10px;
+  }
+  
+  .ed-hero-right img {
+    width: auto;
+    height: 280px;
+  }
+  
+  .ed-title {
+    font-size: 24px;
+  }
+
+  .ev-chip {
+    font-size: 12px; 
+    padding: 3px 10px; 
+  }
+
+  .ev-chip-transparent {
+    font-size: 12px; 
+    padding: 3px 10px; 
+  }
+}
+
+/* Mobile phones */
+@media (max-width: 480px) {
+  .ed-hero {
+    min-height: 200px;
+    margin-bottom: 20px;
+  }
+  
+  .ed-hero-inner {
+    padding: 5px;
+    min-height: 200px;
+  }
+  
+  .ed-hero-right {
+    height: auto;
+    min-height: 200px;
+    margin-top: 30px;
+  }
+  
+  .ed-hero-right img {
+    width: 200px;
+    height: 280px;
+    max-width: 100%;
+    object-fit: contain;
+  }
+  
+  .ed-title {
+    font-size: 24px;
+    padding: 5px;
+  }
+  
+  .ed-title-row {
+    margin-bottom: 16px;
+  }
+  
+  .ed-meta {
+    gap: 5px;
+    margin-top: 8px;
+    padding: 5px;
+  }
+
+  .ed-icon {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .ed-v a {
+    font-size: 14px;
+  }
+
+  .ed-v {
+    font-size: 14px;
+  }
+  
+  .ev-chip,
+  .ev-chip-transparent {
+    font-size: 10px;
+    padding: 3px 8px;
+    margin: 2px;
+  }
+  
+  .ed-info-block {
+    padding: 14px 12px 12px;
+  }
+  
+  .ed-info-title {
+    font-size: 18px;
+  }
+  
+  .ed-kv {
+    grid-template-columns: 1fr;
+    gap: 2px;
+    font-size: 13px;
+  }
+  
+  .ed-schedule {
+    padding: 16px 12px 14px;
+  }
+  
+  .bs-track {
+    height: 32px;
+  }
+  
+  .bs-bar {
+    height: 24px;
+    top: 4px;
+    font-size: 10px;
+    padding: 0 4px;
+  }
+  
+  .act {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+  
+  .act .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .evartist-card {
+    grid-template-columns: 48px 1fr;
+    gap: 8px;
+    padding: 8px;
+  }
+  
+  .artist-thumb {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .artist-actions {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .artist-name {
+    font-size: 14px;
+  }
+  
+  .mdl-backdrop {
+    padding: 10px;
+    align-items: flex-start;
+  }
+  
+  .mdl {
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 12px;
+  }
+  
+  .search-input {
+    height: 32px;
+    font-size: 14px;
+  }
+  
+  .grid2 input[type="time"],
+  .grid2 select {
+    height: 32px;
+    font-size: 14px;
+  }
+  
+  .btn {
+    height: 36px;
+    font-size: 14px;
+  }
+  
+  .btn-xs {
+    height: 26px;
+    font-size: 11px;
+    padding: 0 8px;
+  }
+  
+  .pill {
+    height: 24px;
+    font-size: 11px;
+    padding: 0 8px;
+  }
+  
+  .chip {
+    height: 26px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+  
+  .chips,
+  .duration-chips {
+    gap: 4px;
+    justify-content: center;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 360px) {
+  .ed-hero-inner {
+    padding: 16px 12px;
+  }
+  
+  .ed-hero-right img {
+    width: 180px;
+    height: 250px;
+  }
+  
+  .ed-title {
+    font-size: 22px;
+  }
+  
+  .ed-info-title {
+    font-size: 16px;
+  }
+  
+  .mdl h3 {
+    font-size: 16px;
+  }
+  
+  .ed-meta {
+    font-size: 13px;
+  }
+  
+  .ed-icon {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .ev-chip,
+  .ev-chip-transparent {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+}
+
+/* Fix for very small screens */
+@media (max-width: 320px) {
+  .page {
+    padding: 12px 8px 32px;
+  }
+  
+  .ed-hero-inner {
+    padding: 12px 8px;
+  }
+  
+  .ed-title {
+    font-size: 20px;
+  }
+  
+  .ed-hero-right img {
+    width: 160px;
+    height: 220px;
+  }
+  
+  .evartist-card {
+    grid-template-columns: 40px 1fr;
+    gap: 6px;
+    padding: 6px;
+  }
+  
+  .artist-thumb {
+    width: 40px;
+    height: 40px;
+  }
+}
 /* ==============================================================
-   INFO GRID 3 คอลัมน์ — โทนตามตัวอย่างภาพที่ 2
+   INFO GRID 3 คอลัมน์
    ============================================================== */
 
-.ed-info { margin-top: 16px; }
+.ed-info { 
+  margin-top: 16px; 
+}
 
 .ed-info-grid {
   display: grid;
@@ -655,13 +955,14 @@
   background: #f6f6f6;
   border-top: 5px solid #000000;
   padding: 18px 16px 14px;
+  margin-bottom: 20px;
 }
 
 .ed-info-title {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: .2px;
-  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  text-transform: uppercase;
 }
 
 .ed-kv {
@@ -672,10 +973,30 @@
   padding: 4px 0;
   font-size: 14px;
 }
-.ed-kv > div:first-child { color: #6b7280; }
 
-.ed-text { color: #5b5b63; font-size: 14px; }
+.ed-kv > div:first-child { 
+  color: #6b7280; 
+}
 
+.ed-text { 
+  color: #5b5b63; 
+  font-size: 14px; 
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ed-hero-inner {
+    grid-template-columns: 1fr;
+  }
+  
+  .ed-title {
+    font-size: 32px;
+  }
+  
+  .ed-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
 /* ==============================================================
    LIKE BUTTON ให้เข้มชัดบนพื้นหลังเข้ม (ใช้ของเดิม + ปรับนิดหน่อย)
    ============================================================== */
@@ -714,7 +1035,6 @@
 
 
 
-
 /* ===== Artist Schedule block look like info blocks ===== */
 .ed-schedule {
   background: #f6f6f6;
@@ -734,3 +1054,251 @@
 
 .ed-text { white-space: pre-line; }
 
+/* Add these responsive styles to your EventDetail.css */
+
+/* ==============================
+   RESPONSIVE ARTIST SCHEDULE
+   ============================== */
+
+.ed-schedule-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-text {
+  display: inline;
+}
+
+.btn-icon {
+  display: none;
+  font-weight: bold;
+}
+
+/* Status Messages */
+.note.published-note {
+  background: #eef6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.status-message {
+  margin: 0.5rem 0 1rem;
+  font-size: 0.8125rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.status-message.ready {
+  color: #059669;
+  background: #f0fdf4;
+}
+
+.status-message.pending {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.empty-state {
+  text-align: center;
+  color: #6b7280;
+  padding: 2rem;
+  font-style: italic;
+  border: 1px dashed #e5e7eb;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+/* Responsive Schedule Layout */
+@media (max-width: 768px) {
+  .ed-schedule-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .ed-schedule-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  /* BasicSchedule responsive */
+  .bs-head {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .bs-colname {
+    font-size: 0.875rem;
+  }
+  
+  .bs-scale {
+    font-size: 0.75rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+  
+  .bs-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    padding: 0.75rem;
+    background: #fafafa;
+    border-radius: 8px;
+  }
+  
+  .bs-track {
+    height: 32px;
+    margin-top: 0.5rem;
+  }
+  
+  .bs-bar {
+    height: 24px;
+    top: 4px;
+    font-size: 0.75rem;
+    padding: 0 0.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .ed-schedule-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+  
+  .btn-text {
+    display: none;
+  }
+  
+  .btn-icon {
+    display: inline;
+  }
+  
+  /* Specific button icons */
+  .btn.primary .btn-icon::before {
+    content: "+";
+  }
+  
+  .btn.primary[disabled] .btn-icon::before {
+    content: "⏳";
+  }
+  
+  .btn.danger .btn-icon::before {
+    content: "🗑";
+  }
+  
+  /* Schedule grid adjustments */
+  .bs-name {
+    font-size: 0.875rem;
+  }
+  
+  .bs-sub {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .st {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .btn-xs.cancel {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .ed-schedule {
+    padding: 1rem 0.75rem;
+  }
+  
+  .ed-info-title {
+    font-size: 1.25rem;
+  }
+  
+  .note.published-note,
+  .status-message {
+    font-size: 0.75rem;
+    padding: 0.625rem;
+  }
+  
+  /* Horizontal scroll for schedule on very small screens */
+  .bs-wrap {
+    overflow-x: auto;
+  }
+  
+  .bs-head,
+  .bs-row {
+    min-width: 500px;
+  }
+}
+
+/* Fix for very small screens */
+@media (max-width: 360px) {
+  .ed-schedule {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .ed-info-title {
+    font-size: 1.125rem;
+  }
+  
+  .btn {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Ensure modal is responsive */
+@media (max-width: 640px) {
+  .mdl {
+    width: 95vw;
+    margin: 1rem;
+    padding: 1rem;
+  }
+  
+  .evartist-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .grid2 {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .chips,
+  .duration-chips {
+    justify-content: center;
+  }
+}
+
+/* Loading states */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Touch-friendly improvements */
+.bs-bar {
+  min-height: 24px;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .bs-bar:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+}

@@ -188,7 +188,7 @@ export default function Venue() {
   if (loading)
     return (
       <div className="vn-page">
-        <div className="vn-loading">กำลังโหลด…</div>
+        <div className="vn-loading">Loading…</div>
       </div>
     );
 
@@ -198,7 +198,7 @@ export default function Venue() {
         <div className="vn-error">{err}</div>
         <div style={{ marginTop: 8 }}>
           <Link to="/venues" className="vn-btn-ghost">
-            ← กลับแผนที่
+            ← Return to map
           </Link>
         </div>
       </div>
@@ -367,7 +367,7 @@ export default function Venue() {
 
           {/* Links / Socials */}
           <div className="vn-info-block">
-            <div className="vn-info-title">Links</div>
+            <div className="vn-info-title">social media</div>
             <div className="vn-social-icons">
               {venueData.websiteUrl && (
                 <a href={venueData.websiteUrl} target="_blank" rel="noreferrer">
@@ -455,7 +455,7 @@ export default function Venue() {
             ))}
 
             {eventsUpcoming.length === 0 && (
-              <li className="a-empty">ยังไม่มีกิจกรรมที่จะเกิดขึ้น</li>
+              <li className="a-empty">There are no upcoming events.</li>
             )}
           </ul>
         </div>

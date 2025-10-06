@@ -350,16 +350,23 @@ export default function NotificationBell({ mobileMode = false }) {
           border: none;
           outline: none;
           cursor: pointer;
-          background-color: ${hover ? 'rgba(139, 139, 139, 0.2)' : 'transparent'};
+          background-color: transparent;
           border-radius: 50%;
           transition: all 0.2s ease;
           color: inherit;
         }
 
-        // .nbell-btn:hover {
-        //   background-color: rgba(139, 139, 139, 0.3);
-        //   transform: scale(1.05);
-        // }
+        .nbell-btn:hover {
+          background-color: rgba(139, 139, 139, 0.2);
+        }
+
+        .nbell-btn:focus,
+        .nbell-btn:active {
+          outline: none;
+          box-shadow: none;
+          border: none;
+        }
+
 
         .nbell-badge {
           position: absolute;

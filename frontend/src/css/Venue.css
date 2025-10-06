@@ -227,7 +227,7 @@
 
 .vn-kv {
   display: grid;
-  grid-template-columns: 120px 1fr;  
+  grid-template-columns: 90px 1fr;  
   gap: 8px 14px;
   align-items: center;
   padding: 8px 0;
@@ -439,6 +439,9 @@
   .vn-info-grid {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+  .vn-info-block {
+    margin-left: -20px;
   }
 }
 

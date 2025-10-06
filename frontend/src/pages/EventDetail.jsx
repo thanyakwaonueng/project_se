@@ -707,11 +707,43 @@ export default function EventDetail() {
                 <span className="badge" style={{background:'#6b7280',color:'#fff'}}>Draft</span>
               )}
             </div>
+            
+            <div className="ed-meta">
+              <img src="/img/calendar-white-icon.png" alt="Date" className="ed-icon"/>
+              <span className="ed-v">{formatDateEN(ev.date)}</span>
+              <span className="ed-v">{scheduleRange}</span>
+            </div>
+            
+            <div className="ed-meta">
+              <img src="/img/pin_white.png" alt="Venue" className="ed-icon"/>
+              <span className="ed-v"> 
+                {locationUrl
+                  ? <a className="alink" href={locationUrl} target="_blank" rel="noreferrer">{venueName} ↗</a>
+                  : '—'}
+              </span>
+            </div>
+            
+            {/* <div className="ed-meta ">
+              <span className="ev-chip">{ev?.genre || '—'}</span>
+              <span className="ev-chip-transparent">{ev?.eventType || '—'}</span>
+              <span className="ev-chip-transparent">Alcohol: {ev?.alcoholPolicy || '—'}</span>
+              <span className="ev-chip-transparent">Age: {ev?.ageRestriction || '—'}</span>
+            </div> */}
 
-            <div className="ed-meta"><span className="ed-k">Date</span><span className="ed-v">{formatDateEN(ev.date)}</span></div>
-            <div className="ed-meta"><span className="ed-k">Hours</span><span className="ed-v">{scheduleRange}</span></div>
-            <div className="ed-meta"><span className="ed-k">Event Type</span><span className="ed-v">{ev?.eventType || '—'}</span></div>
-            <div className="ed-meta"><span className="ed-k">Location</span><span className="ed-v">{venueName}{' '}</span></div>
+            <div className="ed-meta">
+              {ev.genre && <span className="ev-chip">{ev.genre}</span>}
+              {ev.eventType && (
+                <span className="ev-chip-transparent">{ev.eventType}</span>
+              )}
+              {ev.alcoholPolicy && (
+                <span className="ev-chip-transparent">Alcohol: {ev.alcoholPolicy}</span>
+              )}
+              {ev.ageRestriction && (
+                <span className="ev-chip-transparent">Age: {ev.ageRestriction}+</span>
+              )}
+            </div>
+
+            
           </div>
 
           <div className="ed-hero-right">
@@ -732,12 +764,12 @@ export default function EventDetail() {
             <div className="ed-kv"><div>Email</div><div>—</div></div>
             <div className="ed-kv"><div>Phone</div><div>—</div></div>
             <div className="ed-kv">
-              <div>Location</div>
+              {/* <div>Location</div>
               <div>
                 {locationUrl
                   ? <a className="alink" href={locationUrl} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>
                   : '—'}
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -747,7 +779,7 @@ export default function EventDetail() {
           </div>
 
           <div className="ed-info-block">
-            <h3 className="ed-info-title">LINKS</h3>
+            <h3 className="ed-info-title">TICKET LINK</h3>
             <p className="ed-text">
               {ev?.ticketLink
                 ? <a className="alink" href={ev.ticketLink} target="_blank" rel="noreferrer">Tickets ↗</a>
@@ -760,7 +792,7 @@ export default function EventDetail() {
       {/* SCHEDULE */}
       <section className="ed-schedule">
         <div className="ed-schedule-head">
-          <h2 className="h2">Artist Schedule</h2>
+          <h2 className="ed-info-title">Artist Schedule</h2>
           <div style={{display:'flex', gap:8}}>
             {canEdit && (
               <button className="btn primary" onClick={()=>{ setEditing(null); setModalOpen(true); }}>

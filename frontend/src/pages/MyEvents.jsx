@@ -56,7 +56,9 @@ export default function MyEvents() {
       boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
       transition: "all 0.3s ease",
       display: "flex",
-      flexDirection: "column"
+      flexDirection: "column",
+      cursor: "pointer",
+      position: "relative"
     },
     eventPoster: {
       width: "100%",
@@ -158,6 +160,15 @@ export default function MyEvents() {
     }
   };
 
+  // Handle card click to navigate to view page
+  const handleCardClick = (evId, e) => {
+    // Prevent navigation if the click was on a button
+    if (e.target.closest('button')) {
+      return;
+    }
+    navigate(`/myevents/${evId}`);
+  };
+
   // Hover effects
   const handleMouseEnter = (e) => {
     if (e.target.className === 'btn-viewdetail-ev') {
@@ -245,6 +256,7 @@ export default function MyEvents() {
               className="event-card"
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
+              onClick={(e) => handleCardClick(ev.id, e)}
             >
               <img
                 src={ev.posterUrl || "https://via.placeholder.com/300x160?text=No+Poster"}
