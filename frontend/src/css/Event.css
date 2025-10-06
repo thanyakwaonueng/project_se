@@ -681,3 +681,87 @@ Responsive in another type
     text-overflow: ellipsis; 
   }
 } */
+
+
+
+
+
+
+
+/* ===== Popup: Genre list (สไตล์ให้เหมือนหน้า Artist) ===== */
+.ev-genre-title {
+  font-size: 32px;
+  font-weight: 500;
+  margin: 0 0 12px 0;
+}
+
+.ev-genre-list {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+  border-top: 1px solid #efefef;
+}
+
+.ev-genre-list > li {
+  border-bottom: 1px solid #efefef; /* เส้นคั่นบางๆ */
+}
+
+.ev-genre-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  padding: 12px;
+  cursor: pointer;
+  transition: background-color .3s ease, color .3s ease;
+}
+
+/* แถว All genres ให้เด่นนิดๆ */
+.ev-genre-list > li:first-child .ev-genre-item {
+  /* background: #f7f7fa; */
+}
+
+/* hover เทาอ่อน */
+.ev-genre-item:hover {
+  background: #f6f7f8;
+}
+
+/* active (ตอนกดค้าง) */
+.ev-genre-item:active {
+  /* background: #eef0f3; */
+}
+
+/* สถานะที่ถูกเลือก */
+.ev-genre-item.is-active {
+  /* background: #f0f2f5; */
+  font-weight: 700;
+}
+
+
+/* ===== Match Artist "Select Genre" pill button ===== */
+.select-genre,
+.a-genre-btn {
+  padding: 12px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  background-color: #a9deff;   /* เหมือน Artist */
+  color: #292929;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color .2s ease, color .2s ease;
+  text-transform: uppercase;
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.select-genre:hover,
+.a-genre-btn:hover {
+  background-color: #292929;
+  color: #d2d2d2;
+}
+
+/* ระยะห่างปุ่มเฉพาะหน้า Event */
+.ev-genre-btn { margin-left: 10px; }
