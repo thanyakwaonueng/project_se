@@ -40,6 +40,61 @@ function normalizeVideoUrl(raw) {
   }
 }
 
+
+
+
+
+
+
+
+
+// [ADD] Helper: ดึง bookingType จากหลายโครงสร้างให้ครอบจักรวาล
+function extractBookingType(g) {
+  const candidates = [
+    g?.bookingType,
+    g?.booking_type,
+    g?.artistInfo?.bookingType,
+    g?.artist_info?.bookingType,
+    g?.artistProfile?.bookingType,
+    g?.artist_profile?.bookingType,
+    g?.profile?.bookingType,
+    g?.application?.bookingType,
+    g?.details?.bookingType,
+    g?.meta?.bookingType,
+    g?.info?.bookingType,
+    g?.booking?.type,
+  ].filter(Boolean);
+  if (candidates.length) return String(candidates[0]).trim();
+
+  // fallback: scan ชื่อคีย์ที่มีคำว่า booking + type แบบตื้น ๆ
+  try {
+    for (const [k, v] of Object.entries(g || {})) {
+      const key = String(k).toLowerCase();
+      if (key.includes("booking") && key.includes("type") && v) {
+        return String(v).trim();
+      }
+      if (v && typeof v === "object") {
+        for (const [sk, sv] of Object.entries(v)) {
+          const skey = String(sk).toLowerCase();
+          if (skey.includes("booking") && skey.includes("type") && sv) {
+            return String(sv).trim();
+          }
+        }
+      }
+    }
+  } catch {}
+  return null;
+}
+
+
+
+
+
+
+
+
+
+
 /** ---------- Social icon (เล็กๆ) ---------- */
 function SocialIcon({ href, img, label }) {
   if (!href) return null;
@@ -58,6 +113,35 @@ function SocialIcon({ href, img, label }) {
   );
 }
 
+
+
+// [ADD] Helper: ดึง priceMin / priceMax (ถ้าไม่มีจริงจะคืน null)
+function extractPriceRange(g) {
+  if (!g) return null;
+  const pick = (obj) => {
+    if (!obj || typeof obj !== "object") return null;
+    const min = obj.priceMin ?? obj.price_min ?? obj.minPrice ?? obj.min_price ?? obj?.price?.min;
+    const max = obj.priceMax ?? obj.price_max ?? obj.maxPrice ?? obj.max_price ?? obj?.price?.max;
+    return { min, max };
+  };
+  const cands = [pick(g), pick(g?.artistInfo), pick(g?.artist_info), pick(g?.artistProfile), pick(g?.artist_profile), pick(g?.profile), pick(g?.details), pick(g?.meta), pick(g?.info)].filter(Boolean);
+  for (const c of cands) {
+    const min = c.min != null && String(c.min).trim() !== "" ? Number(c.min) : null;
+    const max = c.max != null && String(c.max).trim() !== "" ? Number(c.max) : null;
+    if (min != null || max != null) {
+      const fmt = (n) => Number(n).toLocaleString();
+      if (min != null && max != null) return `฿${fmt(min)} – ฿${fmt(max)}`;
+      if (min != null) return `฿${fmt(min)}+`;
+      if (max != null) return `≤ ฿${fmt(max)}`;
+    }
+  }
+  return null;
+}
+
+
+
+
+
 export default function Artist() {
   const [groups, setGroups] = useState([]);
   const [loadingGroups, setLoadingGroups] = useState(true);
@@ -75,6 +159,23 @@ export default function Artist() {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+
+  // [MOCK] ใช้ชั่วคราวถ้าไม่มีข้อมูลจริง
+  const MOCK_PRICE_RANGE = { min: 5000, max: 15000 }; // แก้ตัวเลขได้ตามต้องการ
+  const fmtTHB = (n) => Number(n).toLocaleString();   // 5,000 -> "5,000"
+
+  // [CHANGE] ถ้าไม่มีข้อมูลจริง ให้ใช้ม็อคเสมอ
+  const priceText = useMemo(() => {
+    const real = extractPriceRange(selectedGroup);
+    if (real) return real;
+    // fallback เป็นม็อค
+    const { min, max } = MOCK_PRICE_RANGE;
+    return `฿${fmtTHB(min)} – ฿${fmtTHB(max)}`;
+  }, [selectedGroup]);
+
+
+
+
 
   /* multi-select genres (เหมือน Event) */
   const [selectedGenres, setSelectedGenres] = useState([]); // array<string>
@@ -191,7 +292,17 @@ useEffect(() => {
       setGroupsError(null);
       try {
         const res = await axios.get("/api/groups", { withCredentials: true });
-        if (!cancelled) setGroups(Array.isArray(res.data) ? res.data : []);
+
+        const rows = Array.isArray(res.data) ? res.data : [];
+        // ---- [ADD] normalize bookingType ----
+        const normalized = rows.map((g) => ({
+          ...g,
+          bookingType: extractBookingType(g),
+        }));
+
+
+        if (!cancelled) setGroups(normalized);
+
       } catch (err) {
         if (!cancelled) {
           setGroupsError(err);
@@ -210,6 +321,40 @@ useEffect(() => {
     const found = groups.find((g) => String(g.id) === String(id));
     setSelectedGroup(found || null);
   }, [id, groups]);
+
+
+  // [ADD] Enrich bookingType ในหน้า Detail ถ้ายังไม่มี
+  useEffect(() => {
+    if (!selectedGroup?.id) return;
+    if (selectedGroup.bookingType) return; // มีแล้วไม่ต้องดึงซ้ำ
+
+    let alive = true;
+    (async () => {
+      // เลือกเหลือเฉพาะ endpoint ที่โปรเจกต์คุณมีจริง
+      const tryUrls = [
+        `/api/artists/${selectedGroup.id}`,
+        `/api/groups/${selectedGroup.id}`,
+      ];
+      for (const url of tryUrls) {
+        try {
+          const { data } = await axios.get(url, { withCredentials: true });
+          const bt = extractBookingType(data);
+          if (alive && bt) {
+            // อัปเดตทั้ง selectedGroup และ groups
+            setSelectedGroup((prev) => (prev ? { ...prev, bookingType: bt } : prev));
+            setGroups((gs) => gs.map((g) => (g.id === selectedGroup.id ? { ...g, bookingType: bt } : g)));
+            break;
+          }
+        } catch {
+          // ลอง URL ถัดไป
+        }
+      }
+    })();
+
+    return () => { alive = false; };
+  }, [selectedGroup?.id, selectedGroup?.bookingType]);
+
+
 
   /** keep selectedGroup fresh when groups changed */
   useEffect(() => {
@@ -651,8 +796,22 @@ const sortedGroups = useMemo(() => {
             <div className="profile-grid">
               {/* ซ้าย: ชื่อ/คำบรรยาย/EPK */}
               <div className="left-box">
-                <h1 className="title">{selectedGroup?.name || "Artist"}</h1>
+                <div className="title-section">
+                  <h1 className="title">{selectedGroup?.name || "Artist"}</h1>
+                  {selectedGroup?.bookingType && (
+                    <span className="chip-transparent at-booking">{selectedGroup.bookingType}</span>
+                  )}
+                </div>
+
                 <p className="desc">{(selectedGroup?.description || "").trim() || "No description."}</p>
+
+                {/* [MOVE] PRICE: ให้อยู่เหนือปุ่มเอกสาร และชิดกัน */}
+                {priceText && (
+                  <div className="price-near-docs">
+                    <span className="meta-label">PRICE</span>
+                    <span className="price-chip">{priceText}</span>
+                  </div>
+                )}
 
                 {/* เอกสารศิลปิน — 3 ปุ่มบรรทัดเดียว (แสดงเฉพาะ ADMIN / ORGANIZE / เจ้าของศิลปิน) */}
                 {canSeeArtistDocs && (

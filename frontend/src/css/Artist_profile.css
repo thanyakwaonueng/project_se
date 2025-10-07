@@ -967,3 +967,76 @@
   /* ถ้าอยากให้มีระยะห่างจากขอบล่างเพิ่ม: */
   /* margin-bottom: 4px; */
 }
+
+
+
+
+/* แถวหัวข้อใหญ่: ชื่อซ้าย + booking type ขวา */
+.title-section {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* แถวชื่อในการ์ดลิสต์ */
+.artist-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* ชิป booking: ป้องกันตัดคำ/เบี้ยว */
+.at-booking {
+  white-space: nowrap;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* กันชื่อยาวดัน layout */
+.artist-title,
+.left-box .title {
+  min-width: 0;
+}
+
+
+
+
+
+
+/* PRICE ให้อยู่ชิดกับปุ่มเอกสาร */
+.price-near-docs {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 10px;   /* เว้นจาก desc นิดหน่อย และชิดปุ่ม */
+}
+
+/* ลดช่องไฟด้านบนของแถวปุ่มเอกสาร ให้ดูชิด PRICE */
+.doc-row {
+  margin-top: 6px;      /* ถ้ามีค่ามากกว่านี้อยู่เดิม ให้ลดลงมา */
+}
+
+/* สไตล์เดิม (เผื่อหน้าไม่มี) */
+.meta-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-soft, #6b7280);
+}
+
+.price-chip {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  /* border: 1px solid var(--c-line, #e7e7ea); */
+  /* background: var(--c-accent-ghost, #f6f6f7); */
+  color: var(--c-accent, #6b7280);
+  font-size: 14px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
