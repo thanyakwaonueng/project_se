@@ -798,7 +798,7 @@ const sortedGroups = useMemo(() => {
               <div className="left-box">
                 <div className="title-section">
                   <h1 className="title">{selectedGroup?.name || "Artist"}</h1>
-                  {selectedGroup?.bookingType && (
+                  {selectedGroup?.bookingType && canSeeArtistDocs && (
                     <span className="chip-transparent at-booking">{selectedGroup.bookingType}</span>
                   )}
                 </div>
@@ -806,7 +806,7 @@ const sortedGroups = useMemo(() => {
                 <p className="desc">{(selectedGroup?.description || "").trim() || "No description."}</p>
 
                 {/* [MOVE] PRICE: ให้อยู่เหนือปุ่มเอกสาร และชิดกัน */}
-                {priceText && (
+                {priceText && canSeeArtistDocs && (
                   <div className="price-near-docs">
                     <span className="meta-label">PRICE</span>
                     <span className="price-chip">{priceText}</span>

@@ -1203,6 +1203,11 @@ app.get('/groups', async (req, res) => {
         },
 
         schedule,
+        priceMin: a.priceMin ?? null,
+        priceMax: a.priceMax ?? null,
+        price: (a.priceMin != null || a.priceMax != null)
+          ? { min: a.priceMin ?? null, max: a.priceMax ?? null }
+          : null,
 
         // ✅ เอกสาร — ให้ทั้ง object และ legacy URL
         epk: epkObj,
@@ -1632,14 +1637,88 @@ app.post('/events', authMiddleware, async (req, res) => {
 
     let event;
     let changed = [];
+    let artistsToNotify = [];
 
     if (data.id) {
-      const before = await prisma.event.findUnique({ where: { id: data.id } });
+      const before = await prisma.event.findUnique({
+        where: { id: data.id },
+        include: {
+          artistEvents: {
+            select: { artistId: true, status: true, slotStartAt: true, slotEndAt: true }
+          }
+        },
+      });
 
       if (before && before.venueId === venue.performerId) {
-        event = await prisma.event.update({ where: { id: data.id }, data });
-        // ตรวจฟิลด์สำคัญ (เปลี่ยนที่ควรแจ้ง follower)
-        changed = diffFields(before, event, ['date', 'doorOpenTime', 'endTime', 'venueId']);
+        const result = await prisma.$transaction(async (tx) => {
+          const updated = await tx.event.update({ where: { id: data.id }, data });
+          const changedFields = diffFields(before, updated, ['date', 'doorOpenTime', 'endTime', 'venueId']);
+
+          const shouldReset = !updated.isPublished && changedFields.some((f) => ['date', 'doorOpenTime', 'endTime'].includes(f));
+          let artistsNeedingNotify = [];
+
+          if (shouldReset) {
+            const affected = (before.artistEvents || []).filter((ae) => {
+              const st = String(ae.status || '').toUpperCase();
+              return st === 'ACCEPTED' || st === 'PENDING';
+            });
+
+            if (affected.length) {
+              const ids = affected.map((ae) => ae.artistId);
+              await tx.artistEvent.updateMany({
+                where: { eventId: updated.id, artistId: { in: ids } },
+                data: { status: 'PENDING' },
+              });
+              artistsNeedingNotify = ids;
+            }
+
+            const dateChanged = changedFields.includes('date');
+            const oldDate = before?.date ? new Date(before.date) : null;
+            const newDate = updated?.date ? new Date(updated.date) : null;
+
+            if (dateChanged && oldDate && newDate) {
+              const oldBase = new Date(oldDate); oldBase.setHours(0, 0, 0, 0);
+              const newBase = new Date(newDate); newBase.setHours(0, 0, 0, 0);
+              const shiftDate = (dt) => {
+                if (!dt) return dt;
+                const diff = dt.getTime() - oldBase.getTime();
+                return new Date(newBase.getTime() + diff);
+              };
+
+              const slots = await tx.scheduleSlot.findMany({ where: { eventId: updated.id } });
+              for (const slot of slots) {
+                await tx.scheduleSlot.update({
+                  where: { id: slot.id },
+                  data: { startAt: shiftDate(slot.startAt), endAt: shiftDate(slot.endAt) },
+                });
+              }
+
+              const aeSlots = await tx.artistEvent.findMany({
+                where: { eventId: updated.id },
+                select: { artistId: true, slotStartAt: true, slotEndAt: true },
+              });
+              for (const ae of aeSlots) {
+                const dataUpdate = {};
+                if (ae.slotStartAt) dataUpdate.slotStartAt = shiftDate(ae.slotStartAt);
+                if (ae.slotEndAt) dataUpdate.slotEndAt = shiftDate(ae.slotEndAt);
+                if (Object.keys(dataUpdate).length) {
+                  await tx.artistEvent.update({
+                    where: { artistId_eventId: { artistId: ae.artistId, eventId: updated.id } },
+                    data: dataUpdate,
+                  });
+                }
+              }
+            }
+
+            return { updated, changedFields, artistsNeedingNotify };
+          }
+
+          return { updated, changedFields, artistsNeedingNotify };
+        });
+
+        event = result.updated;
+        changed = result.changedFields;
+        artistsToNotify = result.artistsNeedingNotify || [];
       } else {
         const { id, ...createData } = data;
         event = await prisma.event.create({
@@ -1655,6 +1734,21 @@ app.post('/events', authMiddleware, async (req, res) => {
     //  แจ้งอัปเดตเฉพาะเมื่อ "งานถูก publish แล้ว"
     if (changed.length && event.isPublished) {
       try { await eventUpdatedFanout(prisma, event.id, changed); } catch (e) { console.error(e); }
+    }
+
+    if (artistsToNotify?.length) {
+      const unique = Array.from(new Set(artistsToNotify));
+      try {
+        await fanout(
+          prisma,
+          unique,
+          'event.schedule.changed',
+          `The event "${event.name}" has been updated. Please review and re-confirm your availability.`,
+          { eventId: event.id }
+        );
+      } catch (e) {
+        console.error('NOTIFY_EVENT_UPDATE_ERROR', e);
+      }
     }
 
     return res.json(event);
