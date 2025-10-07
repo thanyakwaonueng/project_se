@@ -75,6 +75,44 @@ export default function Artist() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
+
+
+  /* [ADDED] multi-select genres (เหมือน Event) */
+  const [selectedGenres, setSelectedGenres] = useState([]); // array<string>
+
+
+  /* [ADDED] ตัวกรองแนวเพลง */
+  // const [genreFilter, setGenreFilter] = useState("all");
+
+  
+
+
+  /* [ADDED] ปุ่ม/ป๊อปอัปกรองตามแนวเพลง (ใช้ค่าเดียว เพื่อไม่กระทบ logic เดิม) */
+  const [showArtistGenrePopup, setShowArtistGenrePopup] = useState(false);
+
+  /* [ADDED] รายการแนวเพลงที่มีอยู่จริงในข้อมูล */
+  const genreOptions = useMemo(() => {
+    const map = new Map();
+    groups.forEach((g) => {
+      const pool = [
+        g?.genre,
+        g?.subGenre,
+        ...(Array.isArray(g?.genres) ? g.genres : []),
+        g?.details,
+      ].filter(Boolean);
+      pool.forEach((label) => {
+        const key = String(label).trim().toLowerCase();
+        if (!key) return;
+        if (!map.has(key)) map.set(key, label);
+      });
+    });
+    return Array.from(map.values()).sort((a, b) => String(a).localeCompare(String(b)));
+  }, [groups]);
+
+
+
+
+
   // ---------- 2) AUTH กันหน้าเด้ง (จับ 401) ----------
   useEffect(() => {
     let alive = true;
@@ -188,17 +226,57 @@ export default function Artist() {
     return arr;
   }, [groups, activeFilter]);
 
+
+
+  // --- helper สำหรับเช็ค genre (ต้องอยู่ก่อน filteredGroups) ---
+  const norm = (s) => String(s || "").trim().toLowerCase();
+  const hasGenre = (g, target) => {
+    const t = norm(target);
+    const pool = [
+      g?.genre,
+      g?.subGenre,
+      ...(Array.isArray(g?.genres) ? g.genres : []),
+      g?.details,
+    ]
+      .map(norm)
+      .filter(Boolean);
+    return pool.includes(t);
+  };
+
+
+
+  /* [CHANGED] รวม search + multi-genre */
+  /* [CHANGED] รวม search + multi-genre */
   const filteredGroups = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return sortedGroups;
+    const sel = Array.isArray(selectedGenres) ? selectedGenres : []; // [ADDED] guard
+
     return sortedGroups.filter((g) => {
-      const inGroup =
+      const inSearch =
+        !q ||
         g.name?.toLowerCase().includes(q) ||
         (g.description || "").toLowerCase().includes(q) ||
         (g.details || "").toLowerCase().includes(q);
-      return inGroup;
+
+      if (!inSearch) return false;
+
+      // เลือกได้หลายแนว: มีอย่างน้อย 1 แนวตรง → ผ่าน
+      if (sel.length > 0 && !sel.some(tag => hasGenre(g, tag))) return false;
+
+      return true;
     });
-  }, [sortedGroups, searchQuery]);
+  }, [sortedGroups, searchQuery, selectedGenres]);
+
+
+
+
+  /* [ADDED] reset page เมื่อเปลี่ยนชุดแนว */
+  useEffect(() => { setCurrentPage(1); }, [selectedGenres]);
+  /* [ADDED] เปลี่ยน Genre แล้วรีเซ็ตหน้า */
+  // useEffect(() => { setCurrentPage(1); }, [genreFilter]);
+
+
+
 
   /** follow/unfollow (DB-based) */
   const toggleFollow = async (group) => {
@@ -255,6 +333,7 @@ export default function Artist() {
 
   const [scheduleTab, setScheduleTab] = useState("upcoming");
 
+
   // genres:
   const groupGenres = useMemo(() => {
     if (!selectedGroup) return [];
@@ -265,20 +344,8 @@ export default function Artist() {
     if (!list.length && selectedGroup.details) list.push(selectedGroup.details);
     return Array.from(new Set(list.filter(Boolean)));
   }, [selectedGroup]);
-  // --- helper สำหรับเช็ค genre ---
-  const norm = (s) => String(s || "").trim().toLowerCase();
-  const hasGenre = (g, target) => {
-    const t = norm(target);
-    const pool = [
-      g?.genre,
-      g?.subGenre,
-      ...(Array.isArray(g?.genres) ? g.genres : []),
-      g?.details,
-    ]
-      .map(norm)
-      .filter(Boolean);
-    return pool.includes(t);
-  };
+
+
 
   // --- เลือกลิสต์ "ศิลปินอื่น" ตามแนวเพลงแรกของศิลปินปัจจุบัน ---
   const otherArtists = useMemo(() => {
@@ -343,6 +410,7 @@ export default function Artist() {
   const canSeeArtistDocs =
     isOwner || user?.role === "ADMIN" || user?.role === "ORGANIZE";
 
+
   // 小 component สำหรับ player ให้คงอัตราส่วน 16:9
   const PlayerCard = ({ url, poster, title }) => {
     if (!url) return null;
@@ -367,6 +435,12 @@ export default function Artist() {
       </div>
     );
   };
+
+  
+
+
+  const selectedGenresSafe = Array.isArray(selectedGenres) ? selectedGenres : [];
+
 
   return (
     <div className="artist-container a-bleed">
@@ -397,6 +471,23 @@ export default function Artist() {
               >New</button>
             </div>
 
+            {/* [ADDED] ปุ่มเปิดป๊อปอัป Genre (แทน select เดิม) */}
+            {/* [CHANGED] ปุ่มเปิดป๊อปอัปให้เหมือน Event */}
+            <div className="a-genre-inline">
+              <button
+                type="button"
+                className="a-genre-btn"
+                onClick={() => setShowArtistGenrePopup(true)}
+                aria-haspopup="dialog"
+                aria-expanded={showArtistGenrePopup ? "true" : "false"}
+                aria-controls="artist-genre-popup"
+              >
+                Select Genre
+              </button>
+            </div>
+
+
+
             <div className="connected-search-container">
               <input
                 type="text"
@@ -416,37 +507,125 @@ export default function Artist() {
 
           {/* Grid */}
           <div className="group-grid">
-            {pageItems.map(group => (
+            {pageItems.map((group) => (
               <div key={group.id} className="group-card-wrap" ref={lastFocusRef}>
-                <button
-                  className={`like-button ${group.likedByMe ? "liked" : ""}`}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFollow(group); }}
-                  aria-label={group.likedByMe ? "Unfollow" : "Follow"}
-                  disabled={followingIds.has(group.id)}
-                  title={group.likedByMe ? "Unfollow" : "Follow"}
-                />
-                <Link
-                  to={`/artists/${group.id}`}
-                  className="group-card a-card-min"
-                >
-                  <div className="group-card-image">
+                {/* === การ์ดแบบเดียวกับหน้า Home === */}
+                <div className="artist-card">
+                  {/* รูป + ปุ่มหัวใจ + แท็ก genre */}
+                  <Link
+                    to={`/artists/${group.id}`}
+                    className="artist-image-wrapper"
+                  >
                     <img
                       src={group.image}
                       alt={group.name}
+                      className="artist-image"
                       loading="lazy"
                       onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
                     />
+
+                    {/* ปุ่มหัวใจ (overlay มุมขวาบน) */}
+                    <button
+                      className={`like-button ${group.likedByMe ? "liked" : ""}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleFollow(group);
+                      }}
+                      aria-label={group.likedByMe ? "Unfollow" : "Follow"}
+                      disabled={followingIds.has(group.id)}
+                      title={group.likedByMe ? "Unfollow" : "Follow"}
+                    />
+
+                    {/* แท็ก Genre มุมซ้ายล่าง (ใช้ genre แรกที่มี) */}
+                    {(
+                      Array.isArray(group.genres) ? group.genres[0] :
+                      group.subGenre || group.genre
+                    ) && (
+                      <span className="artist-genre">
+                        {Array.isArray(group.genres) ? group.genres[0] : (group.subGenre || group.genre)}
+                      </span>
+                    )}
+                  </Link>
+
+                  {/* เนื้อหาใต้รูป: ชื่อ + วันที่ (ถ้ามี) */}
+                  <div className="artist-content">
+                    <h2 className="artist-title">{group.name}</h2>
+                    {/* [CHANGED] แสดงจำนวนผู้ติดตามใต้ชื่อศิลปิน */}
+                    <p className="artist-date">
+                      {fmtCompact(group.followersCount ?? 0)} followers
+                    </p>
                   </div>
-                </Link>
-                <div className="group-card-caption">
-                  <h3>{group.name}</h3>
                 </div>
-                <div className="group-card-likes" style={{ marginTop: 0, fontSize: 13, opacity: 0.8, paddingLeft:10 }}>
-                  👥 {group.followersCount || 0} followers
-                </div>
+                {/* === จบการ์ดแบบ Home === */}
               </div>
             ))}
           </div>
+
+          
+          {/* [ADDED] Popup เลือก Genre แบบหน้า Event (แต่ใช้คลาสใหม่) */}
+          {/* [CHANGED] Popup Genre แบบ multi-select เหมือน Event */}
+          {showArtistGenrePopup && (
+            <div
+              className="a-genre-overlay"
+              role="dialog"
+              aria-modal="true"
+              onClick={() => setShowArtistGenrePopup(false)}
+            >
+              <div
+                id="artist-genre-popup"
+                className="a-genre-content"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  className="a-genre-close"
+                  onClick={() => setShowArtistGenrePopup(false)}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+
+                <h2 className="a-genre-title">Select Genre</h2>
+
+                <ul className="a-genre-list">
+                  <li>
+                    <button
+                      type="button"
+                      className={`a-genre-item ${selectedGenresSafe.length === 0 ? "is-active" : ""}`}
+                      onClick={() => { setSelectedGenres([]); setShowArtistGenrePopup(false); }}
+                    >
+                      All genres
+                    </button>
+                  </li>
+
+                  {genreOptions.map((g) => {
+                    const label  = String(g);
+                    const active = selectedGenresSafe.includes(label);
+                    return (
+                      <li key={label}>
+                        <button
+                          type="button"
+                          className={`a-genre-item ${active ? "is-active" : ""}`}
+                          onClick={() => {
+                            setSelectedGenres(prev => {
+                              const curr = Array.isArray(prev) ? prev : [];
+                              return curr.includes(label) ? curr.filter(x => x !== label) : [...curr, label];
+                            });
+                          }}
+                          title={label}
+                        >
+                          {label}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+              </div>
+            </div>
+          )}
+
+
 
           <div className="a-line-artist" />
 

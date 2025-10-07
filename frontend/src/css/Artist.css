@@ -74,7 +74,7 @@ body {
 
 .artist-container .connected-filter-tab {
   font-family: 'Poppins', sans-serif;
-  padding: 12px 140px;   /* ลดลงจาก 80px เพื่อไม่กว้างเกิน */
+  padding: 12px 100px;   /* ลดลงจาก 80px เพื่อไม่กว้างเกิน */
   border: 1px solid #000; /* ขอบสีดำ */
   background: #f6f6f6;
   font-size: 14px;
@@ -351,3 +351,189 @@ body {
 
 /* ถ้ายังมีสไตล์ปุ่มกล่องเก่าอยู่ ให้ปิดทิ้งสำหรับ pagination ใหม่นี้ */
 .artist-pagination .artist-page-btn{ display:none; }
+
+
+
+/* ===================== [CARD: Match Home style] ===================== */
+/* โครงการ์ด */
+.group-grid .artist-card {
+  border: 1px solid #e5e7eb;         /* เทาอ่อนแบบ Home */
+  /* border-radius: 12px; */
+  background: #fff;
+  overflow: hidden;
+  transition: box-shadow .25s ease, transform .25s ease;
+}
+.group-grid .artist-card:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  transform: translateY(-2px);
+}
+
+/* ส่วนรูป */
+.artist-image-wrapper {
+  position: relative;
+  display: block;
+}
+.artist-image {
+  width: 100%;
+  height: 220px;                      /* ความสูงการ์ดรูปแบบ Home */
+  object-fit: cover;
+  display: block;
+}
+
+/* ปุ่มหัวใจ overlay (ย้ายจาก wrapper เดิมมาไว้บนรูป) */
+.artist-image-wrapper > .like-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #2a2a2a url('/img/heart_light.png') no-repeat center;
+  background-size: 16px 16px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.18);
+}
+.artist-image-wrapper > .like-button:hover,
+.artist-image-wrapper > .like-button.liked {
+  background: #a9deff url('/img/heart_dark.png') no-repeat center;
+  background-size: 18px 18px;
+}
+
+/* ป้าย Genre มุมซ้ายล่าง */
+.artist-genre {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0,0,0,.65);
+  border-radius: 999px;
+  backdrop-filter: saturate(140%) blur(2px);
+}
+
+/* เนื้อหาการ์ด */
+.artist-content {
+  padding: 14px 16px 16px;
+}
+.artist-title {
+  font-size: 18px;
+  font-weight: 600;
+  color:  #111;
+  /* margin: 0 0 6px; */
+}
+.artist-date {
+  font-size: 14px;
+  color: #6b7280; /* เทาแบบ Home */
+  margin: 0;
+}
+
+/* ปรับช่องว่างกริดให้ดูโปร่งแบบหน้า Home (ไม่จำเป็นแต่ออกแบบให้คล้าย) */
+.group-grid {
+  gap: 24px 24px;
+}
+
+
+
+
+
+
+
+/* ===================== GENRE POPUP (Artist) — match Event look ===================== */
+/* ปุ่มเปิด (เท่ากับ .select-genre ของ Event) */
+.a-genre-inline{ 
+  display:flex; 
+  align-items:center; 
+  gap:10px; 
+  padding-left: 30px;
+}
+
+.a-genre-btn{
+  padding: 12px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  background-color: #a9deff;   /* เหมือน Event */
+  color: #292929;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color .2s ease;
+  text-transform: uppercase;
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+.a-genre-btn:hover{ background-color:#292929; color:#d2d2d2; }
+
+/* ฉากทับ/กล่องป๊อปอัป (เท่ากับ .popup-overlay / .popup-content ของ Event) */
+.a-genre-overlay{
+  position: fixed; top:0; left:0; right:0; bottom:0;
+  background-color: rgba(0,0,0,0.5);
+  display:flex; justify-content:center; align-items:center;
+  z-index: 1100; /* สูงพอ */
+}
+.a-genre-content{
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 700px;
+  position: relative;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: popupFadeIn .25s ease-out;  /* คีย์เฟรมชื่อเดียวกับ Event */
+}
+
+/* ปุ่มปิดกากบาท + โทนสีเหมือน Event */
+.a-genre-close{
+  position:absolute; top:8px; right:12px;
+  font-size:1.5rem; font-weight:bold;
+  background:none; border:none; cursor:pointer; color:#333;
+  width:30px; height:30px; display:flex; align-items:center; justify-content:center;
+}
+.a-genre-close:hover{ color:#ff3333; }
+
+.a-genre-title{
+  font-size: clamp(18px,5vw,26px);
+  margin: 10px 0;
+  color: #333;
+  line-height: 1.2;
+}
+
+/* รายการแบบหนึ่งคอลัมน์ มีเส้นคั่นเหมือน Event */
+.a-genre-list{ list-style:none; padding-left:0; margin:0; }
+.a-genre-item{
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #EFEFF1;
+  cursor: pointer;
+  font-size: 16px;
+  color: #111;
+  transition: background .3s ease, transform .3s ease;
+}
+.a-genre-item:hover{ background:#F7F7F9; }
+.a-genre-item:active{ transform: translateY(1px); }
+
+/* ตัวหนาเมื่อ active (เทียบ Event: fontWeight bold) */
+.a-genre-item.is-active{ font-weight: bold; }
+
+/* ใช้คีย์เฟรมเดียวกับ Event เพื่อความเหมือน */
+@keyframes popupFadeIn{
+  from{ opacity:0; transform: translateY(-10px); }
+  to{ opacity:1; transform: translateY(0); }
+}
+
+
+
+
+
+
+
+
+
+
+

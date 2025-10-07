@@ -328,7 +328,7 @@ export default function VenueMap() {
     mapRef.current.flyTo([v.location.latitude, v.location.longitude], 17, { duration: 0.8 });
   };
 
-  if (loading) return <div style={{ padding: 16 }}>กำลังโหลด…</div>;
+  if (loading) return <div style={{ padding: 16 }}>Loading…</div>;
 
   return (
     <div className="vmap-page">
