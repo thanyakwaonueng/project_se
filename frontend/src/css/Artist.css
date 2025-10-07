@@ -415,13 +415,20 @@ body {
 
 /* เนื้อหาการ์ด */
 .artist-content {
-  padding: 14px 16px 16px;
+  width: 90%;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 auto;
+  text-align: left;
 }
 .artist-title {
   font-size: 18px;
-  font-weight: 600;
-  color:  #111;
-  /* margin: 0 0 6px; */
+  /* font-weight: 500; */
+  color: #000;
+  margin: 0;
+  line-height: 1.3;
 }
 .artist-date {
   font-size: 14px;

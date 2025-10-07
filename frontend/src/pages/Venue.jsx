@@ -412,54 +412,56 @@ export default function Venue() {
         <h2 className="vn-section-title">Upcoming</h2>
         <div className="a-panel">
           <ul className="a-schedule-list">
-            {eventsUpcoming.map((ev) => (
-              <li key={ev.id || ev.slug || ev.title} className="a-schedule-item">
-                <div className="a-date">{fmtEnLong(ev.date || ev.dateISO)}</div>
-                <div className="a-event">
-                  <div className="a-event-title">
-                    {ev.title || ev.name}{" "}
-                    {!ev.isPublished && canSeeDrafts && (
-                      <span className="vn-chip" style={{ marginLeft: 8, background: "#6b7280", color: "#fff" }}>
-                        Draft
-                      </span>
-                    )}
+            {eventsUpcoming
+              .filter((ev) => ev.isPublished && new Date(ev.date || ev.dateISO) >= new Date()) // <-- กรอง published และยังไม่ผ่าน
+              .map((ev) => (
+                <li key={ev.id || ev.slug || ev.title} className="a-schedule-item">
+                  <div className="a-date">{fmtEnLong(ev.date || ev.dateISO)}</div>
+                  <div className="a-event">
+                    <div className="a-event-title">{ev.title || ev.name}</div>
+                    <div className="a-event-sub">
+                      {(ev.venue?.name ||
+                        venueData?.performer?.user?.name ||
+                        displayName) || ""}
+                      {ev.city ? ` • ${ev.city}` : ""}
+                      {ev.price ? ` • ${ev.price}` : ""}
+                    </div>
                   </div>
-                  <div className="a-event-sub">
-                    {(ev.venue?.name ||
-                      venueData?.performer?.user?.name ||
-                      displayName) || ""}
-                    {ev.city ? ` • ${ev.city}` : ""}
-                    {ev.price ? ` • ${ev.price}` : ""}
-                  </div>
-                </div>
-                {(ev.id || ev.url || ev.ticketLink) &&
-                  (ev.id ? (
-                    <Link className="a-link" to={`/events/${ev.id}`}>
-                      Detail
-                    </Link>
-                  ) : ev.url ? (
-                    <a className="a-link" href={ev.url} target="_blank" rel="noreferrer">
-                      Detail
-                    </a>
-                  ) : (
-                    <a
-                      className="a-link"
-                      href={ev.ticketLink}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Detail
-                    </a>
-                  ))}
-              </li>
-            ))}
+                  {(ev.id || ev.url || ev.ticketLink) &&
+                    (ev.id ? (
+                      <Link className="a-link" to={`/events/${ev.id}`}>
+                        Detail
+                      </Link>
+                    ) : ev.url ? (
+                      <a
+                        className="a-link"
+                        href={ev.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Detail
+                      </a>
+                    ) : (
+                      <a
+                        className="a-link"
+                        href={ev.ticketLink}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Detail
+                      </a>
+                    ))}
+                </li>
+              ))}
 
-            {eventsUpcoming.length === 0 && (
+            {eventsUpcoming.filter((ev) => ev.isPublished && new Date(ev.date || ev.dateISO) >= new Date()).length === 0 && (
               <li className="a-empty">There are no upcoming events.</li>
             )}
           </ul>
         </div>
       </section>
+
+
 
       {/* ===== GALLERY (Photos) ===== */}
       {gallery.length > 0 && (

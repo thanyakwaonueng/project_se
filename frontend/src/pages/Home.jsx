@@ -182,7 +182,13 @@ export default function Home() {
   }
 
   /* ===== ArtistCard (stateless) ===== */
-  function ArtistCard({ id, image, title, date, genre, likedByMe, onToggleLike, likeBusy }) {
+  function fmtCompact(n) {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "m";
+    if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
+    return n.toString();
+  }
+
+  function ArtistCard({ id, image, title, genre, likedByMe, followersCount, onToggleLike, likeBusy }) {
     return (
       <div className="artist-card">
         <div className="artist-image-wrapper">
@@ -214,11 +220,12 @@ export default function Home() {
           <h2 className="artist-title">
             <a href={`/artists/${id}`}>{title}</a>
           </h2>
-          <p className="artist-date">{date}</p>
+          <p className="artist-date">{fmtCompact(followersCount ?? 0)} followers</p>
         </div>
       </div>
     );
   }
+
 
   /* ===== EventCard → กด View Detail ไปหน้า /events/:id ===== */
   function EventCard({ id, image, title, date, desc, genre }) {
@@ -339,17 +346,17 @@ export default function Home() {
         <div className="container-3">
           <div className="artist-grid" id="artistGrid">
             {artistRows.map(artist => (
-              <ArtistCard 
-                key={artist.id}
-                id={artist.id}
-                title={artist.title}
-                date={artist.date}
-                genre={artist.genre}
-                image={artist.image}
-                likedByMe={artist.likedByMe}
-                likeBusy={busyArtistIds.has(artist.id)}
-                onToggleLike={toggleLikeArtist}
-              />
+            <ArtistCard 
+              key={artist.id}
+              id={artist.id}
+              title={artist.title}
+              genre={artist.genre}
+              image={artist.image}
+              likedByMe={artist.likedByMe}
+              followersCount={artist.followersCount}
+              likeBusy={busyArtistIds.has(artist.id)}
+              onToggleLike={toggleLikeArtist}
+            />
             ))}
           </div>
         </div>
@@ -382,6 +389,8 @@ export default function Home() {
       {/* Upcoming events (3 รายการ) */}
       <div className="event-content">
         <div className="container-5">
+          <h1 className="upcoming-event">Upcoming events</h1>
+          <p className="artist-subtitle">Catch the next wave of sounds around the city</p>
           <div className="event-grid">
             {(upcomingEvents.length ? upcomingEvents : []).map(ev => (
               <EventCard 
