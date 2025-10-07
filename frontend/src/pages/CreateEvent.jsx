@@ -88,6 +88,49 @@ function isWithinVenueHours(startHHMM, endHHMM, venueOpenHHMM, venueCloseHHMM) {
   }
 }
 
+/* 🆕 ตรวจชื่อซ้ำจากเซิร์ฟเวอร์แบบชัวร์ (return true = ยูนีค, false = ซ้ำ) */
+async function checkEventNameUnique(name, excludeId) {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return true;
+
+  // 1) endpoint เฉพาะ (ถ้ามี)
+  try {
+    const { data } = await axios.get('/api/events/check-unique-name', {
+      params: { name: trimmed, excludeId: excludeId || undefined },
+      withCredentials: true,
+    });
+    if (typeof data?.unique === 'boolean') return data.unique;
+  } catch (_) {}
+
+  // 2) exists endpoint (เผื่อโปรเจ็กต์ใช้ชื่อนี้)
+  try {
+    const { data } = await axios.get('/api/events/exists-by-name', {
+      params: { name: trimmed, excludeId: excludeId || undefined },
+      withCredentials: true,
+    });
+    if (typeof data?.exists === 'boolean') return !data.exists;
+  } catch (_) {}
+
+  // 3) Fallback: query รายการแล้วเทียบ exact (case-insensitive)
+  try {
+    const { data: list } = await axios.get('/api/events', {
+      params: { q: trimmed, limit: 10, exact: 1 },
+      withCredentials: true,
+    });
+    const lower = trimmed.toLowerCase();
+    const dup = Array.isArray(list) && list.some(ev => {
+      if (!ev?.name) return false;
+      const sameName = String(ev.name).trim().toLowerCase() === lower;
+      const sameId = excludeId ? Number(ev.id) === Number(excludeId) : false;
+      return sameName && !sameId;
+    });
+    return !dup;
+  } catch (_) {
+    // ถ้าเช็คไม่ได้ ให้กันไว้ก่อน = ไม่ยูนีค
+    return false;
+  }
+}
+
 export default function CreateEvent() {
   const { eventId } = useParams(); // /me/event/:eventId
 
@@ -109,6 +152,10 @@ export default function CreateEvent() {
   // 🆕 เวลาทำการของสถานที่
   const [venueOpen, setVenueOpen] = useState(null);  // "HH:mm" หรือ null
   const [venueClose, setVenueClose] = useState(null); // "HH:mm" หรือ null
+
+  // 🆕 ชื่ออีเวนต์ต้องยูนีค
+  const [isNameUnique, setIsNameUnique] = useState(true);
+  const [nameChecking, setNameChecking] = useState(false);
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -167,11 +214,10 @@ export default function CreateEvent() {
     let alive = true;
     (async () => {
       try {
-        // ดึง me เพื่อทราบ user.id (owner/organizer)
         const meRes = await axios.get('/api/auth/me', { withCredentials: true });
         const me = meRes.data;
         if (!me?.id) return;
-        // ดึง venue ของ user นี้ (ตาม backend: GET /venues/:id ใช้ performerId = userId)
+        // GET /venues/:id ใช้ performerId = userId
         const vRes = await axios.get(`/api/venues/${me.id}`);
         const v = vRes.data;
         const openHH = to24h(v?.timeOpen || v?.venue?.timeOpen || v?.venue?.timeopen || '');
@@ -180,8 +226,7 @@ export default function CreateEvent() {
         setVenueOpen(openHH || null);
         setVenueClose(closeHH || null);
       } catch (e) {
-        // เงียบ ๆ ถ้าหาไม่ได้ จะไม่บล็อกแต่ไม่โชว์โน้ต
-        // console.warn('load venue hours failed', e?.response?.data || e?.message);
+        // เงียบ ๆ ถ้าหาไม่ได้
       }
     })();
     return () => { alive = false; };
@@ -215,6 +260,28 @@ export default function CreateEvent() {
     };
     fetchEvent();
   }, [eventId]);
+
+  // 🆕 เช็คชื่อยูนีคแบบ on-change (debounce)
+  useEffect(() => {
+    let alive = true;
+    const trimmed = String(name || '').trim();
+    if (!trimmed) {
+      setIsNameUnique(true);
+      setNameChecking(false);
+      return;
+    }
+    setNameChecking(true);
+    const t = setTimeout(async () => {
+      const ok = await checkEventNameUnique(trimmed, eventId);
+      if (!alive) return;
+      setIsNameUnique(ok);
+      setNameChecking(false);
+    }, 350);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [name, eventId]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -266,13 +333,20 @@ export default function CreateEvent() {
 
       // 🆕 บังคับอยู่ในเวลาเปิด–ปิดของสถานที่
       if (tDoor && tEnd && (venueOpen || venueClose)) {
-        const ok = isWithinVenueHours(tDoor, tEnd, venueOpen, venueClose);
-        if (!ok) {
+        const okHours = isWithinVenueHours(tDoor, tEnd, venueOpen, venueClose);
+        if (!okHours) {
           setLoading(false);
           return setError(
             `The time selected is outside the venue's opening hours (${venueOpen || '—'}–${venueClose || '—'}).`
           );
         }
+      }
+
+      // 🆕 double-check ชื่อซ้ำก่อนส่ง (กันทุกเคส)
+      const uniqueNow = await checkEventNameUnique(name, eventId);
+      if (!uniqueNow) {
+        setLoading(false);
+        return setError('This event name is already in use. Please choose another.');
       }
 
       // 1) upload poster if any
@@ -325,7 +399,17 @@ export default function CreateEvent() {
       navigate(`/events/${res.data.id}`);
     } catch (err) {
       setLoading(false);
-      setError(err.response?.data?.error || err.message || 'Failed to save event');
+      // 🆕 ดัก duplicate name จาก server
+      const status = err?.response?.status;
+      const code = err?.response?.data?.code || err?.response?.data?.errorCode;
+      const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message;
+
+      if (status === 409 || status === 422 || code === 'EVENT_NAME_NOT_UNIQUE') {
+        setError('This event name is already in use. Please choose another.');
+        return;
+      }
+
+      setError(msg || 'Failed to save event');
     }
   };
 
@@ -346,13 +430,6 @@ export default function CreateEvent() {
 
       <div className="ve-line" />
 
-      {/* 🆕 แถบแจ้งเวลาเปิด–ปิดร้าน ถ้ามีข้อมูล
-      {(venueOpen || venueClose) && (
-        <div className="ee-note" style={{margin:'8px 0', fontSize:13}}>
-          Venue hours: {venueOpen || '—'} – {venueClose || '—'}
-        </div>
-      )} */}
-
       {/* ===== Form ===== */}
       <form className="ee-form" onSubmit={submit}>
         {/* Section: Event Details */}
@@ -368,9 +445,16 @@ export default function CreateEvent() {
                 className="ee-input"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onBlur={() => setName(name.trim())}
                 required
                 placeholder="Event name"
+                aria-invalid={!isNameUnique}
+                aria-describedby="name-uniq-hint"
               />
+              <div id="name-uniq-hint" className="ee-help" style={{ marginTop: 6 }}>
+                {nameChecking ? 'Checking name…'
+                  : (!isNameUnique ? 'This event name is already in use.' : '')}
+              </div>
             </div>
 
             {/* Description */}
@@ -555,7 +639,6 @@ export default function CreateEvent() {
                   />
                 </div>
 
-                {/* optional: quick time suggestions */}
                 <datalist id="time-suggestions">
                   <option value="17:00" />
                   <option value="18:00" />
@@ -609,7 +692,7 @@ export default function CreateEvent() {
           <button
             type="submit"
             className="ee-btn ee-btn-primary"
-            disabled={loading}
+            disabled={loading || nameChecking || !isNameUnique || !name.trim()}
           >
             {loading ? (hasEvent ? 'Updating…' : 'Creating…') : (hasEvent ? 'Update Event' : 'Create Event')}
           </button>
