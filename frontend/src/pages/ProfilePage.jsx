@@ -95,7 +95,7 @@ export default function ProfilePage() {
     let alive = true;
     (async () => {
       try {
-        const [p, a, d] = await Promise.all([
+        const [p, a/*, d*/] = await Promise.all([
           axios.get(`/api/artist-events/pending/${myId}`,  { withCredentials: true }),
           axios.get(`/api/artist-events/accepted/${myId}`, { withCredentials: true }),
           // axios.get(`/api/artist-events/declined/${myId}`, { withCredentials: true }),
@@ -214,7 +214,7 @@ export default function ProfilePage() {
     }
   }
 
-  /* ===== Organizer datasets mapping — Published/Draft/Canceled ===== */
+  /* ===== Organizer datasets mapping — Published/Draft ===== */
   const oeAccepted = useMemo(() => {
     return (orgEvents || [])
       .filter(e => e?.date)
@@ -223,6 +223,7 @@ export default function ProfilePage() {
         id: e.id,
         status: "ACCEPTED", // map to "Published" in labelMap
         event: { id: e.id, name: e.name, date: e.date },
+        posterUrl: e.posterUrl || e.coverImage || e.bannerUrl || null, // ✅ keep poster for CalendarSection
         slotStartAt: null,
         slotEndAt: null,
         slotStage: null,
@@ -237,6 +238,7 @@ export default function ProfilePage() {
         id: e.id,
         status: "PENDING", // map to "Draft" in labelMap
         event: { id: e.id, name: e.name, date: e.date },
+        posterUrl: e.posterUrl || e.coverImage || e.bannerUrl || null, // ✅ keep poster for CalendarSection
         slotStartAt: null,
         slotEndAt: null,
         slotStage: null,
@@ -345,7 +347,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Calendar: Artist (ใช้ค่าเริ่มต้น Accepted/Pending/Declined) */}
+        {/* Calendar: Artist */}
         {isArtistApproved && (
           <CalendarSection
             title="My Schedule"
@@ -359,19 +361,18 @@ export default function ProfilePage() {
           />
         )}
 
-        {/* Calendar: Organizer (แปลงข้อความเป็น Published/Draft/Canceled) */}
+        {/* Calendar: Organizer (Published/Draft) */}
         {isOrganizer && (
           <CalendarSection
             title="My Schedule"
             datasets={[
               { rows: oeAccepted, status: "accepted" }, // published
               { rows: oePending,  status: "pending"  }, // draft
-              // { rows: oeDeclined, status: "declined" }, // (currently none)
+              // { rows: oeDeclined, status: "declined" },
             ]}
             fmtDate={fmtDate}
             fmtTimeHM={fmtTimeHM}
-            labelMap={{ accepted: "Published", pending: "Pending"}}
-            // labelMap={{ accepted: "Published", pending: "Pending", declined: "Declined" }}
+            labelMap={{ accepted: "Published", pending: "Pending" }}
           />
         )}
 
@@ -509,6 +510,15 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM, labelMap }) {
           stage: x.slotStage || null,
           eventId: x.event?.id,
           title: x.event?.name || `Event #${x.event?.id || "?"}`,
+          // ✅ collect an image from various potential fields
+          img:
+            x.posterUrl ||
+            x.image ||
+            x.event?.posterUrl ||
+            x.event?.coverImage ||
+            x.event?.bannerUrl ||
+            x.event?.poster ||
+            null,
         }));
     const merged = [];
     for (const ds of datasets) merged.push(...pack(ds.rows, ds.status));
@@ -543,7 +553,7 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM, labelMap }) {
   };
 
   // const prettyDefault = { accepted: "Accepted", pending: "Pending", declined: "Declined" };
-  const prettyDefault = { accepted: "Accepted", pending: "Pending"};
+  const prettyDefault = { accepted: "Accepted", pending: "Pending" };
   const labels = { ...prettyDefault, ...(labelMap || {}) };
 
   return (
@@ -664,7 +674,7 @@ function CalendarSection({ title, datasets, fmtDate, fmtTimeHM, labelMap }) {
                 <div key={`ev-${ev.id}`} className="pf-card">
                   <img
                     className="pf-thumb"
-                    src={"/img/fallback.jpg"}
+                    src={ev.img || "/img/fallback.jpg"}
                     alt={ev.title}
                     onError={(e) => { e.currentTarget.src = "/img/fallback.jpg"; }}
                   />

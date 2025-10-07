@@ -6,7 +6,7 @@ import axios from 'axios';
 // Event Editor styles
 import "../css/CreateEvent.css";
 
-// ===== helper: normalize to 24h "HH:mm" =====
+/* ===== helper: normalize to 24h "HH:mm" ===== */
 function to24h(s) {
   if (!s) return "";
   const str = String(s).trim();
@@ -48,7 +48,7 @@ function to24h(s) {
   return "";
 }
 
-// ===== helpers: time/date utils (local) =====
+/* ===== helpers: time/date utils (local) ===== */
 const HHMM_REGEX = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 const toMin = (hhmm) => {
   const m = (hhmm||'').match(/^(\d{2}):(\d{2})$/);
@@ -92,6 +92,15 @@ export default function CreateEvent() {
   const [hasEvent, setHasEvent] = useState(false);
 
   const navigate = useNavigate();
+
+  // ===== error at bottom + auto scroll =====
+  const errorRef = useRef(null);
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      errorRef.current.focus?.();
+    }
+  }, [error]);
 
   // ===== upload states =====
   const [posterFile, setPosterFile] = useState(null);
@@ -261,7 +270,7 @@ export default function CreateEvent() {
     }
   };
 
-  // normalize to HH:mm on blur
+  // normalize to HH:mm on blur (optional UX)
   const onBlurTime = (val, setter) => {
     const t = to24h(val);
     setter(t);
@@ -277,10 +286,6 @@ export default function CreateEvent() {
       </header>
 
       <div className="ve-line" />
-
-      {error && (
-        <div className="ee-alert" role="alert">{error}</div>
-      )}
 
       {/* ===== Form ===== */}
       <form className="ee-form" onSubmit={submit}>
@@ -444,9 +449,8 @@ export default function CreateEvent() {
                     className="ee-input ee-inputDate"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
                     required
-                   // min={todayStr} // prevent past by HTML
+                    min={todayStr} // prevent past by HTML (local)
                   />
                 </div>
 
@@ -463,6 +467,7 @@ export default function CreateEvent() {
                     pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
                     value={doorOpenTime}
                     onChange={(e) => setDoorOpenTime(e.target.value)}
+                    onBlur={(e) => onBlurTime(e.target.value, setDoorOpenTime)}
                     required
                   />
                 </div>
@@ -479,6 +484,7 @@ export default function CreateEvent() {
                     pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
+                    onBlur={(e) => onBlurTime(e.target.value, setEndTime)}
                     required
                   />
                 </div>
@@ -509,6 +515,20 @@ export default function CreateEvent() {
             </div>
           </div>
         </section>
+
+        {/* ==== Error moved here, above the action buttons ==== */}
+        {error && (
+          <div
+            ref={errorRef}
+            className="ee-alert"
+            role="alert"
+            aria-live="assertive"
+            tabIndex={-1}
+            style={{ marginTop: 8 }}
+          >
+            {error}
+          </div>
+        )}
 
         {/* Actions */}
         <div className="ee-actions ee-actions-bottom">
