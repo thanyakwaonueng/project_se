@@ -36,7 +36,8 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     try { await api.post('/auth/logout'); } catch {}
     setUser(null);
-  }, []);
+    await refresh();
+  }, [refresh]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
