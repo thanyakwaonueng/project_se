@@ -444,14 +444,15 @@ export default function CreateEvent() {
                     className="ee-input ee-inputDate"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
                     required
-                    min={todayStr} // prevent past by HTML
+                   // min={todayStr} // prevent past by HTML
                   />
                 </div>
 
                 {/* time (24h text) */}
                 <div className="ee-field">
-                  <label className="ee-label" htmlFor="doorOpenTime">Door Open</label>
+                  <label className="ee-label" htmlFor="doorOpenTime">Door Open *</label>
                   <input
                     id="doorOpenTime"
                     type="text"
@@ -462,12 +463,12 @@ export default function CreateEvent() {
                     pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
                     value={doorOpenTime}
                     onChange={(e) => setDoorOpenTime(e.target.value)}
-                    onBlur={(e) => onBlurTime(e.target.value, setDoorOpenTime)}
+                    required
                   />
                 </div>
 
                 <div className="ee-field">
-                  <label className="ee-label" htmlFor="endTime">End Time</label>
+                  <label className="ee-label" htmlFor="endTime">End Time *</label>
                   <input
                     id="endTime"
                     type="text"
@@ -478,7 +479,7 @@ export default function CreateEvent() {
                     pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    onBlur={(e) => onBlurTime(e.target.value, setEndTime)}
+                    required
                   />
                 </div>
 

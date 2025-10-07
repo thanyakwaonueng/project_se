@@ -227,6 +227,9 @@ export default function Event() {
   const days = daysInMonthMap[month];
   const startDayIndex = getStartDayIndex(month, year);
 
+
+
+
   return (
     <div className="eventpage-content">
       <h1 className="sound-agenda">SOUND AGENDA</h1>
@@ -245,9 +248,8 @@ export default function Event() {
           <MonthPicker year={year} month={month} setYear={setYear} setMonth={setMonth} />
 
           <button
-            className="select-genre"
-            onClick={() => setShowGenrePopup(true)}
-            style={{ marginLeft: '10px', cursor: 'pointer' }}>
+            className="select-genre a-genre-btn ev-genre-btn"
+            onClick={() => setShowGenrePopup(true)}>
             Select Genre
           </button>
         </div>
@@ -358,35 +360,53 @@ export default function Event() {
                 aria-label="Close"> ×
               </button>
 
-              <h2>Select Genre</h2>
-              <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
-                <li
-                  key="all"
-                  onClick={() => { setSelectedGenre([]); setShowGenrePopup(false); }}
-                  style={{ cursor: 'pointer', padding: '8px', fontWeight: selectedGenre.length === 0 ? 'bold' : 'normal' }}
-                >
-                  All genres
+              <h2 className="ev-genre-title">Select Genre</h2>
+
+              <ul
+                className="ev-genre-list"
+                role="listbox"
+                aria-label="Genres"
+                aria-multiselectable="true"
+              >
+                <li>
+                  <button
+                    type="button"
+                    className={`ev-genre-item ${selectedGenre.length === 0 ? "is-active" : ""}`}
+                    onClick={() => { setSelectedGenre([]); setShowGenrePopup(false); }}
+                    aria-selected={selectedGenre.length === 0}
+                  >
+                    All genres
+                  </button>
                 </li>
 
-                {genres.map(g => (
-                  <li
-                    key={g}
-                    onClick={() => {
-                      if (selectedGenre.includes(g)) {
-                        setSelectedGenre(selectedGenre.filter(x => x !== g));
-                      } else {
-                        setSelectedGenre([...selectedGenre, g]);
-                      }
-                    }}
-                    style={{ cursor: 'pointer', padding: '8px', fontWeight: selectedGenre.includes(g) ? 'bold' : 'normal' }}
-                  >
-                    {g}
-                  </li>
-                ))}
+                {genres.map((label) => {
+                  const active = selectedGenre.includes(label);
+                  return (
+                    <li key={label}>
+                      <button
+                        type="button"
+                        className={`ev-genre-item ${active ? "is-active" : ""}`}
+                        onClick={() => {
+                          setSelectedGenre(prev =>
+                            prev.includes(label)
+                              ? prev.filter(x => x !== label)   // ถ้าเลือกอยู่แล้ว → เอาออก
+                              : [...prev, label]                // ถ้ายังไม่เลือก → เพิ่มเข้าไป
+                          );
+                          // ไม่ปิด popup เพื่อให้เลือกต่อได้
+                        }}
+                        aria-selected={active}
+                      >
+                        {label}
+                      </button>
+                    </li>
+                  );
+                })}
+
               </ul>
             </div>
           </div>
         )}
+
 
       </div>
     </div>

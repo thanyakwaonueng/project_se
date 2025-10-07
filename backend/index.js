@@ -1237,6 +1237,26 @@ app.get('/groups', async (req, res) => {
 });
 
 /* ───────────────────────────── VENUES (POST = upsert by userId) ─────────── */
+
+// function for validate location
+function isGoogleMapsUrl(url) {
+  try {
+    const u = new URL(url);
+    return (
+      u.hostname.includes("google.com") ||
+      u.hostname.includes("maps.app.goo.gl")
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
+function isValidCoordinates(lat, lng) {
+  if (lat < -90 || lat > 90) return false;
+  if (lng < -180 || lng > 180) return false;
+  return true;
+}
+
 app.post('/venues', authMiddleware, async (req, res) => {
   try {
     if (!['ORGANIZE', 'ADMIN'].includes(req.user.role)) {
@@ -1256,6 +1276,31 @@ app.post('/venues', authMiddleware, async (req, res) => {
       lineUrl:      data.lineUrl ?? null,
       twitterUrl:   data.twitterUrl ?? null,
     };
+
+    //Phone number
+    if(performerData.contactPhone && !isThaiPhoneNumber(performerData.contactPhone)){
+      return res.status(400).json({error: "Invalid Thai phone number"})
+    }
+
+    //URL Social Media
+    if(performerData.youtubeUrl && !validatePlatformurl(performerData.youtubeUrl, 'youtube')){ //Youtube
+      return res.status(400).json({error: "Invalid Youtube URL!"})
+    }
+    if(performerData.tiktokUrl && !validatePlatformurl(performerData.tiktokUrl, 'tiktok')){ //Tiktok
+      return res.status(400).json({error: "Invalid Tiktok URL!"})
+    }
+    if(performerData.facebookUrl && !validatePlatformurl(performerData.facebookUrl, 'facebook')){ //Facebook
+      return res.status(400).json({error: "Invalid Facebook URL!"})
+    }
+    if(performerData.instagramUrl && !validatePlatformurl(performerData.instagramUrl, 'instagram')){ //Instagram
+      return res.status(400).json({error: "Invalid Instagram URL!"})
+    }
+    if(performerData.twitterUrl && !validatePlatformurl(performerData.twitterUrl, 'twitter')){ //Twitter / X
+      return res.status(400).json({error: "Invalid Twitter(X) URL!"})
+    }
+    if(performerData.lineUrl && !validatePlatformurl(performerData.lineUrl, 'line')){ //Twitter / X
+      return res.status(400).json({error: "Invalid Twitter(X) URL!"})
+    }
 
     const venueData = {
       description:   data.description ?? null,
@@ -1281,6 +1326,13 @@ app.post('/venues', authMiddleware, async (req, res) => {
       longitude:  data.longitude ?? null,
       locationUrl:data.locationUrl ?? null,
     };
+
+    if (venueLocationData.latitude && venueLocationData.longitude && !isValidCoordinates(venueLocationData.latitude, venueLocationData.longitude)) {
+      return res.status(400).json({ error: 'Coordinates out of range' });
+    };
+    if (venueLocationData.locationUrl && !isGoogleMapsUrl(venueLocationData.locationUrl)) {
+      return res.status(400).json({ error: 'Not a Google map URL' });
+    } 
 
     const result = await prisma.$transaction(async (tx) => {
       // ✅ ถ้าส่งชื่อมา ให้ผูกกับ User.name (ชื่อเพจสถานที่)
@@ -1428,6 +1480,31 @@ app.put('/venues/:id', authMiddleware, async (req, res) => {
       twitterUrl:   body.twitterUrl ?? null,
     };
 
+    //Phone number
+    if(performerData.contactPhone && !isThaiPhoneNumber(performerData.contactPhone)){
+      return res.status(400).json({error: "Invalid Thai phone number"})
+    }
+
+    //URL Social Media
+    if(performerData.youtubeUrl && !validatePlatformurl(performerData.youtubeUrl, 'youtube')){ //Youtube
+      return res.status(400).json({error: "Invalid Youtube URL!"})
+    }
+    if(performerData.tiktokUrl && !validatePlatformurl(performerData.tiktokUrl, 'tiktok')){ //Tiktok
+      return res.status(400).json({error: "Invalid Tiktok URL!"})
+    }
+    if(performerData.facebookUrl && !validatePlatformurl(performerData.facebookUrl, 'facebook')){ //Facebook
+      return res.status(400).json({error: "Invalid Facebook URL!"})
+    }
+    if(performerData.instagramUrl && !validatePlatformurl(performerData.instagramUrl, 'instagram')){ //Instagram
+      return res.status(400).json({error: "Invalid Instagram URL!"})
+    }
+    if(performerData.twitterUrl && !validatePlatformurl(performerData.twitterUrl, 'twitter')){ //Twitter / X
+      return res.status(400).json({error: "Invalid Twitter(X) URL!"})
+    }
+    if(performerData.lineUrl && !validatePlatformurl(performerData.lineUrl, 'line')){ //Twitter / X
+      return res.status(400).json({error: "Invalid Twitter(X) URL!"})
+    }
+
 
     const venueData = {
       description:    body.description ?? null,
@@ -1457,6 +1534,13 @@ app.put('/venues/:id', authMiddleware, async (req, res) => {
       longitude:  toFloat(body.longitude),
       locationUrl:body.locationUrl ?? null,
     };
+    
+    if (locationData.latitude && locationData.longitude && !isValidCoordinates(locationData.latitude, locationData.longitude)) {
+      return res.status(400).json({ error: 'Coordinates out of range' });
+    };
+    if (locationData.locationUrl && !isGoogleMapsUrl(locationData.locationUrl)) {
+      return res.status(400).json({ error: 'Not a Google map URL' });
+    } 
 
     // ตรวจว่ามี venue นี้จริงก่อน
     const exists = await prisma.venue.findUnique({ where: { performerId: id } });
@@ -1516,6 +1600,7 @@ app.post('/events', authMiddleware, async (req, res) => {
 
     // ====== ⛔ ป้องกันเวลาชนกันภายใน venue เดียวกัน ======
     // ต้องมี date + doorOpenTime + endTime และ end > start
+    // ต้องไม่สร้าง event ในวันเวลาที่ผ่านไปแล้ว
     const dateVal = data.date ? new Date(data.date) : null;
     const toHHMM = (s) => {
       if (!s) return null;
@@ -1533,6 +1618,9 @@ app.post('/events', authMiddleware, async (req, res) => {
       const endAt   = new Date(dateVal.getFullYear(), dateVal.getMonth(), dateVal.getDate(), endHM[0], endHM[1], 0, 0);
       if (endAt <= startAt) {
         return res.status(400).json({ error: 'endTime must be later than doorOpenTime' });
+      }
+      if (startAt < new Date(new Date().getTime() + 7 * 60 * 60 * 1000)) {
+        return res.status(400).json({ error: 'New events should not be in the past.' });
       }
 
       // หาอีเวนต์วันเดียวกันใน venue เดียวกัน (ยกเว้นตัวเองถ้าเป็นการอัปเดต)
