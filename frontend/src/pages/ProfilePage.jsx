@@ -263,9 +263,9 @@ export default function ProfilePage() {
   const fmtTimeHM = (d) => d ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
 
   /* ===== early returns AFTER all hooks declared ===== */
-  if (loading) return <div className="stack">Loading…</div>;
+  // if (loading) return <div className="stack">Loading…</div>;
   if (err) return <div className="stack alert alert-danger">{err}</div>;
-  if (!me) return <div className="stack">No profile.</div>;
+  if (!me) return <div className="stack"></div>;
 
   return (
     <div className="profile-page-wrap">

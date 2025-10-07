@@ -229,7 +229,7 @@ export default function MyEvents() {
     loadEvents();
   }, []);
 
-  if (loading) return <p style={styles.loadingText}>Loading events…</p>;
+  // if (loading) return <p style={styles.loadingText}>Loading events…</p>;
   if (error) return <p style={styles.errorText}>{error}</p>;
 
   return (

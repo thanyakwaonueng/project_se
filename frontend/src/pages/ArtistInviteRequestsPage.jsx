@@ -216,7 +216,7 @@ export default function ArtistInvitesPage() {
                 {isActLoading ? (
                   <>
                     <span className="spinner-border spinner-border-sm me-2" />
-                    Loading...
+                    {/* Loading... */}
                   </>
                 ) : (
                   'Accept'
@@ -237,7 +237,7 @@ export default function ArtistInvitesPage() {
                 {isActLoading ? (
                   <>
                     <span className="spinner-border spinner-border-sm me-2" />
-                    Loading...
+                    {/* Loading... */}
                   </>
                 ) : (
                   'Decline'
@@ -317,7 +317,7 @@ export default function ArtistInvitesPage() {
             {loading ? (
               <div className="text-center py-5 text-muted">
                 <div className="spinner-border" role="status">
-                  <span className="visually-hidden">Loading...</span>
+                  {/* <span className="visually-hidden">Loading...</span> */}
                 </div>
                 <div className="mt-3">Loading invitations...</div>
               </div>
@@ -411,7 +411,7 @@ export default function ArtistInvitesPage() {
                                       {isActLoading ? (
                                         <>
                                           <span className="spinner-border spinner-border-sm me-1" />
-                                          Loading...
+                                          {/* Loading... */}
                                         </>
                                       ) : (
                                         'Decline'
@@ -432,7 +432,7 @@ export default function ArtistInvitesPage() {
                                       {isActLoading ? (
                                         <>
                                           <span className="spinner-border spinner-border-sm me-1" />
-                                          Loading...
+                                          {/* Loading... */}
                                         </>
                                       ) : (
                                         'Accept'

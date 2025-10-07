@@ -205,7 +205,7 @@ export default function NotificationBell({ mobileMode = false }) {
         {open && (
           <div className="mobile-notification-panel">
             <div className="mobile-notification-header">
-              <h4>Notifications</h4>
+              {/* <h4>Notifications</h4> */}
               {count > 0 && (
                 <button 
                   className="btn-mark-all-read" 
@@ -655,7 +655,7 @@ export default function NotificationBell({ mobileMode = false }) {
         @media (max-width: 480px) {
 
           .btn-mark-all-read {
-            font-size: 9px;
+            font-size: 14px;
           }
           .nbell-dropdown {
             width: 95vw;

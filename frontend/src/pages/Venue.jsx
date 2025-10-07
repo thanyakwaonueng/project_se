@@ -185,12 +185,12 @@ export default function Venue() {
       .sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [venueData, canSeeDrafts]);
 
-  if (loading)
-    return (
-      <div className="vn-page">
-        <div className="vn-loading">Loading…</div>
-      </div>
-    );
+  // if (loading)
+  //   return (
+  //     <div className="vn-page">
+  //       <div className="vn-loading">Loading…</div>
+  //     </div>
+  //   );
 
   if (err)
     return (
