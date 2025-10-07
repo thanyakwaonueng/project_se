@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
 // Event Editor styles
 import "../css/CreateEvent.css";
@@ -125,9 +126,10 @@ async function checkEventNameUnique(name, excludeId) {
       return sameName && !sameId;
     });
     return !dup;
-  } catch (_) {
-    // ถ้าเช็คไม่ได้ ให้กันไว้ก่อน = ไม่ยูนีค
-    return false;
+  } catch (err) {
+    console.warn('checkEventNameUnique fallback failed:', err?.response?.data || err?.message);
+    // ถ้าเช็คกับ backend ไม่ได้ ให้ถือว่ายูนีคเพื่อไม่บล็อกการสร้างงาน
+    return true;
   }
 }
 
@@ -396,6 +398,14 @@ export default function CreateEvent() {
       }
 
       setLoading(false);
+      await Swal.fire({
+        icon: 'success',
+        title: eventId ? 'Event updated' : 'Event created',
+        text: eventId
+          ? 'Your changes have been saved.'
+          : 'The event is now ready. You can manage the line-up and publish it when ready.',
+        confirmButtonColor: '#2563eb',
+      });
       navigate(`/events/${res.data.id}`);
     } catch (err) {
       setLoading(false);
@@ -405,11 +415,25 @@ export default function CreateEvent() {
       const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message;
 
       if (status === 409 || status === 422 || code === 'EVENT_NAME_NOT_UNIQUE') {
-        setError('This event name is already in use. Please choose another.');
+        const duplicateMsg = 'This event name is already in use. Please choose another.';
+        setError(duplicateMsg);
+        await Swal.fire({
+          icon: 'error',
+          title: 'Duplicate event name',
+          text: duplicateMsg,
+          confirmButtonColor: '#d33',
+        });
         return;
       }
 
-      setError(msg || 'Failed to save event');
+      const fallbackMsg = msg || 'Failed to save event';
+      setError(fallbackMsg);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Save failed',
+        text: fallbackMsg,
+        confirmButtonColor: '#d33',
+      });
     }
   };
 

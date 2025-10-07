@@ -1,6 +1,7 @@
 // src/pages/EventDetail.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import api, { extractErrorMessage } from '../lib/api';
 import '../css/EventDetail.css';
 
@@ -604,12 +605,34 @@ const toggleFollow = async () => {
   const isReady = !!(ev?._ready?.isReady);
   const onPublish = async () => {
     if (!canPublish || !isReady || publishing) return;
+    const result = await Swal.fire({
+      title: 'Publish this event?',
+      text: 'Followers and accepted artists will be notified.',
+      icon: 'question',
+      confirmButtonText: 'Publish',
+      confirmButtonColor: '#2563eb',
+      cancelButtonText: 'Not yet',
+      showCancelButton: true,
+      reverseButtons: true,
+    });
+    if (!result.isConfirmed) return;
     setPublishing(true);
     try {
       await api.post(`/events/${ev.id}/publish`, {}, { withCredentials: true });
       await fetchEvent();
+      Swal.fire({
+        title: 'Published!',
+        text: 'The event is now live.',
+        icon: 'success',
+        confirmButtonColor: '#2563eb',
+      });
     } catch (e) {
-      alert(e?.response?.data?.error || 'Publish failed');
+      Swal.fire({
+        title: 'Publish failed',
+        text: extractErrorMessage?.(e, 'Publish failed') || 'Publish failed',
+        icon: 'error',
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setPublishing(false);
     }
@@ -703,25 +726,58 @@ const toggleFollow = async () => {
 
   const onCancelInvite = async (row) => {
     if (!row?.artistId || !ev?.id) return;
-    if (!window.confirm(`Cancel invite for "${row.name}"?`)) return;
+    const result = await Swal.fire({
+      title: `Cancel invite for "${row.name}"?`,
+      text: 'The artist will be notified and removed from this line-up.',
+      icon: 'warning',
+      confirmButtonText: 'Cancel invite',
+      confirmButtonColor: '#d33',
+      cancelButtonText: 'Keep invite',
+      showCancelButton: true,
+      reverseButtons: true,
+    });
+    if (!result.isConfirmed) return;
     try {
       await api.delete(`/events/${ev.id}/invites/${row.artistId}`, { withCredentials: true });
       await fetchEvent();
     } catch (e) {
-      alert(extractErrorMessage?.(e, 'Cancel invite failed') || 'Cancel invite failed');
+      Swal.fire({
+        icon: 'error',
+        title: 'Cancel failed',
+        text: extractErrorMessage?.(e, 'Cancel invite failed') || 'Cancel invite failed',
+        confirmButtonColor: '#d33',
+      });
     }
   };
 
   const onDeleteEvent = async () => {
     if (!ev?.id) return;
-    const reason = window.prompt('Type a reason (optional):', '');
-    if (!window.confirm('This will permanently delete the event. Continue?')) return;
+    const result = await Swal.fire({
+      title: 'Delete this event?',
+      text: 'This action cannot be undone.',
+      icon: 'warning',
+      confirmButtonText: 'Delete event',
+      confirmButtonColor: '#d33',
+      showCancelButton: true,
+      cancelButtonText: 'Keep event',
+      reverseButtons: true,
+    });
+    if (!result.isConfirmed) return;
     setDeleting(true);
     try {
-      await api.post(`/events/${ev.id}/cancel`, { reason: reason || null }, { withCredentials: true });
+      await api.post(
+        `/events/${ev.id}/cancel`,
+        { reason: null },
+        { withCredentials: true },
+      );
       navigate(location.pathname.startsWith('/myevents') ? '/myevents' : '/events', { replace: true });
     } catch (e) {
-      alert(extractErrorMessage?.(e, 'Delete failed') || 'Delete failed');
+      Swal.fire({
+        icon: 'error',
+        title: 'Delete failed',
+        text: extractErrorMessage?.(e, 'Delete failed') || 'Delete failed',
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setDeleting(false);
     }

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import api, { extractErrorMessage } from "../lib/api";
+import Swal from "sweetalert2";
 import "../css/AccountSetupPage.css";
 
 /* ---------- [ADD] Reusable Picker Modal ---------- */
@@ -805,6 +806,12 @@ export default function AccountSetupPage() {
       }
 
       setOk(true);
+      await Swal.fire({
+        title: "Saved!",
+        text: "Your account setup has been updated.",
+        icon: "success",
+        confirmButtonColor: "#2563eb",
+      });
       navigate("/me/profile", { replace: true });
     } catch (e) {
       setErr(extractErrorMessage?.(e) || e.message || "เกิดข้อผิดพลาด");
@@ -948,7 +955,6 @@ export default function AccountSetupPage() {
         <div className="a-line"></div>
 
         {ok  && <div className="acc-msg ok">บันทึกโปรไฟล์เรียบร้อย!</div>}
-        {err && <div className="acc-msg err">{err}</div>}
 
         {/* เลือก ROLE */}
         {!isEdit && !role && (
@@ -1498,12 +1504,19 @@ export default function AccountSetupPage() {
 
         {/* Actions */}
         {(isEdit || !!role) && (
-          <div className="acc-actions">
-            <button type="button" className="acc-btn" onClick={resetForm}>Reset</button>
-            <button type="button" className="acc-btn acc-btnPrimary" disabled={saving} onClick={handleSave}>
-              {saving ? "Saving…" : "Save"}
-            </button>
-          </div>
+          <>
+            {err && (
+              <div className="acc-msg err" style={{ marginTop: 24 }}>
+                {err}
+              </div>
+            )}
+            <div className="acc-actions">
+              <button type="button" className="acc-btn" onClick={resetForm}>Reset</button>
+              <button type="button" className="acc-btn acc-btnPrimary" disabled={saving} onClick={handleSave}>
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

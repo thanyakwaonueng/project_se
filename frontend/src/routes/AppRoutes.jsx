@@ -23,7 +23,6 @@ import ProtectedRoute from '../components/ProtectedRoute';
 import EventDetail from '../pages/EventDetail';
 import VenueMap from '../pages/VenueMap';
 import MyEvents from '../pages/MyEvents';
-import InviteArtist from '../pages/InviteArtist';
 import ArtistInviteRequestsPage from '../pages/ArtistInviteRequestsPage';
 import ProfilePage from "../pages/ProfilePage";
 import AccountSetupPage from '../pages/AccountSetupPage';
@@ -180,8 +179,6 @@ export default function AppRoutes() {
           <Route path="/me/artist" element={<CreateArtist />} />
           <Route path="/me/event" element={<CreateEvent />} />
           <Route path="/me/event/:eventId" element={<CreateEvent />} />
-          <Route path="/me/invite_to_event/:eventId" element={<InviteArtist />} />
-
           <Route path="/me/profile" element={<ProfilePage />} />
 
           {/* แอดมิน */}

@@ -1,6 +1,7 @@
 // frontend/src/pages/ArtistInviteRequestPage.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { extractErrorMessage } from '../lib/api';
 import { Link } from 'react-router-dom';
 
@@ -134,16 +135,25 @@ export default function ArtistInvitesPage() {
   }, []);
 
   const act = async (artistIdParam, eventId, action) => {
+    const loadKey = keyFor(artistIdParam, eventId);
     try {
       setErr('');
-      const confirmMessage =
-        action === 'accept'
-          ? 'Confirm acceptance of invitation for this event?'
-          : 'Confirm rejection of invitation for this event?';
-      if (!window.confirm(confirmMessage)) return;
+      const isAccept = action === 'accept';
+      const result = await Swal.fire({
+        title: isAccept ? 'Accept this invitation?' : 'Decline this invitation?',
+        text: isAccept
+          ? 'You will be added to the confirmed line-up.'
+          : 'The organizer will be notified of your rejection.',
+        icon: 'question',
+        confirmButtonText: isAccept ? 'Accept' : 'Decline',
+        confirmButtonColor: isAccept ? '#2563eb' : '#d33',
+        cancelButtonText: 'Cancel',
+        showCancelButton: true,
+        reverseButtons: true,
+      });
+      if (!result.isConfirmed) return;
 
-      const decision = action === 'accept' ? 'ACCEPTED' : 'DECLINED';
-      const loadKey = keyFor(artistIdParam, eventId);
+      const decision = isAccept ? 'ACCEPTED' : 'DECLINED';
       setActionLoadingKey(loadKey);
 
       await axios.post('/api/artist-events/respond', {
@@ -164,8 +174,21 @@ export default function ArtistInvitesPage() {
           return it;
         }).slice().sort((a, b) => getSortTime(b) - getSortTime(a))
       );
+
+      await Swal.fire({
+        icon: 'success',
+        title: isAccept ? 'Invitation accepted' : 'Invitation declined',
+        timer: 1600,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
     } catch (e) {
-      alert(extractErrorMessage(e, 'ทำรายการไม่สำเร็จ'));
+      Swal.fire({
+        icon: 'error',
+        title: 'Action failed',
+        text: extractErrorMessage(e, 'ทำรายการไม่สำเร็จ'),
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setActionLoadingKey(null);
     }

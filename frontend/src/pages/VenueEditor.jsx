@@ -1,6 +1,7 @@
 // src/pages/VenueEditor.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
 import MapPicker from '../components/MapPicker';
 import "../css/VenueEditor.css";
@@ -325,10 +326,25 @@ export default function VenueEditor() {
       }
 
       setLoading(false);
+      await Swal.fire({
+        icon: 'success',
+        title: hasProfile ? 'Venue updated' : 'Venue created',
+        text: hasProfile
+          ? 'Your venue information has been saved.'
+          : 'Your venue profile is ready to customize.',
+        confirmButtonColor: '#2563eb',
+      });
       navigate(`/venues/${userId || ''}`);
     } catch (err) {
       setLoading(false);
-      setError(err?.response?.data?.error || 'Failed to save');
+      const msg = err?.response?.data?.error || 'Failed to save';
+      setError(msg);
+      Swal.fire({
+        icon: 'error',
+        title: 'Save failed',
+        text: msg,
+        confirmButtonColor: '#d33',
+      });
       console.error('VenueEditor save error:', err);
     }
   };

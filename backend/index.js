@@ -1726,7 +1726,11 @@ app.get('/events', async (req, res) => {
 
 app.get('/events/:id', async (req, res) => {
   try {
-    const id = Number(req.params.id);
+    const idRaw = req.params.id;
+    const id = Number(idRaw);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: 'invalid event id' });
+    }
 
     // decode token เพื่อรู้ว่าใครเรียก
     const me = (() => {

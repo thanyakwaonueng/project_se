@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
 import api, { extractErrorMessage } from '../lib/api';
 
 export default function AdminRoleRequestsPage() {
@@ -31,17 +32,45 @@ export default function AdminRoleRequestsPage() {
   useEffect(() => { load(); }, []);
 
   const act = async (id, action) => {
+    const actionKey = `${id}-${action}`;
     try {
-      setActionLoadingKey(`${id}-${action}`);
-      const note = prompt(action === 'approve' ? 'หมายเหตุ (ถ้ามี)' : 'เหตุผลที่ปฏิเสธ?');
-      if (note === null) return; // User cancelled
-      
+      const isApprove = action === 'approve';
+      const result = await Swal.fire({
+        title: isApprove ? 'Approve this request?' : 'Reject this request?',
+        text: isApprove ? 'The user will be granted the requested role.' : 'The user will remain in the current role.',
+        icon: 'warning',
+        input: 'textarea',
+        inputLabel: isApprove ? 'Note (optional)' : 'Reason (optional)',
+        inputPlaceholder: isApprove ? 'Add a note for this approval…' : 'Add a reason for rejection…',
+        inputAttributes: { 'aria-label': 'Reason note' },
+        showCancelButton: true,
+        confirmButtonColor: isApprove ? '#2563eb' : '#d33',
+        confirmButtonText: isApprove ? 'Approve' : 'Reject',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true,
+      });
+      if (!result.isConfirmed) return;
+
+      setActionLoadingKey(actionKey);
+      const note = result.value || '';
       await api.post(`/role-requests/${id}/${action}`, { note });
       await load();
       setShow(false);
       setDetail(null);
+      await Swal.fire({
+        icon: 'success',
+        title: isApprove ? 'Request approved' : 'Request rejected',
+        timer: 1600,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
     } catch (e) {
-      alert(extractErrorMessage(e, 'ทำรายการไม่สำเร็จ'));
+      Swal.fire({
+        icon: 'error',
+        title: 'Action failed',
+        text: extractErrorMessage(e, 'ทำรายการไม่สำเร็จ'),
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setActionLoadingKey(null);
     }
