@@ -374,7 +374,11 @@ export default function VenueEditor() {
 
                 <div className="ve-field">
                   <label className="ve-label" htmlFor="alcoholPolicy">Alcohol policy</label>
-                  <input id="alcoholPolicy" className="ve-input" value={alcoholPolicy} onChange={(e) => setAlcoholPolicy(e.target.value)} placeholder="Serve beer/wine, no spirits, etc." />
+                  <select id="alcoholPolicy" className="ve-select" value={alcoholPolicy} onChange={(e) => setAlcoholPolicy(e.target.value)}>
+                    <option value="SERVE">SERVE</option>
+                    <option value="BYOB">BYOB</option>
+                    <option value="NONE">NONE</option>
+                  </select>
                 </div>
               </div>
             </div>
