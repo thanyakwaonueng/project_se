@@ -1375,36 +1375,6 @@ app.post('/venues', authMiddleware, async (req, res) => {
 });
 
 
-
-
-
-// // GET /me/venue — ดึง venue ของผู้ใช้ปัจจุบัน
-// app.get('/me/venue', authMiddleware, async (req, res) => {
-//   try {
-//     const venue = await prisma.venue.findUnique({
-//       where: { performerId: req.user.id },
-//       include: {
-//         performer: { include: { user: true } },
-//         location: true,
-//         events: true,
-//       },
-//     });
-//     if (!venue) return res.status(404).json({ error: 'No venue for this user' });
-//     res.json(venue);
-//   } catch (err) {
-//     console.error('GET /me/venue error:', err);
-//     res.status(500).json({ error: 'Could not fetch my venue' });
-//   }
-// });
-
-
-
-
-
-
-
-
-
 app.get('/venues', async (_req, res) => {
   const venues = await prisma.venue.findMany({
     include: {

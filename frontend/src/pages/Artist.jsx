@@ -1,6 +1,6 @@
 // src/pages/Artist.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import axios from "axios";
 import ReactPlayer from "react-player/lazy"; // ✅ ใช้ react-player
 import "../css/Artist.css";
@@ -72,25 +72,17 @@ export default function Artist() {
 
   const lastFocusRef = useRef(null);
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
-
-
-  /* [ADDED] multi-select genres (เหมือน Event) */
+  /* multi-select genres (เหมือน Event) */
   const [selectedGenres, setSelectedGenres] = useState([]); // array<string>
 
-
-  /* [ADDED] ตัวกรองแนวเพลง */
-  // const [genreFilter, setGenreFilter] = useState("all");
-
-  
-
-
-  /* [ADDED] ปุ่ม/ป๊อปอัปกรองตามแนวเพลง (ใช้ค่าเดียว เพื่อไม่กระทบ logic เดิม) */
+  /* ปุ่ม/ป๊อปอัปกรองตามแนวเพลง */
   const [showArtistGenrePopup, setShowArtistGenrePopup] = useState(false);
 
-  /* [ADDED] รายการแนวเพลงที่มีอยู่จริงในข้อมูล */
+  /* รายการแนวเพลงที่มีอยู่จริงในข้อมูล — คำนวณที่ระดับบนสุด (ไม่อยู่ใน JSX ที่มีเงื่อนไข) */
   const genreOptions = useMemo(() => {
     const map = new Map();
     groups.forEach((g) => {
@@ -108,10 +100,6 @@ export default function Artist() {
     });
     return Array.from(map.values()).sort((a, b) => String(a).localeCompare(String(b)));
   }, [groups]);
-
-
-
-
 
   // ---------- 2) AUTH กันหน้าเด้ง (จับ 401) ----------
   useEffect(() => {
@@ -171,6 +159,30 @@ export default function Artist() {
     return () => window.removeEventListener("keydown", onKey);
   }, [lightbox.open]);
 
+
+  // อ่านค่า ?genre=... จาก URL แล้วตั้งค่า filter (รองรับหลายค่า/คั่น comma)
+useEffect(() => {
+  const sp = new URLSearchParams(location.search || "");
+  const picked = [];
+  // รองรับทั้ง ?genre=pop,indie และ ?genre=pop&genre=indie
+  sp.forEach((val, key) => {
+    if (key.toLowerCase() !== "genre") return;
+    String(val)
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean)
+      .forEach(v => picked.push(v));
+  });
+
+  if (picked.length > 0) {
+    const unique = Array.from(new Set(picked));
+    setSelectedGenres(unique);
+    setCurrentPage(1); // รีเซ็ตหน้าเวลาเปลี่ยน filter
+  }
+}, [location.search]);
+
+
+
   /** fetch groups */
   useEffect(() => {
     let cancelled = false;
@@ -210,22 +222,21 @@ export default function Artist() {
   useEffect(() => { saveFollowed(followed); }, [followed]);
 
   /** ---------- SORTING & FILTERING ---------- */
-  const sortedGroups = useMemo(() => {
-    const arr = [...groups];
-    if (activeFilter === "popular") {
-      arr.sort((a, b) => {
-        const fb = (b.followersCount || 0) - (a.followersCount || 0);
-        if (fb !== 0) return fb;
-        return String(a.name || "").localeCompare(String(b.name || ""));
-      });
-    } else if (activeFilter === "new") {
-      arr.sort((a, b) => (Number(b?.stats?.debut || 0) - Number(a?.stats?.debut || 0)));
-    } else {
-      arr.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
-    }
-    return arr;
-  }, [groups, activeFilter]);
-
+const sortedGroups = useMemo(() => {
+  const arr = [...groups];
+  if (activeFilter === "popular") {
+    arr.sort((a, b) => {
+      const fb = (b.followersCount || 0) - (a.followersCount || 0);
+      if (fb !== 0) return fb;
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+  } else if (activeFilter === "new") {
+    arr.sort((a, b) => (Number(b?.stats?.debut || 0) - Number(a?.stats?.debut || 0)));
+  } else {
+    arr.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+  }
+  return arr;
+}, [groups, activeFilter]);
 
 
   // --- helper สำหรับเช็ค genre (ต้องอยู่ก่อน filteredGroups) ---
@@ -243,13 +254,10 @@ export default function Artist() {
     return pool.includes(t);
   };
 
-
-
-  /* [CHANGED] รวม search + multi-genre */
-  /* [CHANGED] รวม search + multi-genre */
+  /* รวม search + multi-genre */
   const filteredGroups = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    const sel = Array.isArray(selectedGenres) ? selectedGenres : []; // [ADDED] guard
+    const sel = Array.isArray(selectedGenres) ? selectedGenres : [];
 
     return sortedGroups.filter((g) => {
       const inSearch =
@@ -267,16 +275,8 @@ export default function Artist() {
     });
   }, [sortedGroups, searchQuery, selectedGenres]);
 
-
-
-
-  /* [ADDED] reset page เมื่อเปลี่ยนชุดแนว */
+  /* reset page เมื่อเปลี่ยนชุดแนว */
   useEffect(() => { setCurrentPage(1); }, [selectedGenres]);
-  /* [ADDED] เปลี่ยน Genre แล้วรีเซ็ตหน้า */
-  // useEffect(() => { setCurrentPage(1); }, [genreFilter]);
-
-
-
 
   /** follow/unfollow (DB-based) */
   const toggleFollow = async (group) => {
@@ -333,7 +333,6 @@ export default function Artist() {
 
   const [scheduleTab, setScheduleTab] = useState("upcoming");
 
-
   // genres:
   const groupGenres = useMemo(() => {
     if (!selectedGroup) return [];
@@ -344,8 +343,6 @@ export default function Artist() {
     if (!list.length && selectedGroup.details) list.push(selectedGroup.details);
     return Array.from(new Set(list.filter(Boolean)));
   }, [selectedGroup]);
-
-
 
   // --- เลือกลิสต์ "ศิลปินอื่น" ตามแนวเพลงแรกของศิลปินปัจจุบัน ---
   const otherArtists = useMemo(() => {
@@ -380,9 +377,6 @@ export default function Artist() {
     return arr.sort((a,b) => new Date(b.dateISO) - new Date(a.dateISO));
   }, [selectedGroup]);
 
-  // if (loadingGroups) {
-  //   return <div className="artist-container a-bleed" style={{padding:16}}>Loading…</div>;
-  // }
   if (groupsError) {
     return <div className="artist-container a-bleed" style={{padding:16}}>Failed to load artists.</div>;
   }
@@ -410,7 +404,6 @@ export default function Artist() {
   const canSeeArtistDocs =
     isOwner || user?.role === "ADMIN" || user?.role === "ORGANIZE";
 
-
   // 小 component สำหรับ player ให้คงอัตราส่วน 16:9
   const PlayerCard = ({ url, poster, title }) => {
     if (!url) return null;
@@ -423,7 +416,7 @@ export default function Artist() {
             width="100%"
             height="100%"
             style={{ position: "absolute", top: 0, left: 0 }}
-            light={poster || true}              // ถ้ามี poster ใช้เป็นภาพปก; ถ้าไม่มี react-player จะดึง thumbnail เอง
+            light={poster || true}
             playing={false}
             config={{
               file: {
@@ -436,11 +429,7 @@ export default function Artist() {
     );
   };
 
-  
-
-
   const selectedGenresSafe = Array.isArray(selectedGenres) ? selectedGenres : [];
-
 
   return (
     <div className="artist-container a-bleed">
@@ -450,9 +439,6 @@ export default function Artist() {
           <div className="container-heading">
             <h1 className="artist-heading">MELODY & MEMORIES</h1>
           </div>
-          {/* <h6 className="artist-heading-detail">
-            Music is the language of emotions when words are not enough.
-          </h6> */}
 
           {/* Filter + Search */}
           <div className="seamless-filter-search a-card-min">
@@ -471,8 +457,7 @@ export default function Artist() {
               >New</button>
             </div>
 
-            {/* [ADDED] ปุ่มเปิดป๊อปอัป Genre (แทน select เดิม) */}
-            {/* [CHANGED] ปุ่มเปิดป๊อปอัปให้เหมือน Event */}
+            {/* ปุ่มเปิดป๊อปอัป Genre */}
             <div className="a-genre-inline">
               <button
                 type="button"
@@ -485,8 +470,6 @@ export default function Artist() {
                 Select Genre
               </button>
             </div>
-
-
 
             <div className="connected-search-container">
               <input
@@ -548,10 +531,9 @@ export default function Artist() {
                     )}
                   </Link>
 
-                  {/* เนื้อหาใต้รูป: ชื่อ + วันที่ (ถ้ามี) */}
+                  {/* เนื้อหาใต้รูป: ชื่อ + followers */}
                   <div className="artist-content">
                     <h2 className="artist-title">{group.name}</h2>
-                    {/* [CHANGED] แสดงจำนวนผู้ติดตามใต้ชื่อศิลปิน */}
                     <p className="artist-date">
                       {fmtCompact(group.followersCount ?? 0)} followers
                     </p>
@@ -562,9 +544,7 @@ export default function Artist() {
             ))}
           </div>
 
-          
-          {/* [ADDED] Popup เลือก Genre แบบหน้า Event (แต่ใช้คลาสใหม่) */}
-          {/* [CHANGED] Popup Genre แบบ multi-select เหมือน Event */}
+          {/* Popup Genre (multi-select) — ใช้ genreOptions ตรงๆ ไม่เรียก Hook ใน JSX */}
           {showArtistGenrePopup && (
             <div
               className="a-genre-overlay"
@@ -624,8 +604,6 @@ export default function Artist() {
               </div>
             </div>
           )}
-
-
 
           <div className="a-line-artist" />
 

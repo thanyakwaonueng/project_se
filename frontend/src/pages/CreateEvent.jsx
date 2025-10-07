@@ -69,6 +69,25 @@ const localTodayStr = () => {
   return localISO.split('T')[0];
 };
 
+// 🆕 ตรวจช่วงเวลาอยู่ในช่วงเปิด–ปิดของร้าน (รองรับข้ามเที่ยงคืน)
+function isWithinVenueHours(startHHMM, endHHMM, venueOpenHHMM, venueCloseHHMM) {
+  const s = toMin(startHHMM), e = toMin(endHHMM);
+  const o = toMin(venueOpenHHMM || ''), c = toMin(venueCloseHHMM || '');
+  if (s==null || e==null || o==null || c==null) return true; // ถ้าไม่มีข้อมูลครบ ไม่บล็อก
+  if (s >= e) return false; // ไม่อนุญาตอีเวนต์ข้ามวัน
+
+  if (o <= c) {
+    // ร้านไม่ข้ามเที่ยงคืน
+    return s >= o && e <= c;
+  } else {
+    // ร้านข้ามเที่ยงคืน เช่น 17:00–01:00
+    // อนุญาตถ้าอยู่ในช่วงค่ำ [o, 24:00) หรือช่วงเช้า [00:00, c]
+    const inLate = s >= o && e <= 24*60;
+    const inEarly = s >= 0 && e <= c;
+    return inLate || inEarly;
+  }
+}
+
 export default function CreateEvent() {
   const { eventId } = useParams(); // /me/event/:eventId
 
@@ -86,6 +105,10 @@ export default function CreateEvent() {
   const [doorOpenTime, setDoorOpenTime] = useState(''); // HH:mm (text)
   const [endTime, setEndTime] = useState('');           // HH:mm (text)
   const [genre, setGenre] = useState('');
+
+  // 🆕 เวลาทำการของสถานที่
+  const [venueOpen, setVenueOpen] = useState(null);  // "HH:mm" หรือ null
+  const [venueClose, setVenueClose] = useState(null); // "HH:mm" หรือ null
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -138,6 +161,31 @@ export default function CreateEvent() {
   useEffect(() => {
     if (eventId) setHasEvent(true);
   }, [eventId]);
+
+  // 🆕 preload ข้อมูล "ฉัน" แล้วโหลด venue ของเจ้าของ เพื่อรู้เวลาเปิด–ปิด
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        // ดึง me เพื่อทราบ user.id (owner/organizer)
+        const meRes = await axios.get('/api/auth/me', { withCredentials: true });
+        const me = meRes.data;
+        if (!me?.id) return;
+        // ดึง venue ของ user นี้ (ตาม backend: GET /venues/:id ใช้ performerId = userId)
+        const vRes = await axios.get(`/api/venues/${me.id}`);
+        const v = vRes.data;
+        const openHH = to24h(v?.timeOpen || v?.venue?.timeOpen || v?.venue?.timeopen || '');
+        const closeHH = to24h(v?.timeClose || v?.venue?.timeClose || v?.venue?.timeclose || '');
+        if (!alive) return;
+        setVenueOpen(openHH || null);
+        setVenueClose(closeHH || null);
+      } catch (e) {
+        // เงียบ ๆ ถ้าหาไม่ได้ จะไม่บล็อกแต่ไม่โชว์โน้ต
+        // console.warn('load venue hours failed', e?.response?.data || e?.message);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   // preload existing event (edit mode) + normalize time to HH:mm
   useEffect(() => {
@@ -216,6 +264,17 @@ export default function CreateEvent() {
         }
       }
 
+      // 🆕 บังคับอยู่ในเวลาเปิด–ปิดของสถานที่
+      if (tDoor && tEnd && (venueOpen || venueClose)) {
+        const ok = isWithinVenueHours(tDoor, tEnd, venueOpen, venueClose);
+        if (!ok) {
+          setLoading(false);
+          return setError(
+            `The time selected is outside the venue's opening hours (${venueOpen || '—'}–${venueClose || '—'}).`
+          );
+        }
+      }
+
       // 1) upload poster if any
       let uploadedPoster = null;
       if (posterFile) uploadedPoster = await uploadOne(posterFile);
@@ -286,6 +345,13 @@ export default function CreateEvent() {
       </header>
 
       <div className="ve-line" />
+
+      {/* 🆕 แถบแจ้งเวลาเปิด–ปิดร้าน ถ้ามีข้อมูล
+      {(venueOpen || venueClose) && (
+        <div className="ee-note" style={{margin:'8px 0', fontSize:13}}>
+          Venue hours: {venueOpen || '—'} – {venueClose || '—'}
+        </div>
+      )} */}
 
       {/* ===== Form ===== */}
       <form className="ee-form" onSubmit={submit}>
