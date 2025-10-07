@@ -18,13 +18,49 @@ function formatDateEN(iso) {
 function normTime(t) {
   if (!t) return null;
   const s = String(t).trim();
-  let m = s.match(/^(\d{1,2})[:.\-]?(\d{2})$/);
-  if (!m && s.length === 4) m = [s, s.slice(0,2), s.slice(2)];
-  if (!m) return s;
-  const hh = String(Math.min(23, parseInt(m[1],10))).padStart(2,'0');
-  const mm = String(Math.min(59, parseInt(m[2],10))).padStart(2,'0');
-  return `${hh}:${mm}`;
+
+  // already HH:mm
+  let m = s.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (m) {
+    const hh = String(parseInt(m[1],10)).padStart(2,'0');
+    const mm = String(parseInt(m[2],10)).padStart(2,'0');
+    return `${hh}:${mm}`;
+  }
+
+  // 1930, 19.30, 19-30, 7:5?
+  m = s.match(/^(\d{1,2})[:.\-]?([0-5]?\d)$/);
+  if (m) {
+    const hh = String(Math.min(23, parseInt(m[1],10))).padStart(2,'0');
+    const mm = String(Math.min(59, parseInt(m[2],10))).padStart(2,'0');
+    return `${hh}:${mm}`;
+  }
+
+  // 1:00 PM / 01 PM / 7pm
+  m = s.match(/^(\d{1,2})(?::([0-5]\d))?\s*(AM|PM)$/i);
+  if (m) {
+    let hh = parseInt(m[1],10);
+    const mm = m[2] ?? "00";
+    const isPM = /PM/i.test(m[3]);
+    if (hh === 12) hh = isPM ? 12 : 0;
+    else if (isPM) hh += 12;
+    return `${String(hh).padStart(2,"0")}:${mm}`;
+  }
+
+  // 7pm, 12am
+  m = s.match(/^(\d{1,2})(am|pm)$/i);
+  if (m) {
+    let hh = parseInt(m[1],10);
+    const isPM = /pm/i.test(m[2]);
+    if (hh === 12) hh = isPM ? 12 : 0;
+    else if (isPM) hh += 12;
+    return `${String(hh).padStart(2,"0")}:00`;
+  }
+
+  // keep as-is (จะโดน validate ซ้ำ)
+  return s;
 }
+const HHMM_REGEX = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+
 const toMin = (hhmm) => {
   const m = (hhmm||'').match(/^(\d{2}):(\d{2})$/);
   if (!m) return null;
@@ -56,7 +92,7 @@ function InviteModal({
   onSaved,
   windowStartHHMM,
   windowEndHHMM,
-  invitedStatusMap = new Map(), // <-- เปลี่ยนจาก invitedIds เป็น map: artistId -> STATUS
+  invitedStatusMap = new Map(), // artistId -> STATUS
 }) {
   const DURATIONS = [15, 30, 45, 60, 90, 120];
 
@@ -66,7 +102,7 @@ function InviteModal({
   const [selectedId, setSelectedId] = useState(initial?.artistId ?? null);
   const [warn, setWarn] = useState('');
 
-  // replace declined mode (ยังคงไว้ได้)
+  // replace declined mode
   const replaceDeclinedId = (initial?.status === 'DECLINED' && initial?.aeId) ? initial.aeId : null;
   const isReplaceMode = !!replaceDeclinedId;
 
@@ -111,6 +147,7 @@ function InviteModal({
     return () => { alive = false; };
   }, [open]);
 
+  // อัปเดต endTime อัตโนมัติตาม start + duration (ยังคงเดิม)
   useEffect(() => {
     if (!open) return;
     const sm = toMin(form.startTime || '');
@@ -140,7 +177,7 @@ function InviteModal({
     return artists.filter(a => displayName(a).toLowerCase().includes(s));
   }, [artists, q]);
 
-  // ====== logic C6: เชิญคนที่เคย DECLINED/CANCELED ได้ ======
+  // ====== logic C6 ======
   const statusOf = (id) => {
     const key = Number(id);
     if (invitedStatusMap instanceof Map) return invitedStatusMap.get(key);
@@ -152,13 +189,11 @@ function InviteModal({
   };
   const isActiveInLineup = (id) => {
     const st = String(statusOf(id) || '').toUpperCase();
-    // บล็อคเฉพาะที่ยัง active อยู่: PENDING / ACCEPTED (หรือสถานะอื่นที่ควรนับว่า active)
     return st === 'PENDING' || st === 'ACCEPTED';
   };
 
   const validate = () => {
     if (selectedId && isActiveInLineup(selectedId)) {
-      // อนุญาตก็ต่อเมื่อเป็น replace mode ของคนเดิม
       const isSameDeclinedArtist = isReplaceMode && Number(selectedId) === Number(initial?.artistId);
       if (!isSameDeclinedArtist) return 'This artist is already in the current lineup.';
     }
@@ -212,6 +247,13 @@ function InviteModal({
   };
 
   if (!open) return null;
+
+  // helper: normalize on blur (ให้เป็น HH:mm ชัดเจน)
+  const onBlurTime = (val, key) => {
+    const t = normTime(val);
+    setForm(f => ({ ...f, [key]: (t && HHMM_REGEX.test(t)) ? t : (t || '') }));
+  };
+
   return (
     <div className="mdl-backdrop" onClick={onClose}>
       <div className="mdl" onClick={(e)=>e.stopPropagation()}>
@@ -324,15 +366,21 @@ function InviteModal({
 
           <div className="grid2">
             <label>Start time
+              {/* 👉 เปลี่ยนเป็นกรอก 24 ชั่วโมง (ไม่ใช้ am/pm/ไม่ใช้ type=time) */}
               <input
-                type="time"
-                step="300"
+                type="text"
+                inputMode="numeric"
+                placeholder="HH:mm"
+                title="เวลาแบบ 24 ชั่วโมง เช่น 19:30"
+                pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
                 value={form.startTime}
                 onChange={(e)=>{
-                  const st = normTime(e.target.value);
-                  setForm(v=>({ ...v, startTime: st }));
+                  setForm(v=>({ ...v, startTime: e.target.value }));
                 }}
-                placeholder="19:30"
+                onBlur={(e)=>{
+                  const t = normTime(e.target.value);
+                  setForm(v=>({ ...v, startTime: (t && HHMM_REGEX.test(t)) ? t : (t || '') }));
+                }}
               />
             </label>
 
@@ -520,19 +568,30 @@ export default function EventDetail() {
     return () => { alive = false; };
   }, []);
 
-  const toggleFollow = async () => {
-    if (!ev?.id || busy) return;
-    setBusy(true);
-    try {
-      if (ev.likedByMe) {
-        const { data } = await api.delete(`/events/${ev.id}/like`, { withCredentials: true });
-        setEv(prev => ({ ...prev, likedByMe:false, followersCount: data?.count ?? Math.max(0,(prev.followersCount||0)-1) }));
-      } else {
-        const { data } = await api.post(`/events/${ev.id}/like`, {}, { withCredentials: true });
-        setEv(prev => ({ ...prev, likedByMe:true, followersCount: data?.count ?? (prev.followersCount||0)+1 }));
-      }
-    } finally { setBusy(false); }
-  };
+const toggleFollow = async () => {
+  if (!ev?.id || busy) return;
+  setBusy(true);
+  try {
+    if (ev.likedByMe) {
+      const { data } = await api.delete(`/events/${ev.id}/like`, { withCredentials: true });
+      setEv(prev => ({
+        ...prev,
+        likedByMe: false,
+        followersCount: data?.count ?? Math.max(0, (prev.followersCount || 0) - 1),
+      }));
+    } else {
+      const { data } = await api.post(`/events/${ev.id}/like`, {}, { withCredentials: true });
+      setEv(prev => ({
+        ...prev,
+        likedByMe: true,
+        followersCount: data?.count ?? (prev.followersCount || 0) + 1,
+      })); // ← ตรงนี้เมื่อกี้มีวงเล็บเกินมา 1 ตัว
+    }
+  } finally {
+    setBusy(false);
+  }
+};
+
 
   const canEdit = useMemo(() => {
     if (!me || !ev?.venue) return false;
@@ -558,7 +617,7 @@ export default function EventDetail() {
 
   const canDeleteEvent = !!(ev?._isOwner);
 
-  // ตาราง lineup (เหมือนเดิม)
+  // ตาราง lineup
   const scheduleRows = useMemo(() => {
     const rows = [];
     const aes = Array.isArray(ev?.artistEvents) ? ev.artistEvents : [];
@@ -610,7 +669,7 @@ export default function EventDetail() {
       });
   }, [ev]);
 
-  // 🔄 เปลี่ยนจาก invitedIds เป็น invitedStatusMap (artistId -> STATUS)
+  // invitedStatusMap
   const invitedStatusMap = useMemo(() => {
     const aes = Array.isArray(ev?.artistEvents) ? ev.artistEvents : [];
     const mp = new Map();
@@ -722,13 +781,6 @@ export default function EventDetail() {
                   : '—'}
               </span>
             </div>
-            
-            {/* <div className="ed-meta ">
-              <span className="ev-chip">{ev?.genre || '—'}</span>
-              <span className="ev-chip-transparent">{ev?.eventType || '—'}</span>
-              <span className="ev-chip-transparent">Alcohol: {ev?.alcoholPolicy || '—'}</span>
-              <span className="ev-chip-transparent">Age: {ev?.ageRestriction || '—'}</span>
-            </div> */}
 
             <div className="ed-meta">
               {ev.genre && <span className="ev-chip">{ev.genre}</span>}
@@ -742,8 +794,6 @@ export default function EventDetail() {
                 <span className="ev-chip-transparent">Age: {ev.ageRestriction}+</span>
               )}
             </div>
-
-            
           </div>
 
           <div className="ed-hero-right">
@@ -763,14 +813,7 @@ export default function EventDetail() {
             <h3 className="ed-info-title">CONTACT</h3>
             <div className="ed-kv"><div>Email</div><div>—</div></div>
             <div className="ed-kv"><div>Phone</div><div>—</div></div>
-            <div className="ed-kv">
-              {/* <div>Location</div>
-              <div>
-                {locationUrl
-                  ? <a className="alink" href={locationUrl} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>
-                  : '—'}
-              </div> */}
-            </div>
+            <div className="ed-kv"></div>
           </div>
 
           <div className="ed-info-block">
@@ -852,7 +895,7 @@ export default function EventDetail() {
           onSaved={fetchEvent}
           windowStartHHMM={windowRange.rawStart || null}
           windowEndHHMM={windowRange.rawEnd || null}
-          invitedStatusMap={invitedStatusMap} // <-- ส่ง map สถานะไปแทน
+          invitedStatusMap={invitedStatusMap}
         />
       </section>
     </div>

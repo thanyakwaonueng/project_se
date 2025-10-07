@@ -2486,7 +2486,7 @@ app.post('/events/:id/cancel', authMiddleware, async (req, res) => {
 });
 
 
-/* ───────────────────────────── ARTIST RESPOND ─────────── */
+// ───────────────────────────── ARTIST RESPOND ───────────
 app.post('/artist-events/respond', authMiddleware, async (req, res) => {
   try {
     const { artistId, eventId, decision } = req.body;
@@ -2503,16 +2503,87 @@ app.post('/artist-events/respond', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'You can respond only for your own artistId' });
     }
 
+    // อัปเดตคำตอบของศิลปิน (ของเดิม)
     const updated = await prisma.artistEvent.update({
       where: { artistId_eventId: { artistId: aid, eventId: eid } },
       data: { status: decision },
       include: {
-        artist: { include: { performer: { include: { user: true } } } },
-        event:  { select: { id: true, name: true, venueId: true } }
+        // ดึงเวลาช่องที่เชิญมาด้วย เพื่อใช้คำนวณทับเวลา
+        event:  { select: { id: true, name: true, venueId: true } },
+        artist: { include: { performer: { include: { user: true } } } }
       }
     });
 
-    // 🔔 แจ้งเฉพาะ Organizer/Owner เท่านั้น (ตัด noti ไปยัง audience ออก)
+    // ====== NEW: auto-decline คำเชิญอื่นที่คาบเกี่ยวเมื่อศิลปินกดยืนยัน ======
+    let autoDeclined = [];
+    if (decision === 'ACCEPTED') {
+      // ดึงช่วงเวลาที่กำหนดไว้ในคำเชิญของงานนี้
+      const currentInvite = await prisma.artistEvent.findUnique({
+        where: { artistId_eventId: { artistId: aid, eventId: eid } },
+        select: { slotStartAt: true, slotEndAt: true }
+      });
+
+      const startAt = currentInvite?.slotStartAt;
+      const endAt   = currentInvite?.slotEndAt;
+
+      if (startAt && endAt) {
+        // หา PENDING invites อื่นๆ ของศิลปินคนนี้ที่คาบเกี่ยวเวลา
+        const pendingOverlaps = await prisma.artistEvent.findMany({
+          where: {
+            artistId: aid,
+            eventId: { not: eid },
+            status: 'PENDING',
+            slotStartAt: { lt: endAt },
+            slotEndAt:   { gt: startAt },
+          },
+          select: {
+            eventId: true,
+            event: { select: { id: true, name: true, venueId: true } }
+          }
+        });
+
+        if (pendingOverlaps.length) {
+          const otherEventIds = pendingOverlaps.map(p => p.eventId);
+
+          await prisma.$transaction(async (tx) => {
+            // 1) ตั้งสถานะเป็น DECLINED ทั้งหมด
+            await tx.artistEvent.updateMany({
+              where: {
+                artistId: aid,
+                eventId: { in: otherEventIds },
+                status: 'PENDING',
+              },
+              data: { status: 'DECLINED' },
+            });
+
+            // 2) ลบ scheduleSlot ของศิลปินในงานเหล่านั้น (ถ้ามี)
+            await tx.scheduleSlot.deleteMany({
+              where: { artistId: aid, eventId: { in: otherEventIds } },
+            });
+
+            // 3) แจ้ง Organizer ของงานที่ถูก auto-decline
+            for (const p of pendingOverlaps) {
+              try {
+                if (p.event?.venueId) {
+                  await notify(
+                    tx,
+                    p.event.venueId,
+                    'artist_event.auto_declined',
+                    `คำเชิญศิลปิน #${aid} ถูกปฏิเสธอัตโนมัติ เพราะศิลปินยืนยันอีกงานที่คาบเกี่ยวเวลา`,
+                    { eventId: p.eventId, artistId: aid, reason: 'overlap_accept' }
+                  );
+                }
+              } catch (e) { console.error('NOTIFY_AUTO_DECLINE_ERROR', e); }
+            }
+
+            autoDeclined = otherEventIds;
+          });
+        }
+      }
+    }
+    // ====== END NEW ======
+
+    // แจ้ง Organizer ของงานนี้ (ของเดิม)
     try {
       const ev = updated.event;
       if (ev?.venueId) {
@@ -2526,12 +2597,13 @@ app.post('/artist-events/respond', authMiddleware, async (req, res) => {
       console.error('NOTIFY_RESPOND_ERROR', e);
     }
 
-    return res.json(updated);
+    return res.json({ ...updated, autoDeclinedEventIds: autoDeclined });
   } catch (err) {
     console.error("Respond error:", err);
     return res.status(500).json({ error: "Could not respond to invite" });
   }
 });
+
 
 app.get('/artist-events/pending/:artistId', authMiddleware, async (req, res) => {
   try {

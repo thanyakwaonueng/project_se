@@ -3,16 +3,79 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
-// ✅ แยกไฟล์ CSS สำหรับหน้านี้โดยเฉพาะ (prefix: ee- = Event Editor)
+// Event Editor styles
 import "../css/CreateEvent.css";
+
+// ===== helper: normalize to 24h "HH:mm" =====
+function to24h(s) {
+  if (!s) return "";
+  const str = String(s).trim();
+
+  // 1) already HH:mm
+  let m = str.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (m) return `${m[1].padStart(2,"0")}:${m[2]}`;
+
+  // 2) HMM or H:MM with various separators (1930, 19.30, 19-30, 7:05)
+  m = str.match(/^(\d{1,2})[:.\-]?([0-5]\d)$/);
+  if (m) {
+    const hh = Math.max(0, Math.min(23, parseInt(m[1],10)));
+    const mm = m[2];
+    return `${String(hh).padStart(2,"0")}:${mm}`;
+  }
+
+  // 3) AM/PM forms: "1:00 PM", "01 PM"
+  m = str.match(/^(\d{1,2})(?::([0-5]\d))?\s*(AM|PM)$/i);
+  if (m) {
+    let hh = parseInt(m[1],10);
+    const mm = m[2] ?? "00";
+    const isPM = /PM/i.test(m[3]);
+    if (hh === 12) hh = isPM ? 12 : 0;
+    else if (isPM) hh += 12;
+    return `${String(hh).padStart(2,"0")}:${mm}`;
+  }
+
+  // 4) compact am/pm: "7pm", "12am"
+  m = str.match(/^(\d{1,2})(am|pm)$/i);
+  if (m) {
+    let hh = parseInt(m[1],10);
+    const isPM = /pm/i.test(m[2]);
+    if (hh === 12) hh = isPM ? 12 : 0;
+    else if (isPM) hh += 12;
+    return `${String(hh).padStart(2,"0")}:00`;
+  }
+
+  // 5) unknown -> empty (prevent invalid)
+  return "";
+}
+
+// ===== helpers: time/date utils (local) =====
+const HHMM_REGEX = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+const toMin = (hhmm) => {
+  const m = (hhmm||'').match(/^(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  return parseInt(m[1],10)*60 + parseInt(m[2],10);
+};
+const nowHHMM = () => {
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  return `${hh}:${mm}`;
+};
+// yyyy-mm-dd in user's local timezone
+const localTodayStr = () => {
+  const d = new Date();
+  const z = d.getTimezoneOffset();
+  const localISO = new Date(d.getTime() - z*60*1000).toISOString();
+  return localISO.split('T')[0];
+};
 
 export default function CreateEvent() {
   const { eventId } = useParams(); // /me/event/:eventId
 
-  // ===== state เดิม =====
+  // ===== state =====
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [posterUrl, setPosterUrl] = useState(''); // เก็บ URL โปสเตอร์ (เก่าหรือที่ได้จากอัปโหลดใหม่)
+  const [posterUrl, setPosterUrl] = useState('');
   const [conditions, setConditions] = useState('');
   const [eventType, setEventType] = useState('INDOOR');
   const [ticketing, setTicketing] = useState('FREE');
@@ -20,8 +83,8 @@ export default function CreateEvent() {
   const [alcoholPolicy, setAlcoholPolicy] = useState('SERVE');
   const [ageRestriction, setAgeRestriction] = useState('ALL'); // ALL | E18 | E20
   const [date, setDate] = useState('');
-  const [doorOpenTime, setDoorOpenTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [doorOpenTime, setDoorOpenTime] = useState(''); // HH:mm (text)
+  const [endTime, setEndTime] = useState('');           // HH:mm (text)
   const [genre, setGenre] = useState('');
 
   const [error, setError] = useState('');
@@ -30,25 +93,21 @@ export default function CreateEvent() {
 
   const navigate = useNavigate();
 
-  // ===== สถานะไฟล์/อัปโหลด (เหมือนหน้า VenueEditor) =====
-  const [posterFile, setPosterFile] = useState(null);      // File (โปสเตอร์ใหม่)
-  const [posterPreview, setPosterPreview] = useState('');  // objectURL เพื่อพรีวิว
-  const [deleteQueue, setDeleteQueue] = useState([]);      // url[] ของไฟล์เดิมที่จะลบหลังเซฟสำเร็จ
+  // ===== upload states =====
+  const [posterFile, setPosterFile] = useState(null);
+  const [posterPreview, setPosterPreview] = useState('');
+  const [deleteQueue, setDeleteQueue] = useState([]);
   const posterInputRef = useRef(null);
 
   const handlePickPoster = () => posterInputRef.current?.click();
   const handlePosterChange = (e) => {
     const f = e.target.files?.[0] || null;
     setPosterFile(f);
-    if (f) {
-      setPosterPreview(URL.createObjectURL(f));
-    } else {
-      setPosterPreview('');
-    }
+    if (f) setPosterPreview(URL.createObjectURL(f));
+    else setPosterPreview('');
   };
   const clearPoster = () => {
     if (posterUrl) {
-      // ถ้ากดลบ จะใส่ url เดิมเข้าคิวลบ
       setDeleteQueue((prev) => (prev.includes(posterUrl) ? prev : [...prev, posterUrl]));
     }
     setPosterUrl('');
@@ -71,7 +130,7 @@ export default function CreateEvent() {
     if (eventId) setHasEvent(true);
   }, [eventId]);
 
-  // โหลดข้อมูลเดิม (โหมดแก้ไข)
+  // preload existing event (edit mode) + normalize time to HH:mm
   useEffect(() => {
     const fetchEvent = async () => {
       if (!eventId) return;
@@ -80,8 +139,8 @@ export default function CreateEvent() {
         const ev = res.data;
         setName(ev.name || '');
         setDescription(ev.description || '');
-        setPosterUrl(ev.posterUrl || ''); // เก็บ URL โปสเตอร์เดิมไว้
-        setPosterPreview(''); // ให้เริ่มด้วยไม่มีพรีวิว (ถ้าต้องการโชว์รูปเดิมก็ใช้ posterUrl ใน <img> ได้เลย)
+        setPosterUrl(ev.posterUrl || '');
+        setPosterPreview('');
         setConditions(ev.conditions || '');
         setEventType(ev.eventType || 'INDOOR');
         setTicketing(ev.ticketing || 'FREE');
@@ -89,8 +148,8 @@ export default function CreateEvent() {
         setAlcoholPolicy(ev.alcoholPolicy || 'SERVE');
         setAgeRestriction(ev.ageRestriction || 'ALL');
         setDate(ev.date ? ev.date.split('T')[0] : '');
-        setDoorOpenTime(ev.doorOpenTime || '');
-        setEndTime(ev.endTime || '');
+        setDoorOpenTime(to24h(ev.doorOpenTime || ''));
+        setEndTime(to24h(ev.endTime || ''));
         setGenre(ev.genre || '');
       } catch (err) {
         console.error('Failed to fetch event:', err);
@@ -106,23 +165,63 @@ export default function CreateEvent() {
     setLoading(true);
 
     try {
-      // 1) ถ้ามีเลือกโปสเตอร์ใหม่ → อัปโหลดก่อน
-      let uploadedPoster = null;
-      if (posterFile) {
-        uploadedPoster = await uploadOne(posterFile);
+      // validate time format
+      const tDoor = to24h(doorOpenTime);
+      const tEnd  = to24h(endTime);
+      if ((doorOpenTime && !HHMM_REGEX.test(tDoor)) || (endTime && !HHMM_REGEX.test(tEnd))) {
+        setLoading(false);
+        return setError('Invalid time format. Please use HH:mm (e.g., 13:00, 19:30).');
       }
 
-      // 2) ถ้าอัปโหลดใหม่สำเร็จ และมีโปสเตอร์เดิม → ใส่เดิมเข้าคิวลบ
+      // forbid past date/time
+      const todayStr = localTodayStr();
+      if (date && date < todayStr) {
+        setLoading(false);
+        return setError('Unable to create events in the past.');
+      }
+      if (date && date === todayStr) {
+        const now = toMin(nowHHMM());
+        if (tDoor && toMin(tDoor) < now) {
+          setLoading(false);
+          return setError('Door Open time must not be in the past (today).');
+        }
+        if (tEnd && toMin(tEnd) < now) {
+          setLoading(false);
+          return setError('End Time must not be in the past (today).');
+        }
+      }
+
+      // at least 60 minutes if both times are provided
+      if (tDoor && tEnd) {
+        const s = toMin(tDoor);
+        const eMin = toMin(tEnd);
+        if (s != null && eMin != null) {
+          if (eMin <= s) {
+            setLoading(false);
+            return setError('End Time must be later than Door Open.');
+          }
+          if (eMin - s < 60) {
+            setLoading(false);
+            return setError('Event duration must be at least 60 minutes.');
+          }
+        }
+      }
+
+      // 1) upload poster if any
+      let uploadedPoster = null;
+      if (posterFile) uploadedPoster = await uploadOne(posterFile);
+
+      // 2) mark old poster for deletion if replaced
       const deleteQueueNext = [...deleteQueue];
       if (uploadedPoster && posterUrl && posterUrl !== uploadedPoster) {
         if (!deleteQueueNext.includes(posterUrl)) deleteQueueNext.push(posterUrl);
       }
 
-      // 3) เซฟข้อมูลอีเวนต์
+      // 3) save
       const raw = {
         name: name.trim(),
         description: description.trim() || undefined,
-        posterUrl: (uploadedPoster || posterUrl || '').trim() || undefined, // ใช้รูปใหม่ถ้ามี ไม่งั้นใช้รูปเดิม
+        posterUrl: (uploadedPoster || posterUrl || '').trim() || undefined,
         conditions: conditions.trim() || undefined,
         eventType,
         ticketing,
@@ -130,10 +229,10 @@ export default function CreateEvent() {
         alcoholPolicy,
         ageRestriction,
         date: date ? new Date(date).toISOString() : undefined,
-        doorOpenTime: doorOpenTime.trim() || undefined,
-        endTime: endTime.trim() || undefined,
+        doorOpenTime: tDoor || undefined,
+        endTime: tEnd || undefined,
         genre: genre.trim() || undefined,
-        id: eventId ? parseInt(eventId, 10) : undefined, // แก้ไข = ส่ง id ด้วย
+        id: eventId ? parseInt(eventId, 10) : undefined,
       };
 
       const payload = Object.fromEntries(
@@ -145,26 +244,30 @@ export default function CreateEvent() {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      // 4) ลบไฟล์เก่าจริง ๆ (best-effort) หลังบันทึกสำเร็จ
+      // 4) best-effort delete old files
       if (deleteQueueNext.length) {
         try {
-          await axios.post(
-            '/api/storage/delete',
-            { urls: deleteQueueNext },
-            { withCredentials: true }
-          );
+          await axios.post('/api/storage/delete', { urls: deleteQueueNext }, { withCredentials: true });
         } catch (errDel) {
           console.warn('delete storage failed (ignored):', errDel?.response?.data || errDel?.message);
         }
       }
 
       setLoading(false);
-      navigate(`/events/${res.data.id}`); // ไปหน้ารายละเอียดงาน
+      navigate(`/events/${res.data.id}`);
     } catch (err) {
       setLoading(false);
       setError(err.response?.data?.error || err.message || 'Failed to save event');
     }
   };
+
+  // normalize to HH:mm on blur
+  const onBlurTime = (val, setter) => {
+    const t = to24h(val);
+    setter(t);
+  };
+
+  const todayStr = localTodayStr();
 
   return (
     <div className="ee-page" aria-busy={loading ? "true" : "false"}>
@@ -186,7 +289,7 @@ export default function CreateEvent() {
           <h2 className="ee-section-title">Details</h2>
 
           <div className="ee-grid-2">
-            {/* แถว 1: Name (เต็มแถว) */}
+            {/* Name */}
             <div className="ee-field ee-col-span-2">
               <label className="ee-label" htmlFor="name">Name *</label>
               <input
@@ -199,7 +302,7 @@ export default function CreateEvent() {
               />
             </div>
 
-            {/* แถว 2: Description (เต็มแถว, textarea) */}
+            {/* Description */}
             <div className="ee-field ee-col-span-2">
               <label className="ee-label" htmlFor="description">Description</label>
               <textarea
@@ -212,10 +315,9 @@ export default function CreateEvent() {
               />
             </div>
 
-            {/* ✅ โปสเตอร์: เปลี่ยนจาก input URL -> เป็นอัปโหลดไฟล์ + พรีวิว + ปุ่มลบ */}
+            {/* Poster */}
             <div className="ee-field ee-col-span-2">
               <label className="ee-label">Poster</label>
-
               <div className="ee-posterRow">
                 <div className="ee-poster">
                   {posterPreview || posterUrl ? (
@@ -226,19 +328,11 @@ export default function CreateEvent() {
                 </div>
 
                 <div className="ee-fileRow">
-                  <button
-                    type="button"
-                    className="ee-fileBtn"
-                    onClick={handlePickPoster}
-                  >
+                  <button type="button" className="ee-fileBtn" onClick={handlePickPoster}>
                     Choose image
                   </button>
                   {(posterPreview || posterUrl) && (
-                    <button
-                      type="button"
-                      className="ee-fileBtn ee-fileBtn-danger"
-                      onClick={clearPoster}
-                    >
+                    <button type="button" className="ee-fileBtn ee-fileBtn-danger" onClick={clearPoster}>
                       Remove
                     </button>
                   )}
@@ -251,11 +345,11 @@ export default function CreateEvent() {
                   />
                 </div>
 
-                <p className="ee-help">โปสเตอร์จะถูกอัปโหลดเมื่อกด Save</p>
+                <p className="ee-help">The poster will be uploaded when you press Save.</p>
               </div>
             </div>
 
-            {/* แถว: Conditions */}
+            {/* Conditions */}
             <div className="ee-field">
               <label className="ee-label" htmlFor="conditions">Conditions</label>
               <input
@@ -267,7 +361,7 @@ export default function CreateEvent() {
               />
             </div>
 
-            {/* แถว: Event Type / Ticketing */}
+            {/* Event Type / Ticketing */}
             <div className="ee-field">
               <label className="ee-label" htmlFor="eventType">Event Type *</label>
               <select
@@ -298,7 +392,7 @@ export default function CreateEvent() {
               </select>
             </div>
 
-            {/* แถว: Ticket Link (เต็มแถว) */}
+            {/* Ticket Link */}
             <div className="ee-field ee-col-span-2">
               <label className="ee-label" htmlFor="ticketLink">Ticket Link</label>
               <input
@@ -310,7 +404,7 @@ export default function CreateEvent() {
               />
             </div>
 
-            {/* แถว: Alcohol / Age */}
+            {/* Alcohol / Age */}
             <div className="ee-field">
               <label className="ee-label" htmlFor="alcoholPolicy">Alcohol Policy *</label>
               <select
@@ -339,7 +433,7 @@ export default function CreateEvent() {
               </select>
             </div>
 
-            {/* แถว: Date / Door open / End time */}
+            {/* Date / Door open / End time */}
             <div className="ee-col-span-2">
               <div className="ee-grid-3">
                 <div className="ee-field">
@@ -351,17 +445,24 @@ export default function CreateEvent() {
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     required
+                    min={todayStr} // prevent past by HTML
                   />
                 </div>
 
+                {/* time (24h text) */}
                 <div className="ee-field">
                   <label className="ee-label" htmlFor="doorOpenTime">Door Open</label>
                   <input
                     id="doorOpenTime"
-                    type="time"
+                    type="text"
                     className="ee-input"
+                    inputMode="numeric"
+                    placeholder="HH:mm"
+                    title="e.g., 13:00 or 19:30"
+                    pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
                     value={doorOpenTime}
                     onChange={(e) => setDoorOpenTime(e.target.value)}
+                    onBlur={(e) => onBlurTime(e.target.value, setDoorOpenTime)}
                   />
                 </div>
 
@@ -369,16 +470,32 @@ export default function CreateEvent() {
                   <label className="ee-label" htmlFor="endTime">End Time</label>
                   <input
                     id="endTime"
-                    type="time"
+                    type="text"
                     className="ee-input"
+                    inputMode="numeric"
+                    placeholder="HH:mm"
+                    title="e.g., 22:00 or 23:30"
+                    pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
+                    onBlur={(e) => onBlurTime(e.target.value, setEndTime)}
                   />
                 </div>
+
+                {/* optional: quick time suggestions */}
+                <datalist id="time-suggestions">
+                  <option value="17:00" />
+                  <option value="18:00" />
+                  <option value="19:00" />
+                  <option value="19:30" />
+                  <option value="20:00" />
+                  <option value="21:00" />
+                  <option value="22:00" />
+                </datalist>
               </div>
             </div>
 
-            {/* แถว: Genre */}
+            {/* Genre */}
             <div className="ee-field ee-col-span-2">
               <label className="ee-label" htmlFor="genre">Genre</label>
               <input
@@ -392,7 +509,7 @@ export default function CreateEvent() {
           </div>
         </section>
 
-        {/* Actions (bottom) */}
+        {/* Actions */}
         <div className="ee-actions ee-actions-bottom">
           <button
             type="button"

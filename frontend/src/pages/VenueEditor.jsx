@@ -5,6 +5,50 @@ import { useNavigate } from 'react-router-dom';
 import MapPicker from '../components/MapPicker';
 import "../css/VenueEditor.css";
 
+// ===== helper: แปลงเวลาเป็น 24 ชั่วโมง "HH:mm" =====
+function to24h(s) {
+  if (!s) return "";
+  const str = String(s).trim();
+
+  // 1) already HH:mm
+  let m = str.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (m) return `${m[1].padStart(2,"0")}:${m[2]}`;
+
+  // 2) 1930, 19.30, 19-30, 7:5?
+  m = str.match(/^(\d{1,2})[:.\-]?([0-5]?\d)$/);
+  if (m) {
+    let hh = Math.max(0, Math.min(23, parseInt(m[1],10)));
+    let mm = Math.max(0, Math.min(59, parseInt(m[2],10)));
+    return `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;
+  }
+
+  // 3) 1:00 PM / 01 PM / 7pm
+  m = str.match(/^(\d{1,2})(?::([0-5]\d))?\s*(AM|PM)$/i);
+  if (m) {
+    let hh = parseInt(m[1],10);
+    const mm = m[2] ?? "00";
+    const isPM = /PM/i.test(m[3]);
+    if (hh === 12) hh = isPM ? 12 : 0;
+    else if (isPM) hh += 12;
+    return `${String(hh).padStart(2,"0")}:${mm}`;
+  }
+
+  // 4) 7pm, 12am
+  m = str.match(/^(\d{1,2})(am|pm)$/i);
+  if (m) {
+    let hh = parseInt(m[1],10);
+    const isPM = /pm/i.test(m[2]);
+    if (hh === 12) hh = isPM ? 12 : 0;
+    else if (isPM) hh += 12;
+    return `${String(hh).padStart(2,"0")}:00`;
+  }
+
+  // parse ไม่ได้ -> คืนค่าว่าง
+  return "";
+}
+
+const HHMM_REGEX = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+
 export default function VenueEditor() {
   // ===== basic info =====
   const [name, setName] = useState('');
@@ -15,8 +59,8 @@ export default function VenueEditor() {
   const [dateOpen, setDateOpen] = useState('');
   const [dateClose, setDateClose] = useState('');
   const [priceRate, setPriceRate] = useState('BUDGET');
-  const [timeOpen, setTimeOpen] = useState('');
-  const [timeClose, setTimeClose] = useState('');
+  const [timeOpen, setTimeOpen] = useState('');   // HH:mm (text)
+  const [timeClose, setTimeClose] = useState(''); // HH:mm (text)
   const [alcoholPolicy, setAlcoholPolicy] = useState('SERVE');
   const [ageRestriction, setAgeRestriction] = useState('ALL');
 
@@ -42,17 +86,16 @@ export default function VenueEditor() {
   const [userId, setUserId] = useState(null);
   const navigate = useNavigate();
 
-  // ===== media state (แยกเดิม/ใหม่ + คิวลบ) =====
+  // ===== media state =====
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const avatarInputRef = useRef(null);
 
   const [existingPhotos, setExistingPhotos] = useState([]);   // string[]
-  const [existingVideos, setExistingVideos] = useState([]);   // string[] (ถ้าจะใช้เก็บ)
+  const [existingVideos, setExistingVideos] = useState([]);   // string[]
   const [imageFiles, setImageFiles]     = useState([]);       // File[]
   const [videoFiles, setVideoFiles]     = useState([]);       // File[]
-
-  const [deleteQueue, setDeleteQueue]   = useState([]);       // string[] ของไฟล์เดิมที่ผู้ใช้ลบ
+  const [deleteQueue, setDeleteQueue]   = useState([]);       // string[]
 
   const handlePickAvatar = () => avatarInputRef.current?.click();
   const handleAvatarChange = (e) => {
@@ -63,12 +106,8 @@ export default function VenueEditor() {
   const onPickImages = (e) => setImageFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
   const onPickVideos = (e) => setVideoFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
 
-  const removeSelectedImage = (idx) => {
-    setImageFiles(prev => prev.filter((_, i) => i !== idx));
-  };
-  const removeSelectedVideo = (idx) => {
-    setVideoFiles(prev => prev.filter((_, i) => i !== idx));
-  };
+  const removeSelectedImage = (idx) => setImageFiles(prev => prev.filter((_, i) => i !== idx));
+  const removeSelectedVideo = (idx) => setVideoFiles(prev => prev.filter((_, i) => i !== idx));
 
   const removeExistingPhoto = (url) => {
     setExistingPhotos(prev => prev.filter(u => u !== url));
@@ -76,9 +115,7 @@ export default function VenueEditor() {
   };
 
   const clearAvatar = () => {
-    if (profilePhotoUrl) {
-      setDeleteQueue(prev => prev.includes(profilePhotoUrl) ? prev : [...prev, profilePhotoUrl]);
-    }
+    if (profilePhotoUrl) setDeleteQueue(prev => prev.includes(profilePhotoUrl) ? prev : [...prev, profilePhotoUrl]);
     setProfilePhotoUrl('');
     setAvatarFile(null);
     setAvatarPreview('');
@@ -132,19 +169,21 @@ export default function VenueEditor() {
           setDateOpen(v?.dateOpen ? v.dateOpen.slice(0, 10) : '');
           setDateClose(v?.dateClose ? v.dateClose.slice(0, 10) : '');
           setPriceRate(v?.priceRate || 'BUDGET');
-          setTimeOpen(v?.timeOpen || '');
-          setTimeClose(v?.timeClose || '');
+
+          // 👇 normalize เวลาเป็น HH:mm
+          setTimeOpen(to24h(v?.timeOpen || ''));
+          setTimeClose(to24h(v?.timeClose || ''));
+
           setAlcoholPolicy(v?.alcoholPolicy || 'SERVE');
           setAgeRestriction(v?.ageRestriction || 'ALL');
 
-          // ✅ ใช้ avatar ของ "venue" เอง (ไม่ใช่ของ user อีกต่อไป)
+          // avatar & media
           setProfilePhotoUrl(v?.profilePhotoUrl || '');
           if (v?.profilePhotoUrl) setAvatarPreview(v.profilePhotoUrl);
-
           setExistingPhotos(Array.isArray(v?.photoUrls) ? v.photoUrls : []);
-          // ถ้าคุณยังไม่ได้เก็บวิดีโอใน Venue ให้คงว่างไว้
           setExistingVideos([]);
 
+          // contacts
           setContactEmail(me?.performerInfo?.contactEmail || '');
           setContactPhone(me?.performerInfo?.contactPhone || '');
           setFacebookUrl(me?.performerInfo?.facebookUrl || '');
@@ -153,6 +192,7 @@ export default function VenueEditor() {
           setTiktokUrl(me?.performerInfo?.tiktokUrl || '');
           setWebsiteUrl(v?.websiteUrl || '');
 
+          // map
           if (v?.location?.latitude != null && v?.location?.longitude != null) {
             setLocation({ lat: v.location.latitude, lng: v.location.longitude, address: '' });
             setLatitude(String(v.location.latitude));
@@ -163,7 +203,7 @@ export default function VenueEditor() {
         }
       } catch (e) {
         console.error('fetch /auth/me failed:', e);
-        setError('โหลดข้อมูลผู้ใช้ไม่สำเร็จ');
+        setError('Failed to load user data.');
       }
     })();
     return () => { alive = false; };
@@ -185,6 +225,14 @@ export default function VenueEditor() {
     setLoading(true);
 
     try {
+      // validate เวลา
+      const tOpen = to24h(timeOpen);
+      const tClose = to24h(timeClose);
+      if ((timeOpen && !HHMM_REGEX.test(tOpen)) || (timeClose && !HHMM_REGEX.test(tClose))) {
+        setLoading(false);
+        return setError('The opening/closing time is incorrect. Please use 24-hour format, e.g. 10:00, 23:30.');
+      }
+
       // 1) upload new files
       const avatarUploaded = avatarFile ? await uploadOne(avatarFile) : null;
       const imageUploaded  = await uploadMany(imageFiles);
@@ -205,18 +253,16 @@ export default function VenueEditor() {
             }
           : undefined;
 
-      // 3) merge photo urls: keep existing (minus removed) + newly uploaded
+      // 3) merge photo urls
       const mergedPhotoUrls = [...existingPhotos, ...imageUploaded];
 
-      // ✅ ถ้ามีการอัปโหลด avatar ใหม่ → เพิ่ม avatar เก่าเข้าคิวลบ (ถ้ามีและไม่ซ้ำ)
+      // 4) delete queue (avatar เดิมถ้าเปลี่ยนใหม่)
       const deleteQueueNext = [...deleteQueue];
       if (avatarUploaded && profilePhotoUrl && profilePhotoUrl !== avatarUploaded) {
-        if (!deleteQueueNext.includes(profilePhotoUrl)) {
-          deleteQueueNext.push(profilePhotoUrl);
-        }
+        if (!deleteQueueNext.includes(profilePhotoUrl)) deleteQueueNext.push(profilePhotoUrl);
       }
 
-      // 4) payload
+      // 5) payload (เวลาส่งเป็น HH:mm)
       const payloadRaw = {
         name: (name || '').trim(),
         locationUrl: (locationUrl || '').trim(),
@@ -226,17 +272,15 @@ export default function VenueEditor() {
         dateOpen: dateOpen ? new Date(dateOpen).toISOString() : undefined,
         dateClose: dateClose ? new Date(dateClose).toISOString() : undefined,
         priceRate: priceRate || undefined,
-        timeOpen: timeOpen || undefined,
-        timeClose: timeClose || undefined,
+        timeOpen: tOpen || undefined,
+        timeClose: tClose || undefined,
         alcoholPolicy,
         ageRestriction: ageRestriction || undefined,
         websiteUrl: websiteUrl || undefined,
 
-        // ✅ ใช้ avatar ใหม่ถ้ามี ไม่งั้นใช้ตัวเดิม
         profilePhotoUrl: avatarUploaded || profilePhotoUrl || undefined,
 
         photoUrls: mergedPhotoUrls,
-        // ถ้า backend ยังไม่รองรับ videoUrls ใน Venue ให้คอมเมนต์บรรทัดนี้ทิ้งได้
         // videoUrls: [...existingVideos, ...videoUploaded],
 
         contactEmail: contactEmail || undefined,
@@ -257,7 +301,7 @@ export default function VenueEditor() {
         ),
       );
 
-      // 5) save venue
+      // 6) save venue
       if (hasProfile) {
         if (!userId) throw new Error('Invalid user');
         await axios.put(`/api/venues/${userId}`, payload, {
@@ -271,16 +315,11 @@ export default function VenueEditor() {
         });
       }
 
-      // 6) delete removed files from storage (best-effort)
+      // 7) delete removed files (best-effort)
       if (deleteQueueNext.length) {
         try {
-          await axios.post(
-            '/api/storage/delete',
-            { urls: deleteQueueNext },
-            { withCredentials: true }
-          );
+          await axios.post('/api/storage/delete', { urls: deleteQueueNext }, { withCredentials: true });
         } catch (e) {
-          // เงียบๆ ไว้ก่อน (ถ้า backend ยังไม่ทำ endpoint นี้)
           console.warn('delete storage failed (ignored):', e?.response?.data || e?.message);
         }
       }
@@ -289,9 +328,14 @@ export default function VenueEditor() {
       navigate(`/venues/${userId || ''}`);
     } catch (err) {
       setLoading(false);
-      setError(err?.response?.data?.error || 'บันทึกไม่สำเร็จ');
+      setError(err?.response?.data?.error || 'Failed to save');
       console.error('VenueEditor save error:', err);
     }
+  };
+
+  const onBlurTime = (val, setter) => {
+    const t = to24h(val);
+    setter(t);
   };
 
   // ===== UI =====
@@ -321,13 +365,47 @@ export default function VenueEditor() {
               <div className="ve-grid-3">
                 <div className="ve-field">
                   <label className="ve-label" htmlFor="timeOpen">Opening time</label>
-                  <input id="timeOpen" className="ve-input" type="time" value={timeOpen} onChange={(e) => setTimeOpen(e.target.value)} />
+                  {/* 👉 เปลี่ยนเป็นกรอก 24h */}
+                  <input
+                    id="timeOpen"
+                    className="ve-input"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="HH:mm"
+                    title="24-hour time such as 10:00, 19:30"
+                    pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
+                    value={timeOpen}
+                    onChange={(e) => setTimeOpen(e.target.value)}
+                    onBlur={(e) => onBlurTime(e.target.value, setTimeOpen)}
+                  />
                 </div>
 
                 <div className="ve-field">
                   <label className="ve-label" htmlFor="timeClose">Closing time</label>
-                  <input id="timeClose" className="ve-input" type="time" value={timeClose} onChange={(e) => setTimeClose(e.target.value)} />
+                  {/* 👉 เปลี่ยนเป็นกรอก 24h */}
+                  <input
+                    id="timeClose"
+                    className="ve-input"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="HH:mm"
+                    title="24-hour time such as 10:00, 19:30"
+                    pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
+                    value={timeClose}
+                    onChange={(e) => setTimeClose(e.target.value)}
+                    onBlur={(e) => onBlurTime(e.target.value, setTimeClose)}
+                  />
                 </div>
+
+                <datalist id="venue-time-suggestions">
+                  <option value="10:00" />
+                  <option value="12:00" />
+                  <option value="17:00" />
+                  <option value="18:00" />
+                  <option value="19:00" />
+                  <option value="22:00" />
+                  <option value="23:00" />
+                </datalist>
 
                 <div className="ve-field">
                   <label className="ve-label" htmlFor="capacity">Capacity</label>
@@ -479,7 +557,7 @@ export default function VenueEditor() {
                   ))}
                 </div>
               )}
-              <p className="ve-help">Supports MP4/MOV etc. (จะอัปโหลดตอน Save)</p>
+              <p className="ve-help">Supports MP4/MOV etc. (Will upload when Save)</p>
             </div>
           </div>
         </div>
