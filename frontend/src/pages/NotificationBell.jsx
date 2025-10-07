@@ -11,165 +11,99 @@ export default function NotificationBell({ mobileMode = false }) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Load notifications
+  // ===== Load notifications =====
   const load = async () => {
-    if (!user) return;
+    if (!user?.id) return;
     try {
       const { data } = await api.get('/notifications?unread=1', { withCredentials: true });
-      setItems(data || []);
+      setItems(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Failed to load notifications:', error);
+      console.error('❌ Failed to load notifications:', error);
     }
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
     load();
-    const t = setInterval(load, 15000);
-    return () => clearInterval(t);
+    const interval = setInterval(load, 15000);
+    return () => clearInterval(interval);
   }, [user?.id]);
 
-  // Close when clicking outside (desktop only)
+  // ===== Close dropdown on outside click =====
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (mobileMode) return;
-      if (!e.target.closest('.nbell')) setOpen(false);
+      if (!e.target.closest('.nbell-container')) setOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [mobileMode]);
 
+  // ===== Mark one notification as read =====
   const markRead = async (id) => {
+    if (!id) return;
     try {
       await api.post(`/notifications/${id}/read`, {}, { withCredentials: true });
-      setItems((prev) => prev.filter((x) => x.id !== id));
+      setItems((prev) => prev.filter((x) => String(x.id) !== String(id)));
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      console.error('❌ Failed to mark notification as read:', error);
     }
   };
 
+  // ===== Mark all as read =====
   const markAllRead = async () => {
     try {
       setLoading(true);
       await api.post('/notifications/read_all', {}, { withCredentials: true });
       setItems([]);
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
+      console.error('❌ Failed to mark all as read:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  // ===== Navigate to event or admin page =====
+  const openEvent = async (notif, eventId, extraQuery = '') => {
+    if (!eventId) return;
+    try {
+      await api.post(`/notifications/${notif.id}/read`, {}, { withCredentials: true });
+    } catch {}
+    setOpen(false);
+    navigate(`/events/${eventId}${extraQuery}`);
+  };
+
   const goReview = async (notifId) => {
-    try { 
-      await api.post(`/notifications/${notifId}/read`, {}, { withCredentials: true }); 
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-    }
+    try {
+      await api.post(`/notifications/${notifId}/read`, {}, { withCredentials: true });
+    } catch {}
     setOpen(false);
     navigate('/admin/role_requests');
   };
 
-  // Helper functions for notification types
-  const isArtist = user?.role === 'ARTIST';
-  const isOrganizer = user?.role === 'ORGANIZE' || user?.role === 'ADMIN';
-  const isAdmin = user?.role === 'ADMIN';
-
-  const typeIs = (n, patterns) =>
-    patterns.some((p) => (typeof p === 'string' ? n.type === p : p.test(n.type || '')));
-
+  // ===== Button helpers =====
   const ctaFor = (n) => {
     const meta = n?.data || {};
     const eventId = meta.eventId ?? n.eventId ?? meta.entityId;
     const artistId = meta.artistId;
 
-    const artistInvited   = typeIs(n, ['artist_event.invited', /artist[_\-\.]?event[_\-\.]?invited/i, /artist[_\-\.]?invited/i, /invite.*artist/i]);
-    const artistAccepted  = typeIs(n, ['artist_event.accepted', /accepted/i]);
-    const artistDeclined  = typeIs(n, ['artist_event.declined', /declined/i]);
-    const roleReqNew      = typeIs(n, ['role_request.new']);
-    const eventUpdated    = typeIs(n, ['event.updated']);
-    const artistNewEvent  = typeIs(n, ['artist.new_event']);
-
     const actions = [];
 
-    if (artistInvited && isArtist && eventId) {
+    if (eventId && /event/i.test(n.type || '')) {
       actions.push({
         label: 'View event',
-        onClick: async () => {
-          try { await api.post(`/notifications/${n.id}/read`, {}, { withCredentials: true }); } catch {}
-          setOpen(false);
-          navigate(`/events/${eventId}`);
-        },
+        onClick: () => openEvent(n, eventId),
       });
     }
 
-    if ((artistAccepted || artistDeclined) && isOrganizer && eventId) {
-      actions.push({
-        label: 'Open event',
-        onClick: async () => {
-          try { await api.post(`/notifications/${n.id}/read`, {}, { withCredentials: true }); } catch {}
-          setOpen(false);
-          navigate(`/events/${eventId}`);
-        },
-      });
-      if (artistId) {
-        actions.push({
-          label: 'View lineup',
-          onClick: async () => {
-            try { await api.post(`/notifications/${n.id}/read`, {}, { withCredentials: true }); } catch {}
-            setOpen(false);
-            navigate(`/events/${eventId}?focus=artist-${artistId}`);
-          },
-        });
-      }
-    }
-
-    if ((eventUpdated || artistNewEvent) && eventId) {
-      actions.push({
-        label: eventUpdated ? 'View update' : 'See new event',
-        onClick: async () => {
-          try { await api.post(`/notifications/${n.id}/read`, {}, { withCredentials: true }); } catch {}
-          setOpen(false);
-          navigate(`/events/${eventId}`);
-        },
-      });
-
-      const isLineup = (meta?.change?.type || '').toLowerCase() === 'lineup';
-      if (isLineup && (meta?.artistId || artistId)) {
-        const aId = meta?.artistId ?? artistId;
-        actions.push({
-          label: 'View lineup',
-          onClick: async () => {
-            try { await api.post(`/notifications/${n.id}/read`, {}, { withCredentials: true }); } catch {}
-            setOpen(false);
-            navigate(`/events/${eventId}?focus=artist-${aId}`);
-          },
-        });
-      }
-    }
-
-    if (roleReqNew && isAdmin) {
+    if (n.type === 'role_request.new' && user?.role === 'ADMIN') {
       actions.push({
         label: 'Review',
-        onClick: async () => {
-          try { await api.post(`/notifications/${n.id}/read`, {}, { withCredentials: true }); } catch {}
-          setOpen(false);
-          navigate('/admin/role_requests');
-        },
+        onClick: () => goReview(n.id),
       });
     }
 
-    if (!actions.length && meta.url) {
-      actions.push({
-        label: 'Open',
-        onClick: async () => {
-          try { await api.post(`/notifications/${n.id}/read`, {}, { withCredentials: true }); } catch {}
-          setOpen(false);
-          navigate(meta.url);
-        },
-      });
-    }
-
+    // Always include mark read
     actions.push({
       label: 'Mark read',
       outline: true,
@@ -182,7 +116,7 @@ export default function NotificationBell({ mobileMode = false }) {
   const count = items.length;
   const badgeText = count > 99 ? '99+' : String(count);
 
-  // ===== Mobile Version =====
+  // ===== Mobile version =====
   if (mobileMode) {
     return (
       <div className="mobile-notification-section">
@@ -205,18 +139,17 @@ export default function NotificationBell({ mobileMode = false }) {
         {open && (
           <div className="mobile-notification-panel">
             <div className="mobile-notification-header">
-              {/* <h4>Notifications</h4> */}
               {count > 0 && (
-                <button 
-                  className="btn-mark-all-read" 
-                  onClick={markAllRead} 
+                <button
+                  className="btn-mark-all-read"
+                  onClick={markAllRead}
                   disabled={loading}
                 >
                   {loading ? '...' : 'Mark all read'}
                 </button>
               )}
             </div>
-            
+
             <div className="mobile-notification-list">
               {!items.length ? (
                 <div className="mobile-notification-empty">
@@ -230,20 +163,17 @@ export default function NotificationBell({ mobileMode = false }) {
                       {new Date(n.createdAt).toLocaleString()}
                     </div>
                     <div className="mobile-notification-actions">
-                      {user?.role === 'ADMIN' && n.type === 'role_request.new' && (
-                        <button 
-                          className="btn-action-primary" 
-                          onClick={() => goReview(n.id)}
+                      {ctaFor(n).map((a, i) => (
+                        <button
+                          key={i}
+                          className={
+                            a.outline ? 'btn-action-secondary' : 'btn-action-primary'
+                          }
+                          onClick={a.onClick}
                         >
-                          Review
+                          {a.label}
                         </button>
-                      )}
-                      <button 
-                        className="btn-action-secondary" 
-                        onClick={() => markRead(n.id)}
-                      >
-                        Mark read
-                      </button>
+                      ))}
                     </div>
                   </div>
                 ))
@@ -255,7 +185,7 @@ export default function NotificationBell({ mobileMode = false }) {
     );
   }
 
-  // ===== Desktop Version =====
+  // ===== Desktop version =====
   return (
     <div className="nbell-container">
       <button
@@ -267,22 +197,25 @@ export default function NotificationBell({ mobileMode = false }) {
         }}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
-        aria-label={count ? `Notifications ${badgeText} unread` : 'Notifications'}
-        aria-expanded={open}
       >
-        <svg className="nbell-icon" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+        <svg className="nbell-icon" viewBox="0 0 24 24" width="26" height="26">
           <path
             d="M15 17H9c-2 0-3.5-1.2-3.5-2.7 0-.3.1-.6.2-.9C6.5 12.2 7 10.8 7 9c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.8.5 3.2 1.3 4.4.2.3.2.6.2.9 0 1.5-1.5 2.7-3.5 2.7Z"
-            fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
-          <path d="M10 19a2 2 0 0 0 4 0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path
+            d="M10 19a2 2 0 0 0 4 0"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
         </svg>
-
-        {count > 0 && (
-          <span className="nbell-badge">
-            {badgeText}
-          </span>
-        )}
+        {count > 0 && <span className="nbell-badge">{badgeText}</span>}
       </button>
 
       {open && (
@@ -290,9 +223,9 @@ export default function NotificationBell({ mobileMode = false }) {
           <div className="nbell-header">
             <h3>Notifications</h3>
             {count > 0 && (
-              <button 
-                className="nbell-mark-all-btn" 
-                onClick={markAllRead} 
+              <button
+                className="nbell-mark-all-btn"
+                onClick={markAllRead}
                 disabled={loading}
               >
                 {loading ? '...' : 'Mark all read'}
@@ -306,32 +239,34 @@ export default function NotificationBell({ mobileMode = false }) {
                 {loading ? 'Loading…' : 'No notifications'}
               </div>
             ) : (
-              items.map((n) => {
-                const actions = ctaFor(n);
-                return (
-                  <div key={n.id} className="nbell-item">
-                    <div className="nbell-item-title">{n.title || n.message || 'Notification'}</div>
-                    <div className="nbell-item-time">{new Date(n.createdAt).toLocaleString()}</div>
-                    {actions.length > 0 && (
-                      <div className="nbell-actions">
-                        {actions.map((a, i) => (
-                          <button
-                            key={i}
-                            className={`nbell-action-btn ${a.outline ? 'nbell-action-outline' : 'nbell-action-primary'}`}
-                            onClick={a.onClick}
-                          >
-                            {a.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+              items.map((n) => (
+                <div key={n.id} className="nbell-item">
+                  <div className="nbell-item-title">{n.title || n.message}</div>
+                  <div className="nbell-item-time">
+                    {new Date(n.createdAt).toLocaleString()}
                   </div>
-                );
-              })
+                  <div className="nbell-actions">
+                    {ctaFor(n).map((a, i) => (
+                      <button
+                        key={i}
+                        className={`nbell-action-btn ${
+                          a.outline
+                            ? 'nbell-action-outline'
+                            : 'nbell-action-primary'
+                        }`}
+                        onClick={a.onClick}
+                      >
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
       )}
+
 
       <style jsx>{`
         .nbell-container {
@@ -493,14 +428,14 @@ export default function NotificationBell({ mobileMode = false }) {
         }
 
         .nbell-action-primary {
-          background: #007bff;
-          border-color: #007bff;
+          background: #000000ff;
+          border-color: #000000ff;
           color: white;
         }
 
         .nbell-action-primary:hover {
-          background: #0056b3;
-          border-color: #0056b3;
+          background: #303030ff;
+          border-color: #303030ff;
         }
 
         .nbell-action-outline {

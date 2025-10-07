@@ -1902,7 +1902,7 @@ app.post('/events/:id/schedule/slots', authMiddleware, async (req, res) => {
           ],
         },
       });
-      if (overlap) throw new Error('ช่วงเวลาซ้อนกับรายการอื่น');
+      if (overlap) throw new Error('Time slot overlaps with another event');
 
       const slot = await tx.eventScheduleSlot.create({
         data: {
@@ -1960,7 +1960,7 @@ app.patch('/events/:id/schedule/slots/:slotId', authMiddleware, async (req, res)
             ],
           },
         });
-        if (overlap) throw new Error('ช่วงเวลาซ้อนกับรายการอื่น');
+        if (overlap) throw new Error('Time slot overlaps with another event');
       }
 
       return tx.eventScheduleSlot.update({
@@ -2058,7 +2058,7 @@ app.get('/myevents', authMiddleware, async (req, res) => {
 
 async function fanoutPublishNotifications(prismaClient, ev) {
   const eventName = ev.name || `Event #${ev.id}`;
-  const venueName = ev?.venue?.performer?.user?.name || ev?.venue?.name || 'สถานที่';
+  const venueName = ev?.venue?.performer?.user?.name || ev?.venue?.name || 'Venue';
   const hhmm = (t) => {
     if (!t) return null;
     const m = String(t).match(/^(\d{1,2}):(\d{2})$/);
@@ -2067,7 +2067,7 @@ async function fanoutPublishNotifications(prismaClient, ev) {
     const mm = String(Math.min(59, +m[2])).padStart(2, '0');
     return `${hh}:${mm}`;
   };
-  const timeRange = [hhmm(ev.doorOpenTime), hhmm(ev.endTime)].filter(Boolean).join('–') || 'เวลาไม่ระบุ';
+  const timeRange = [hhmm(ev.doorOpenTime), hhmm(ev.endTime)].filter(Boolean).join('–') || 'Time not specified';
 
   // ===== 1) ผู้ติดตามศิลปินที่ "ACCEPTED" =====
   const acceptedAEs = (ev.artistEvents || []).filter(ae => String(ae.status).toUpperCase() === 'ACCEPTED');
@@ -2094,11 +2094,11 @@ async function fanoutPublishNotifications(prismaClient, ev) {
 
   for (const [userId, setIds] of byUser.entries()) {
     const ids = Array.from(setIds);
-    const firstName = artistIdToName.get(ids[0]) || 'ศิลปิน';
+    const firstName = artistIdToName.get(ids[0]) || 'Artist';
     const more = ids.length - 1;
-    const artistLabel = more > 0 ? `${firstName} และอีก ${more} คน` : firstName;
+    const artistLabel = more > 0 ? `${firstName} and ${more} more` : firstName;
 
-    const msg = `ศิลปินที่คุณชื่นชอบ ${artistLabel} จะขึ้นแสดงในงาน “${eventName}” ที่ ${venueName} เวลา ${timeRange}`;
+    const msg = `Your favorite artist ${artistLabel} will perform at the event "${eventName}" at ${venueName} from ${timeRange}.`;
     await prismaClient.notification.create({
       data: {
         userId,
@@ -2118,7 +2118,7 @@ async function fanoutPublishNotifications(prismaClient, ev) {
 
   for (const { userId } of eventLikers) {
     if (notified.has(userId)) continue; // เลี่ยงซ้ำกับกลุ่มผู้ติดตามศิลปิน
-    const msg = `งานเผยแพร่แล้ว: “${eventName}” เวลา ${timeRange}`;
+    const msg = `The event has been published: “${eventName}” at ${timeRange}`;
     await prismaClient.notification.create({
       data: {
         userId,
@@ -2190,18 +2190,22 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
     const eid = Number(eventId);
 
     if (!Number.isInteger(aid) || !Number.isInteger(eid)) {
-      return res.status(400).json({ message: 'artistId/eventId ไม่ถูกต้อง' });
+      return res.status(400).json({ message: 'Invalid artistId or eventId' });
     }
+
     if (!startTime || !endTime) {
-      return res.status(400).json({ message: 'ต้องมี startTime และ endTime (HH:MM)' });
+      return res.status(400).json({ message: 'startTime and endTime are required (HH:MM)' });
     }
+
 
     const ev = await prisma.event.findUnique({ where: { id: eid } });
-    if (!ev) return res.status(404).json({ message: 'ไม่พบอีเวนต์' });
+    if (!ev) return res.status(404).json({ message: 'Event not found' });
+
 
     if (ev.isPublished) {
-      return res.status(400).json({ message: 'Event ถูกเผยแพร่แล้ว ไม่สามารถเชิญศิลปินเพิ่มได้' });
+      return res.status(400).json({ message: 'The event has already been published; you cannot invite more artists.' });
     }
+
 
     if (!(req.user.role === 'ADMIN' || (req.user.role === 'ORGANIZE' && ev.venueId === req.user.id))) {
       return res.sendStatus(403);
@@ -2217,8 +2221,9 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
     const startAt = h2d(startTime);
     const endAt = h2d(endTime);
     if (!startAt || !endAt || endAt <= startAt) {
-      return res.status(400).json({ message: 'ช่วงเวลาไม่ถูกต้อง' });
+      return res.status(400).json({ message: 'Invalid time range' });
     }
+
 
     // ── A) กันชน “ภายในอีเวนต์เดียวกัน”
     // หา slot อื่นในงานนี้ที่ทับเวลา และไม่ใช่ศิลปินคนเดียวกัน
@@ -2282,7 +2287,7 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
       }));
 
       return res.status(409).json({
-        message: 'มีศิลปินเล่นในช่วงเวลานี้อยู่แล้ว',
+        message: 'An artist is already scheduled for this time slot',
         details, // FE จะนำไปแสดงเป็นรายการได้ เช่น "NewJeans (ACCEPTED) 13:00–14:00"
       });
     }
@@ -2314,7 +2319,7 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
       const otherEventName = crossEvent?.event?.name || `Event #${crossEvent.eventId}`;
       const otherVenueName = crossEvent?.event?.venue?.performer?.user?.name || '';
       return res.status(409).json({
-        message: `ศิลปินมีคิวที่ยืนยันแล้วทับเวลา: ${otherEventName}${otherVenueName ? ` @${otherVenueName}` : ''} (${fmt(crossEvent.slotStartAt)}–${fmt(crossEvent.slotEndAt)})`,
+        message: `The artist already has a confirmed booking that overlaps: ${otherEventName}${otherVenueName ? ` @${otherVenueName}` : ''} (${fmt(crossEvent.slotStartAt)}–${fmt(crossEvent.slotEndAt)})`,
       });
     }
 
@@ -2352,7 +2357,8 @@ app.post('/artist-events/invite', authMiddleware, async (req, res) => {
         prisma,
         aid,
         'artist_event.invited',
-        `คุณถูกเชิญให้แสดงในงาน "${ev.name}" เวลา ${startTime}–${endTime}`,
+        `You are invited to perform at the event "${ev.name}" from ${startTime} to ${endTime}`,
+
         { eventId: eid, artistId: aid, startTime, endTime }
       );
     } catch (e) { console.error('NOTIFY_INVITE_ERROR', e); }
@@ -2412,7 +2418,7 @@ app.delete('/events/:id/invites/:artistId', authMiddleware, async (req, res) => 
           tx,
           artistId, // artistId == performerId == userId
           'artist_event.uninvited',
-          `คำเชิญแสดงในงาน "${ev.name}" ถูกยกเลิกโดยผู้จัด`,
+          `Your invitation to perform at the event "${ev.name}" has been canceled by the organizer`,
           { eventId, artistId }
         );
       } catch (e) { console.error('UNINVITE_NOTIFY_ERROR', e); }
@@ -2497,7 +2503,7 @@ app.post('/events/:id/cancel', authMiddleware, async (req, res) => {
             prisma,
             acceptedArtistIds,
             'event.canceled.artist_self',
-            `งานที่คุณได้ยืนยันการแสดงถูกยกเลิกแล้ว: "${ev.name}"${venueName ? ` @${venueName}` : ''}${reason ? ` — เหตุผล: ${reason}` : ''}`,
+            `The event you confirmed to perform has been canceled: "${ev.name}"${venueName ? ` @${venueName}` : ''}${reason ? ` — Reason: ${reason}` : ''}`,
             { eventId: id, reason }
           );
         }
@@ -2509,7 +2515,7 @@ app.post('/events/:id/cancel', authMiddleware, async (req, res) => {
             prisma,
             pendingLikeIds,
             'artist_event.uninvited',
-            `คำเชิญแสดงในงาน "${ev.name}" ถูกยกเลิกโดยผู้จัด${reason ? ` — เหตุผล: ${reason}` : ''}`,
+            `Your invitation to perform at the event "${ev.name}" has been canceled by the organizer${reason ? ` — Reason: ${reason}` : ''}`,
             { eventId: id, reason }
           );
         }
@@ -2523,7 +2529,7 @@ app.post('/events/:id/cancel', authMiddleware, async (req, res) => {
               prisma,
               likeAudienceIds,
               'event.canceled.generic',
-              `งาน "${ev.name}" ถูกยกเลิกแล้ว${reason ? ` — เหตุผล: ${reason}` : ''}`,
+              `The event "${ev.name}" has been canceled${reason ? ` — Reason: ${reason}` : ''}`,
               { eventId: id, reason }
             );
           }
@@ -2552,12 +2558,12 @@ app.post('/events/:id/cancel', authMiddleware, async (req, res) => {
           if (artistFollowerIds.length) {
             // สรุปชื่อในข้อความ: "<A>" หรือ "<A> และอีก N คน"
             const firstName = acceptedNames[0];
-            const extra = acceptedNames.length > 1 ? ` และอีก ${acceptedNames.length - 1} คน` : '';
+            const extra = acceptedNames.length > 1 ? ` and ${acceptedNames.length - 1} more` : '';
             await fanout(
               prisma,
               artistFollowerIds,
               'event.canceled.artist_follow',
-              `งาน "${ev.name}" ของศิลปินที่คุณติดตาม ${firstName}${extra} ถูกยกเลิกแล้ว${reason ? ` — เหตุผล: ${reason}` : ''}`,
+              `The event "${ev.name}" by the artist(s) you follow ${firstName}${extra} has been canceled${reason ? ` — Reason: ${reason}` : ''}`,
               { eventId: id, artists: acceptedArtistIds, reason }
             );
           }
@@ -2657,7 +2663,7 @@ app.post('/artist-events/respond', authMiddleware, async (req, res) => {
                     tx,
                     p.event.venueId,
                     'artist_event.auto_declined',
-                    `คำเชิญศิลปิน #${aid} ถูกปฏิเสธอัตโนมัติ เพราะศิลปินยืนยันอีกงานที่คาบเกี่ยวเวลา`,
+                    `The invitation for artist #${aid} was automatically declined because the artist confirmed another overlapping event`,
                     { eventId: p.eventId, artistId: aid, reason: 'overlap_accept' }
                   );
                 }
@@ -2677,9 +2683,9 @@ app.post('/artist-events/respond', authMiddleware, async (req, res) => {
       if (ev?.venueId) {
         const type = decision === 'ACCEPTED' ? 'artist_event.accepted' : 'artist_event.declined';
         const msg  = decision === 'ACCEPTED'
-          ? `ศิลปิน #${aid} ยืนยันเข้าร่วมงาน "${ev.name}"`
-          : `ศิลปิน #${aid} ปฏิเสธคำเชิญงาน "${ev.name}"`;
-        await notify(prisma, ev.venueId, type, msg, { eventId: ev.id, artistId: aid, status: decision });
+          ? `Artist ${artistName} has accepted the invitation to the event "${ev.name}"`
+          : `Artist ${artistName} has declined the invitation to the event "${ev.name}"`;
+        await notify(prisma, ev.venueId, type, msg, { eventId: ev.id, artistId: aid, artistName: artistName, status: decision });
       }
     } catch (e) {
       console.error('NOTIFY_RESPOND_ERROR', e);
