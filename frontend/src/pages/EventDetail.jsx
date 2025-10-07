@@ -727,7 +727,7 @@ const toggleFollow = async () => {
     }
   };
 
-  if (loading) return <div className="page"><div className="note">กำลังโหลด…</div></div>;
+  // if (loading) return <div className="page"><div className="note">กำลังโหลด…</div></div>;
   if (err) return (
     <div className="page">
       <div className="note err">{err}</div>
@@ -860,7 +860,7 @@ const toggleFollow = async () => {
           </div>
         </div>
 
-        {ev?.isPublished ? (
+        {/* {ev?.isPublished ? (
           <div className="note" style={{ background: '#eef6ff', border: '1px solid #bfdbfe', color: '#1e40af', marginBottom: 10 }}>
             This event is published (read-only). You can’t modify the lineup.
           </div>
@@ -870,7 +870,7 @@ const toggleFollow = async () => {
               ? (ev._isOwner ? 'Ready: All artists accepted — you can Publish now.' : 'Ready: All artists accepted.')
               : `Pending: ${ev._ready.accepted}/${ev._ready.totalInvited} accepted`}
           </div>
-        ) : null}
+        ) : null} */}
 
         {scheduleRows.length === 0 ? (
           <div className="empty">—</div>

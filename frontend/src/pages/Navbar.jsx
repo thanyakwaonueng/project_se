@@ -22,7 +22,7 @@ export default function Navbar() {
   function MobileAuthMenu({ user, loading }) {
     const [roleMenuOpen, setRoleMenuOpen] = useState(false);
 
-    if (loading) return <span>กำลังตรวจสอบ…</span>;
+    if (loading) return <span>…</span>;
     if (!user) {
       return (
         <>
@@ -117,7 +117,7 @@ export default function Navbar() {
 
   // Desktop Auth Buttons (เดิม)
   function AuthButtons({ user, loading }) {
-    if (loading) return <span className="nav-item nav-link">กำลังตรวจสอบ…</span>;
+    if (loading) return <span className="nav-item nav-link">…</span>;
 
     if (!user) {
       return (
@@ -154,7 +154,7 @@ export default function Navbar() {
             </Link>
           </li>
 
-          {(user.role === 'ARTIST' || user.role === 'ADMIN') && (
+          {(user.role === 'ARTIST') && (
             <li>
               <Link className="dropdown-item" to="/artist/inviterequests" onClick={closeMobileMenu}>
                 Artist Pending Invite
@@ -162,7 +162,7 @@ export default function Navbar() {
             </li>
           )}
 
-          {(user.role === 'ORGANIZE' || user.role === 'ADMIN') && (
+          {(user.role === 'ORGANIZE') && (
             <>
               <li>
                 <Link className="dropdown-item" to={`/venues/${user.id}`} onClick={closeMobileMenu}>
@@ -180,6 +180,14 @@ export default function Navbar() {
                 </Link>
               </li>
             </>
+          )}
+
+          {(user.role === 'ADMIN') && (
+            <li>
+              <Link className="dropdown-item" to="/admin/role_requests" onClick={closeMobileMenu}>
+                Permission Upgrade Request
+              </Link>
+            </li>
           )}
 
           <li><hr className="dropdown-divider" /></li>

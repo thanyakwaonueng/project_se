@@ -380,9 +380,9 @@ export default function Artist() {
     return arr.sort((a,b) => new Date(b.dateISO) - new Date(a.dateISO));
   }, [selectedGroup]);
 
-  if (loadingGroups) {
-    return <div className="artist-container a-bleed" style={{padding:16}}>Loading…</div>;
-  }
+  // if (loadingGroups) {
+  //   return <div className="artist-container a-bleed" style={{padding:16}}>Loading…</div>;
+  // }
   if (groupsError) {
     return <div className="artist-container a-bleed" style={{padding:16}}>Failed to load artists.</div>;
   }
@@ -450,9 +450,9 @@ export default function Artist() {
           <div className="container-heading">
             <h1 className="artist-heading">MELODY & MEMORIES</h1>
           </div>
-          <h6 className="artist-heading-detail">
+          {/* <h6 className="artist-heading-detail">
             Music is the language of emotions when words are not enough.
-          </h6>
+          </h6> */}
 
           {/* Filter + Search */}
           <div className="seamless-filter-search a-card-min">

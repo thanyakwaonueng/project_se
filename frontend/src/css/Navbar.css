@@ -537,3 +537,168 @@
     padding-right: 5%;
   }
 }
+
+.dropdown-menu {
+  border: none;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  padding: 8px;
+  margin-top: 8px;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid #e1e5e9;
+  max-width: calc(100vw - 40px); 
+}
+
+/* Desktop Dropdown Container with Smart Positioning */
+.desktop-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.desktop-dropdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #1c1c1c;
+  text-decoration: none;
+}
+
+.desktop-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  min-width: 260px;
+  max-width: min(300px, calc(100vw - 40px)); /* Maximum width with viewport limit */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  border: 1px solid #e1e5e9;
+}
+
+/* Right-aligned dropdown (default) */
+.desktop-dropdown-menu.dropdown-right {
+  right: 0;
+  left: auto;
+}
+
+/* Left-aligned dropdown when near right edge */
+.desktop-dropdown-menu.dropdown-left {
+  left: 0;
+  right: auto;
+}
+
+.desktop-dropdown-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Ensure dropdown doesn't exceed viewport height */
+.dropdown-content {
+  padding: 8px 0;
+  max-height: min(60vh, 400px); 
+  overflow-y: auto; 
+}
+
+
+/* Responsive Design with Boundary Protection */
+@media (max-width: 768px) {
+  .desktop-menu {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  
+  .desktop-dropdown-menu {
+    max-width: calc(100vw - 20px);
+    min-width: 200px;
+  }
+}
+
+/* Small Mobile Devices */
+@media (max-width: 360px) {
+  .desktop-dropdown-menu {
+    min-width: 180px;
+    max-width: calc(100vw - 10px);
+  }
+  
+  .dropdown-item {
+    padding: 10px 12px;
+    font-size: 0.85em;
+  }
+}
+
+/* Desktop Boundary Protection */
+@media (min-width: 769px) {
+  .mobile-menu-overlay {
+    display: none;
+  }
+  
+  /* Ensure dropdown doesn't exceed viewport on large screens */
+  .desktop-dropdown-menu {
+    max-width: min(300px, calc(50vw - 40px));
+  }
+}
+
+/* Tablet Landscape Protection */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+  .desktop-dropdown-menu {
+    max-height: min(70vh, 500px);
+  }
+  
+  .dropdown-content {
+    max-height: min(50vh, 350px);
+  }
+}
+
+
+@media (min-width: 1200px) {
+  .desktop-dropdown-menu {
+    min-width: 280px;
+  }
+}
+
+
+/* Scrollbar Styling for Overflow Protection */
+.dropdown-content::-webkit-scrollbar,
+.mobile-submenu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dropdown-content::-webkit-scrollbar-track,
+.mobile-submenu::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 2px;
+}
+
+.dropdown-content::-webkit-scrollbar-thumb,
+.mobile-submenu::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 2px;
+}
+
+.dropdown-content::-webkit-scrollbar-thumb:hover,
+.mobile-submenu::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.dropdown-item,
+.mobile-submenu-link {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  line-height: 1.4;
+}
+

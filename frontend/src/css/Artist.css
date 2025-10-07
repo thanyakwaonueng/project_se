@@ -95,10 +95,10 @@ body {
   align-items: center;
   flex: 1 1 auto;
   background: transparent; /* ไม่ทึบทั้งแถบ */
-  border: 1px solid #000;
+  border: 1px solid #4a4a4a;
+  border-radius: 20px;
   flex-grow: 1;
   padding: 0 12px;
-  border-radius: 4px;
   margin-left: 30px; 
 }
 .artist-container .connected-search-box {
