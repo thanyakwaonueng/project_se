@@ -431,7 +431,7 @@ export default function VenueEditor() {
             </div>
 
             <div className="ve-field ve-col-span-2">
-              <label className="ve-label">Favorite genres</label>
+              <label className="ve-label">Genres</label>
               <div className="ve-chips">
                 {["Pop","Rock","Indie","Jazz","Blues","Hip-Hop","EDM","Folk","Metal","R&B"].map(g => {
                   const selected = genre?.toLowerCase() === g.toLowerCase();
@@ -450,9 +450,25 @@ export default function VenueEditor() {
               </div>
             </div>
 
-            <div className="ve-field ve-col-span-2">
-              <label className="ve-label" htmlFor="description">Description</label>
-              <textarea id="description" className="ve-textarea" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short description of your venue" />
+            {/* Description Section */}
+            <div className="venue-description-section">
+              <div className="venue-description-header">
+                <label className="ve-label" htmlFor="description">Description</label>
+              </div>
+              
+              <textarea
+                id="description"
+                className="venue-description-textarea"
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Short description of your venue"
+                maxLength={500}
+              />
+              
+              <div className="venue-char-counter">
+                {description.length} / 500
+              </div>
             </div>
 
             <div className="ve-col-span-2">
@@ -482,106 +498,103 @@ export default function VenueEditor() {
       </section>
 
       {/* ===== Avatar ===== */}
+      {/* // ใน VenueEditor.jsx - ส่วนนี้ยังคงเหมือนเดิม */}
       <section className="ve-section">
         <div className="ve-form">
-          <h2 className="ve-section-title">Venue Avatar</h2>
-          <div className="ve-avatarRow">
-            <div className="ve-avatar">
-              {avatarPreview || profilePhotoUrl ? (
-                <img src={avatarPreview || profilePhotoUrl} alt="avatar" />
-              ) : (
-                <div className="ve-avatar-placeholder">No image</div>
-              )}
-            </div>
-            <div className="ve-fileRow">
-              <button type="button" className="ve-fileBtn" onClick={handlePickAvatar}>Choose image</button>
-              {(avatarPreview || profilePhotoUrl) && (
-                <button type="button" className="ve-fileBtn ve-fileBtn-danger" onClick={clearAvatar}>
-                  Remove
-                </button>
-              )}
-              <input ref={avatarInputRef} type="file" accept="image/*" hidden onChange={handleAvatarChange} />
-            </div>
-            <p className="ve-help">Avatar จะถูกอัปโหลดเมื่อกด Save</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== Images & Videos ===== */}
-      <section className="ve-section">
-        <div className="ve-form">
-          <h2 className="ve-section-title">Images & Videos</h2>
-
-        <div className="ve-grid">
-            {/* Images (existing) */}
-            <div className="ve-field-1">
-              <label className="ve-label">Existing images</label>
-              {existingPhotos.length ? (
-                <div className="ve-mediaGrid">
-                  {existingPhotos.map((u, i) => (
-                    <div key={`exi-${i}`} className="ve-mediaThumb">
-                      <img src={u} alt={`photo-${i+1}`} />
-                      <button type="button" className="ve-removeBtn" onClick={() => removeExistingPhoto(u)}>Remove</button>
-                    </div>
-                  ))}
+          <h2 className="ve-section-title">Venue Media</h2>
+          
+          <div className="venue-media-section">
+            {/* Venue Avatar - ด้านซ้าย */}
+            <div>
+              <div className="ve-field">
+                {/* <label className="ve-label">Venue Avatar</label> */}
+                <div 
+                  className="venue-avatar-compact" 
+                  onClick={handlePickAvatar} 
+                  role="button" 
+                  aria-label="Upload venue avatar"
+                >
+                  {avatarPreview || profilePhotoUrl ? (
+                    <>
+                      <img src={avatarPreview || profilePhotoUrl} alt="venue avatar preview" />
+                      <div className="venue-avatar-edit-compact">change image</div>
+                    </>
+                  ) : (
+                    <div className="venue-avatar-hint"><br/>()</div>
+                  )}
                 </div>
-              ) : (
-                <div className="ve-help">No existing images</div>
-              )}
+                <input 
+                  ref={avatarInputRef} 
+                  type="file" 
+                  accept="image/*" 
+                  className="acc-fileInput" 
+                  onChange={handleAvatarChange} 
+                />
+              </div>
+              
+              {/* <div className="venue-help-text" style={{ marginTop: '10px', textAlign: 'center' }}>
+                Recommended: Square image, at least 400×400 pixels
+              </div> */}
             </div>
 
-            {/* Images (new) */}
-            <div className="ve-field-1">
-              <label className="ve-label">Add images</label>
-              <div className="ve-fileRow">
-                <label className="ve-fileBtn ve-fileBtn-secondary">
-                  Choose images
+            {/* Venue Images - ด้านขวา */}
+            <div className="venue-images-compact">
+              <div className="venue-images-header">
+                <label className="ve-label">Gallery Photos</label>
+                
+                <label className="venue-add-btn-compact" role="button" aria-label="Add venue images">
+                  + Add images
                   <input type="file" accept="image/*" multiple hidden onChange={onPickImages} />
                 </label>
               </div>
 
-              {!!imageFiles.length && (
-                <div className="ve-mediaGrid">
-                  {imageFiles.map((f, i) => (
-                    <div key={`img-${i}`} className="ve-mediaThumb">
-                      <img src={URL.createObjectURL(f)} alt={`image-${i+1}`} />
-                      <button type="button" className="ve-removeBtn" onClick={() => removeSelectedImage(i)}>
-                        Remove
+              {/* กริดรูปภาพ */}
+              <div className="venue-images-grid-compact">
+                {/* รูปเดิมที่มีอยู่ */}
+                {existingPhotos.map((u, i) => (
+                  <div key={`old-${i}`} className="venue-image-thumb-compact">
+                    <img src={u} alt={`existing venue image ${i + 1}`} />
+                    <button
+                      type="button"
+                      className="venue-remove-btn-compact"
+                      title="Remove"
+                      aria-label={`Remove existing image ${i + 1}`}
+                      onClick={() => removeExistingPhoto(u)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+
+                {/* รูปที่เพิ่งเลือกใหม่ */}
+                {imageFiles.map((f, i) => {
+                  const src = URL.createObjectURL(f);
+                  return (
+                    <div key={`new-${i}`} className="venue-image-thumb-compact">
+                      <img src={src} alt={`new venue image ${i + 1}`} onLoad={() => URL.revokeObjectURL(src)} />
+                      <button
+                        type="button"
+                        className="venue-remove-btn-compact"
+                        title="Remove"
+                        aria-label={`Remove new image ${i + 1}`}
+                        onClick={() => removeSelectedImage(i)}
+                      >
+                        ×
                       </button>
                     </div>
-                  ))}
-                </div>
-              )}
-              <p className="ve-help">Images will be uploaded when you click Save.</p>
-            </div>
-
-            {/* Videos (new) */}
-            <div className="ve-field-1">
-              <label className="ve-label">Add videos</label>
-              <div className="ve-fileRow">
-                <label className="ve-fileBtn">
-                  Choose videos
-                  <input type="file" accept="video/*" multiple hidden onChange={onPickVideos} />
-                </label>
+                  );
+                })}
               </div>
 
-              {!!videoFiles.length && (
-                <div className="ve-mediaGrid">
-                  {videoFiles.map((f, i) => (
-                    <div key={`vid-${i}`} className="ve-mediaThumb">
-                      <video className="ve-videoThumb" src={URL.createObjectURL(f)} controls preload="metadata" />
-                      <button type="button" className="ve-removeBtn" onClick={() => removeSelectedVideo(i)}>
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <p className="ve-help">Supports MP4/MOV etc. (Will upload when Save)</p>
+              <p className="venue-help-text" style={{ marginTop: 10 }}>
+                Upload photos of your venue. Show the stage, seating area, and atmosphere.
+              </p>
             </div>
           </div>
         </div>
       </section>
+
+      
 
       {/* ===== Social & Contact ===== */}
       <section className="ve-section">

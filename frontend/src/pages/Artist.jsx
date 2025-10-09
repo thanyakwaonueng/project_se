@@ -906,7 +906,7 @@ const sortedGroups = useMemo(() => {
             <div className="listen2">
               <div className="listen2-top">
                 <div className="listen2-title">LISTEN ON</div>
-                <div className="listen2-quote">“Where words fail, music speaks.”</div>
+                {/* <div className="listen2-quote">“Where words fail, music speaks.”</div> */}
               </div>
               <div className="listen2-grid">
                 <a className="listen2-item" href={selectedGroup?.socials?.spotify || "#"} target="_blank" rel="noreferrer">
@@ -963,7 +963,7 @@ const sortedGroups = useMemo(() => {
             <section className="gallery small" aria-label="Artist gallery">
               <div className="gallery-top">
                 <h2 className="gallery-title">GALLERY</h2>
-                <p className="gallery-quote">Photos on top, videos below.</p>
+                {/* <p className="gallery-quote">Photos on top, videos below.</p> */}
               </div>
 
               {/* ---------- Photos Row ---------- */}
