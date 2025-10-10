@@ -122,6 +122,13 @@ export default function MyEvents() {
       flex: 1,
       textAlign: "center"
     },
+    buttonDisabled: {
+      backgroundColor: "#f7fafc",
+      color: "#a0aec0",
+      border: "1px dashed #e2e8f0",
+      cursor: "not-allowed",
+      opacity: 0.7
+    },
     buttonSecondary: {
       backgroundColor: "#edf2f7",
       color: "#4a5568",
@@ -193,6 +200,7 @@ export default function MyEvents() {
   };
 
   const handleButtonHover = (e, isHover) => {
+    if (e.target.disabled) return;
     if (e.target.className.includes('btn-secondary')) {
       e.target.style.backgroundColor = isHover ? '#e2e8f0' : '#edf2f7';
       e.target.style.color = isHover ? '#2d3748' : '#4a5568';
@@ -287,9 +295,17 @@ export default function MyEvents() {
 
               <div style={styles.eventActions}>
                 <button
-                  style={{...styles.button, ...styles.buttonSecondary}}
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonSecondary,
+                    ...(ev.isPublished ? styles.buttonDisabled : {})
+                  }}
                   className="btn btn-sm btn-secondary"
-                  onClick={() => navigate(`/me/event/${ev.id}`)}
+                  onClick={() => {
+                    if (!ev.isPublished) navigate(`/me/event/${ev.id}`);
+                  }}
+                  disabled={!!ev.isPublished}
+                  title={ev.isPublished ? 'Published events cannot be edited' : 'Edit event'}
                   onMouseEnter={(e) => handleButtonHover(e, true)}
                   onMouseLeave={(e) => handleButtonHover(e, false)}
                 >

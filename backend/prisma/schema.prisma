@@ -122,8 +122,8 @@ model ArtistRecord {
 
 
 model Venue {
-  genre           String
-  description     String?
+    genre           String
+    description     String?
   capacity        Int?
   dateOpen        DateTime?
   dateClose       DateTime?

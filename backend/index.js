@@ -1340,7 +1340,15 @@ app.post('/venues', authMiddleware, async (req, res) => {
     } 
 
     const result = await prisma.$transaction(async (tx) => {
-      // upsert performer (contact/social) — ไม่แตะชื่อ user (username)
+      const venueName = (data.name ?? '').trim();
+      if (venueName) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { name: venueName },
+        });
+      }
+
+      // upsert performer (contact/social)
       const performer = await tx.performer.upsert({
         where:  { userId },
         update: performerData,
@@ -1436,10 +1444,7 @@ app.put('/venues/:id', authMiddleware, async (req, res) => {
     const toInt = (v) => (v === '' || v == null ? null : (Number.isFinite(+v) ? Math.trunc(+v) : null));
     const toFloat = (v) => (v === '' || v == null ? null : (Number.isFinite(+v) ? +v : null));
 
-    const userData = {
-      // ชื่อ venue เก็บที่ user.name ของเจ้าของ (ตามสคีมาเดิม)
-      name: (body.name ?? '').trim() || null,
-    };
+    const venueName = (body.name ?? '').trim();
 
     const performerData = {
       contactEmail: body.contactEmail ?? null,
@@ -1519,8 +1524,10 @@ app.put('/venues/:id', authMiddleware, async (req, res) => {
     if (!exists) return res.status(404).json({ error: 'Venue not found' });
 
     const updated = await prisma.$transaction(async (tx) => {
-      // 1) user.name
-      await tx.user.update({ where: { id }, data: userData });
+      // 1) อัปเดตชื่อ user ให้ตรงกับชื่อ venue (ถ้าส่งมา)
+      if (venueName) {
+        await tx.user.update({ where: { id }, data: { name: venueName } });
+      }
 
       // 2) performer (ช่องทางติดต่อ/โซเชียล)
       await tx.performer.update({ where: { userId: id }, data: performerData });

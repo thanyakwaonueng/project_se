@@ -385,53 +385,108 @@ export default function CreateEvent() {
                 onBlur={() => setName(name.trim())}
                 required
                 placeholder="Event name"
+                aria-invalid={!isNameUnique}
+                aria-describedby="name-uniq-hint"
               />
+              <div id="name-uniq-hint" className="ee-help" style={{ marginTop: 6 }}>
+                {nameChecking ? 'Checking name…'
+                  : (!isNameUnique ? 'This event name is already in use.' : '')}
+              </div>
             </div>
 
-            {/* Description */}
+            {/* Poster & Description Section - Layout ใหม่ */}
             <div className="ee-field ee-col-span-2">
-              <label className="ee-label" htmlFor="description">Description</label>
-              <textarea
-                id="description"
-                className="ee-textarea"
-                rows={4}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Short description of your event"
-              />
-            </div>
+              <div className="ee-poster-description-grid">
+                {/* Poster Section - ด้านซ้าย */}
+                <div className="ee-poster-section">
+                  <label className="ee-label">
+                    Event Poster
+                  </label>
+                  
+                  <div className="ee-poster-upload-area">
+                    <div 
+                      className="ee-poster-clickable-area"
+                      onClick={handlePickPoster}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handlePickPoster();
+                        }
+                      }}
+                    >
+                      {posterPreview || posterUrl ? (
+                        <div className="ee-poster-preview">
+                          <img src={posterPreview || posterUrl} alt="Event poster preview" />
+                          <button 
+                            type="button" 
+                            className="ee-poster-remove-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              clearPoster();
+                            }}
+                            aria-label="Remove poster"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="ee-poster-placeholder">
+                          <div className="ee-poster-placeholder-icon">📷</div>
+                          <div className="ee-poster-placeholder-text">No poster uploaded</div>
+                          <div className="ee-poster-placeholder-subtext">
+                            Recommended: 1200×1800px, JPG or PNG
+                          </div>
+                          <div className="ee-poster-placeholder-hint">
+                            Click to upload image
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
-            {/* Poster */}
-            <div className="ee-field ee-col-span-2">
-              <label className="ee-label">Poster</label>
-              <div className="ee-posterRow">
-                <div className="ee-poster">
-                  {posterPreview || posterUrl ? (
-                    <img src={posterPreview || posterUrl} alt="poster" />
-                  ) : (
-                    <div className="ee-poster-placeholder">No poster</div>
-                  )}
+                    {/* {(posterPreview || posterUrl) && (
+                      <div className="ee-poster-controls">
+                        <button 
+                          type="button" 
+                          className="ee-btn ee-btn-text"
+                          onClick={clearPoster}
+                        >
+                          Remove Image
+                        </button>
+                      </div>
+                    )} */}
+                    
+                    <input
+                      ref={posterInputRef}
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={handlePosterChange}
+                    />
+                  </div>
                 </div>
 
-                <div className="ee-fileRow">
-                  <button type="button" className="ee-fileBtn" onClick={handlePickPoster}>
-                    Choose image
-                  </button>
-                  {(posterPreview || posterUrl) && (
-                    <button type="button" className="ee-fileBtn ee-fileBtn-danger" onClick={clearPoster}>
-                      Remove
-                    </button>
-                  )}
-                  <input
-                    ref={posterInputRef}
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={handlePosterChange}
-                  />
+                {/* Description Section - ด้านขวา */}
+                <div className="ee-description-section">
+                  <label className="ee-label" htmlFor="description">
+                    Description
+                  </label>
+                  <div className="ee-description-wrapper">
+                    <textarea
+                      id="description"
+                      className="ee-textarea"
+                      rows={8}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Tell people about your event - the atmosphere, special performances, or anything they should know..."
+                      maxLength={500}
+                    />
+                    <div className="ee-char-count">
+                      <span>{description.length}</span>/500
+                    </div>
+                  </div>
                 </div>
-
-                <p className="ee-help">The poster will be uploaded when you press Save.</p>
               </div>
             </div>
 
@@ -623,7 +678,7 @@ export default function CreateEvent() {
           <button
             type="submit"
             className="ee-btn ee-btn-primary"
-            disabled={loading || !name.trim()}
+            disabled={loading || nameChecking || !isNameUnique || !name.trim()}
           >
             {loading ? (hasEvent ? 'Updating…' : 'Creating…') : (hasEvent ? 'Update Event' : 'Create Event')}
           </button>

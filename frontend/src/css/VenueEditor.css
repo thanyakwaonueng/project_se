@@ -81,7 +81,7 @@
   width: 80%;
   margin-inline: auto;
   padding: 16px;
-  margin-bottom: 18px;
+  /* margin-bottom: 18px; */
   background: #ffffff;
 }
 
@@ -504,3 +504,265 @@
 /* (ไม่มีโค้ด — รายการเพื่อการ house-keeping) */
 
 
+
+
+
+
+/* =========================================================================
+   VENUE MEDIA SECTION - New Compact Design
+   ========================================================================= */
+
+.venue-media-section {
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 80px;
+  align-items: start;
+  /* background-color: #ffb2b2; */
+}
+
+.venue-avatar-compact {
+  /* padding-left: 10px; */
+  width: 256px;
+  height: 256px;
+  border: 1px dashed #111111;
+  border-radius: 4px;
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+  /* background-color: aqua; */
+}
+
+.venue-avatar-compact:hover {
+  background: #f9f9f9;
+}
+
+.venue-avatar-compact img {
+  /* background-color: aqua; */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.venue-avatar-hint {
+  font-size: 12px;
+  color: #666666;
+  text-align: center;
+  padding: 6px 8px;
+}
+
+.venue-avatar-edit-compact {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  font-size: 12px;
+  text-align: center;
+  padding: 4px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.venue-images-compact {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  height: fit-content;
+}
+
+.venue-images-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.venue-images-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.venue-image-thumb-compact {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid #e2e2e8;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fafafa;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+}
+
+.venue-image-thumb-compact:hover {
+  border-color: #cfcfd6;
+  box-shadow: 0 4px 12px rgba(0,0,0,.06);
+}
+
+.venue-image-thumb-compact img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.venue-remove-btn-compact {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 9999px;
+  background: rgba(255,255,255,.95);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 6px rgba(0,0,0,.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.venue-remove-btn-compact:hover {
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,.16);
+  transform: translateY(-1px);
+}
+
+.venue-add-btn-compact {
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 10px;
+  border: 1px dashed #9ca3af;
+  background: transparent;
+  color: #111;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.venue-add-btn-compact:hover {
+  background: #f7f7f8;
+  border-color: #6b7280;
+  border-style: solid;
+}
+
+.venue-add-btn-compact input[type="file"] {
+  display: none;
+}
+
+.venue-help-text {
+  color: #5b5b63;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .venue-media-section {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .venue-avatar-compact {
+    width: 180px;
+    height: 180px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .venue-media-section {
+    gap: 16px;
+  }
+  
+  .venue-avatar-compact {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .venue-images-grid-compact {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+  }
+}
+
+
+
+
+
+
+
+/* =========================================================================
+   VENUE DESCRIPTION SECTION - New Design
+   ========================================================================= */
+
+.venue-description-section {
+  grid-column: 1 / -1;
+  background: #fff;
+  /* border: 1px solid #e5e7eb; */
+  border-radius: 4px;
+  /* padding: 16px; */
+  /* box-shadow: 0 1px 2px rgba(0,0,0,.04); */
+}
+
+.venue-description-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.venue-description-textarea {
+  width: 100%;
+  min-height: 120px;
+  border: none;
+  border-bottom: 2px solid #11111133;
+  border-radius: 0;
+  padding: 10px 4px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-bottom-color 0.2s ease;
+}
+
+.venue-description-textarea:hover {
+  border-bottom-color: #11111180;
+}
+
+.venue-description-textarea:focus {
+  border-bottom-color: #000000;
+}
+
+.venue-description-textarea::placeholder {
+  color: #9a9a9a;
+}
+
+.venue-char-counter {
+  font-size: 12px;
+  color: #727272;
+  margin-top: 4px;
+  text-align: right;
+}
