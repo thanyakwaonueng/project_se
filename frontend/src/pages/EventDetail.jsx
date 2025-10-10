@@ -869,7 +869,14 @@ const toggleFollow = async () => {
             <h3 className="ed-info-title">CONTACT</h3>
             <div className="ed-kv"><div>Email</div><div>—</div></div>
             <div className="ed-kv"><div>Phone</div><div>—</div></div>
-            <div className="ed-kv"></div>
+            <div className="ticket-content"> 
+              <h3 className="ed-info-title">TICKET LINK</h3>
+              <p className="ed-text">
+                {ev?.ticketLink
+                  ? <a className="alink" href={ev.ticketLink} target="_blank" rel="noreferrer">Tickets ↗</a>
+                  : '—'}
+              </p>
+            </div>
           </div>
 
           <div className="ed-info-block">
@@ -878,12 +885,8 @@ const toggleFollow = async () => {
           </div>
 
           <div className="ed-info-block">
-            <h3 className="ed-info-title">TICKET LINK</h3>
-            <p className="ed-text">
-              {ev?.ticketLink
-                ? <a className="alink" href={ev.ticketLink} target="_blank" rel="noreferrer">Tickets ↗</a>
-                : '—'}
-            </p>
+            <h3 className="ed-info-title">CONDITIONS</h3>
+            <p className="ed-text">{ev?.conditions || '—'}</p>
           </div>
         </div>
       </section>

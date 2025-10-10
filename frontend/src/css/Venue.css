@@ -97,7 +97,7 @@
   font-weight: bold;
   font-size: 40px;
   margin: 2px 0 10px;
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
 }
 
 .vn-btn-img {
