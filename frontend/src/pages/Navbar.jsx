@@ -58,7 +58,6 @@ export default function Navbar() {
             )}
             {(user.role === 'ORGANIZE' || user.role === 'ADMIN') && (
               <>
-                <a href={`/venues/${user.id}`} onClick={closeMobileMenu}>My Venue</a>
                 <a href="/me/event" onClick={closeMobileMenu}>Create Event</a>
                 <a href="/myevents" onClick={closeMobileMenu}>My Event</a>
               </>
@@ -164,11 +163,6 @@ export default function Navbar() {
 
           {(user.role === 'ORGANIZE') && (
             <>
-              <li>
-                <Link className="dropdown-item" to={`/venues/${user.id}`} onClick={closeMobileMenu}>
-                  My Venue
-                </Link>
-              </li>
               <li>
                 <Link className="dropdown-item" to="/me/event" onClick={closeMobileMenu}>
                   Create Event

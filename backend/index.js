@@ -665,7 +665,7 @@ app.post('/users', async (req, res) => {
       return res.status(400).json({ error: 'Invalid email!' });
     }
     if (!password || password.length < 6) {
-      return res.status(400).json({ error: 'Password ต้องมีอย่างน้อย 6 ตัวอักษรขึ้นไป!' });
+      return res.status(400).json({ error: 'Password must be at least 6 characters long!' });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -1340,15 +1340,7 @@ app.post('/venues', authMiddleware, async (req, res) => {
     } 
 
     const result = await prisma.$transaction(async (tx) => {
-      // ✅ ถ้าส่งชื่อมา ให้ผูกกับ User.name (ชื่อเพจสถานที่)
-      if ((data.name ?? '').trim()) {
-        await tx.user.update({
-          where: { id: userId },
-          data: { name: (data.name || '').trim() },
-        });
-      }
-
-      // upsert performer (contact/social)
+      // upsert performer (contact/social) — ไม่แตะชื่อ user (username)
       const performer = await tx.performer.upsert({
         where:  { userId },
         update: performerData,
@@ -1359,7 +1351,12 @@ app.post('/venues', authMiddleware, async (req, res) => {
       const venue = await tx.venue.upsert({
         where:  { performerId: userId },
         update: venueData,
-        create: { performerId: userId, ...venueData },
+        create: {
+          ...venueData,
+          performer: {
+            connect: { userId },
+          },
+        },
       });
 
       // ✅ upsert location ให้คู่กับ venue เสมอ
@@ -3647,3 +3644,4 @@ app.get('/', (_req, res) => res.send('🎵 API is up!'));
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
+

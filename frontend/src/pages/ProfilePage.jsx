@@ -80,6 +80,7 @@ export default function ProfilePage() {
   const performer  = u.performerInfo || null;
   const artistInfo = performer?.artistInfo || null;
   const venue      = performer?.venueInfo  || null;
+  const hasVenue = !!(venue && (venue.name?.trim() || venue.description?.trim() || venue.genre || (Array.isArray(venue.events) && venue.events.length > 0)));
 
   const displayName = u.name || (me?.email ? me.email.split("@")[0] : "User");
   const avatar = u.profilePhotoUrl || "/img/default-avatar.png";
@@ -88,6 +89,7 @@ export default function ProfilePage() {
 
   const isArtistApproved = me?.role === "ARTIST";
   const isOrganizer = me?.role === "ORGANIZE"; // ✅ ตรง backend
+  const canManageVenue = me?.role === "ORGANIZE" || me?.role === "ADMIN";
 
   /* ===== Artist schedule load ===== */
   useEffect(() => {
@@ -341,8 +343,13 @@ export default function ProfilePage() {
             {isArtistApproved && artistInfo && (
               <Link to={`/artists/${myId}`} className="btn-ghost">View public artist</Link>
             )}
-            {venue && (
-              <Link to={`/venues/${venue.performerId}`} className="btn-ghost">Manage venue</Link>
+            {canManageVenue && (
+              <Link
+                to={hasVenue && venue?.performerId ? `/venues/${venue.performerId}` : "/venue/edit"}
+                className="btn-ghost"
+              >
+                Manage venue
+              </Link>
             )}
           </div>
         </div>

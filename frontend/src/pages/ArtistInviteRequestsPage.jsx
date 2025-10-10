@@ -162,18 +162,7 @@ export default function ArtistInvitesPage() {
         decision,
       }, { withCredentials: true });
 
-      setItems(prev =>
-        prev.map(it => {
-          if (String(it.artistId) === String(artistIdParam) && String(it.eventId) === String(eventId)) {
-            return {
-              ...it,
-              status: decision,
-              updatedAt: new Date().toISOString(),
-            };
-          }
-          return it;
-        }).slice().sort((a, b) => getSortTime(b) - getSortTime(a))
-      );
+      await load();
 
       await Swal.fire({
         icon: 'success',

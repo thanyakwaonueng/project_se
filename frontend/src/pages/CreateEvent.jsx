@@ -89,49 +89,6 @@ function isWithinVenueHours(startHHMM, endHHMM, venueOpenHHMM, venueCloseHHMM) {
   }
 }
 
-/* 🆕 ตรวจชื่อซ้ำจากเซิร์ฟเวอร์แบบชัวร์ (return true = ยูนีค, false = ซ้ำ) */
-async function checkEventNameUnique(name, excludeId) {
-  const trimmed = String(name || '').trim();
-  if (!trimmed) return true;
-
-  // 1) endpoint เฉพาะ (ถ้ามี)
-  try {
-    const { data } = await axios.get('/api/events/check-unique-name', {
-      params: { name: trimmed, excludeId: excludeId || undefined },
-      withCredentials: true,
-    });
-    if (typeof data?.unique === 'boolean') return data.unique;
-  } catch (_) {}
-
-  // 2) exists endpoint (เผื่อโปรเจ็กต์ใช้ชื่อนี้)
-  try {
-    const { data } = await axios.get('/api/events/exists-by-name', {
-      params: { name: trimmed, excludeId: excludeId || undefined },
-      withCredentials: true,
-    });
-    if (typeof data?.exists === 'boolean') return !data.exists;
-  } catch (_) {}
-
-  // 3) Fallback: query รายการแล้วเทียบ exact (case-insensitive)
-  try {
-    const { data: list } = await axios.get('/api/events', {
-      params: { q: trimmed, limit: 10, exact: 1 },
-      withCredentials: true,
-    });
-    const lower = trimmed.toLowerCase();
-    const dup = Array.isArray(list) && list.some(ev => {
-      if (!ev?.name) return false;
-      const sameName = String(ev.name).trim().toLowerCase() === lower;
-      const sameId = excludeId ? Number(ev.id) === Number(excludeId) : false;
-      return sameName && !sameId;
-    });
-    return !dup;
-  } catch (err) {
-    console.warn('checkEventNameUnique fallback failed:', err?.response?.data || err?.message);
-    // ถ้าเช็คกับ backend ไม่ได้ ให้ถือว่ายูนีคเพื่อไม่บล็อกการสร้างงาน
-    return true;
-  }
-}
 
 export default function CreateEvent() {
   const { eventId } = useParams(); // /me/event/:eventId
@@ -155,10 +112,7 @@ export default function CreateEvent() {
   const [venueOpen, setVenueOpen] = useState(null);  // "HH:mm" หรือ null
   const [venueClose, setVenueClose] = useState(null); // "HH:mm" หรือ null
 
-  // 🆕 ชื่ออีเวนต์ต้องยูนีค
-  const [isNameUnique, setIsNameUnique] = useState(true);
-  const [nameChecking, setNameChecking] = useState(false);
-
+  // Error + status state
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasEvent, setHasEvent] = useState(false);
@@ -263,27 +217,6 @@ export default function CreateEvent() {
     fetchEvent();
   }, [eventId]);
 
-  // 🆕 เช็คชื่อยูนีคแบบ on-change (debounce)
-  useEffect(() => {
-    let alive = true;
-    const trimmed = String(name || '').trim();
-    if (!trimmed) {
-      setIsNameUnique(true);
-      setNameChecking(false);
-      return;
-    }
-    setNameChecking(true);
-    const t = setTimeout(async () => {
-      const ok = await checkEventNameUnique(trimmed, eventId);
-      if (!alive) return;
-      setIsNameUnique(ok);
-      setNameChecking(false);
-    }, 350);
-    return () => {
-      alive = false;
-      clearTimeout(t);
-    };
-  }, [name, eventId]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -344,13 +277,6 @@ export default function CreateEvent() {
         }
       }
 
-      // 🆕 double-check ชื่อซ้ำก่อนส่ง (กันทุกเคส)
-      const uniqueNow = await checkEventNameUnique(name, eventId);
-      if (!uniqueNow) {
-        setLoading(false);
-        return setError('This event name is already in use. Please choose another.');
-      }
-
       // 1) upload poster if any
       let uploadedPoster = null;
       if (posterFile) uploadedPoster = await uploadOne(posterFile);
@@ -409,24 +335,11 @@ export default function CreateEvent() {
       navigate(`/events/${res.data.id}`);
     } catch (err) {
       setLoading(false);
-      // 🆕 ดัก duplicate name จาก server
-      const status = err?.response?.status;
-      const code = err?.response?.data?.code || err?.response?.data?.errorCode;
-      const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message;
-
-      if (status === 409 || status === 422 || code === 'EVENT_NAME_NOT_UNIQUE') {
-        const duplicateMsg = 'This event name is already in use. Please choose another.';
-        setError(duplicateMsg);
-        await Swal.fire({
-          icon: 'error',
-          title: 'Duplicate event name',
-          text: duplicateMsg,
-          confirmButtonColor: '#d33',
-        });
-        return;
-      }
-
-      const fallbackMsg = msg || 'Failed to save event';
+      const fallbackMsg =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to save event';
       setError(fallbackMsg);
       await Swal.fire({
         icon: 'error',
@@ -472,13 +385,7 @@ export default function CreateEvent() {
                 onBlur={() => setName(name.trim())}
                 required
                 placeholder="Event name"
-                aria-invalid={!isNameUnique}
-                aria-describedby="name-uniq-hint"
               />
-              <div id="name-uniq-hint" className="ee-help" style={{ marginTop: 6 }}>
-                {nameChecking ? 'Checking name…'
-                  : (!isNameUnique ? 'This event name is already in use.' : '')}
-              </div>
             </div>
 
             {/* Description */}
@@ -716,7 +623,7 @@ export default function CreateEvent() {
           <button
             type="submit"
             className="ee-btn ee-btn-primary"
-            disabled={loading || nameChecking || !isNameUnique || !name.trim()}
+            disabled={loading || !name.trim()}
           >
             {loading ? (hasEvent ? 'Updating…' : 'Creating…') : (hasEvent ? 'Update Event' : 'Create Event')}
           </button>

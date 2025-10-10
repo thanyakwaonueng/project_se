@@ -393,7 +393,7 @@ export default function AccountSetupPage() {
   const todayStr = React.useMemo(() => new Date().toISOString().slice(0,10), []);
 
   // Artist form
-  const [artist, setArtist] = useState({
+const [artist, setArtist] = useState({
     name: "",
     profilePhotoUrl: "",
     description: "",
@@ -430,8 +430,15 @@ export default function AccountSetupPage() {
     shazamUrl: "",
     bandcampUrl: "",
     tiktokUrl: "",
-  });
-  const setA = (key, value) => setArtist(prev => ({ ...prev, [key]: value }));
+});
+const setA = (key, value) => setArtist(prev => ({ ...prev, [key]: value }));
+
+  useEffect(() => {
+    if (role === "ARTIST") {
+      const target = (artist.name || "").trim();
+      setDisplayName(prev => (prev === target ? prev : target));
+    }
+  }, [role, artist.name]);
 
   /* ---- ช็อตคัตค่าที่ JSX ใช้ ---- */
   const { genre, subGenre, bookingType, foundingYear, memberCount, priceMin, priceMax } = artist;
@@ -677,8 +684,13 @@ export default function AccountSetupPage() {
         return undefined;
       };
 
+      const effectiveAccountName =
+        role === "ARTIST"
+          ? (artist.name?.trim() || undefined)
+          : (displayName?.trim() || artist?.name || undefined);
+
       const setupPayload = cleanObject({
-        name: displayName || artist?.name || undefined,
+        name: effectiveAccountName,
         favoriteGenres,
         profileImageUrl: avatarUrl ?? (avatarPreview && !avatarPreview.startsWith("blob:") ? avatarPreview : undefined),
         birthday: birthDate || undefined,
@@ -998,7 +1010,15 @@ export default function AccountSetupPage() {
                   <div className="acc-formGrid">
                     <div className="col-span-2">
                       <label className="acc-label">Username</label>
-                      <input type="text" className="acc-inputUnderline" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="ตั้งชื่อผู้ใช้" />
+                      <input
+                        type="text"
+                        className="acc-inputUnderline"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        placeholder="ตั้งชื่อผู้ใช้"
+                        disabled={role === "ARTIST"}
+                        title={role === "ARTIST" ? "Username จะอิงจาก Name อัตโนมัติ" : undefined}
+                      />
                     </div>
 
                     <div className="col-span-2">
@@ -1050,16 +1070,17 @@ export default function AccountSetupPage() {
                   <label className="acc-check">
                     <input
                       type="checkbox"
-                      checked={!!(artist.label && artist.label.trim() !== "")}
+                      checked={hasLabel}
                       onChange={(e) => {
                         const v = e.target.checked;
+                        setHasLabel(v);
                         if (!v) setA("label", "");
                       }}
                     />
                     <span>Has label</span>
                   </label>
 
-                  {(artist.label && artist.label.trim() !== "") && (
+                  {hasLabel && (
                     <input
                       type="text"
                       className="acc-inputUnderline"

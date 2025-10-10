@@ -1,4 +1,4 @@
-// prisma/seed.js — rich, realistic, consistency-safe seed
+﻿// prisma/seed.js — rich, realistic, consistency-safe seed
 const { PrismaClient } = require('../generated/prisma');
 const bcrypt = require('bcryptjs');
 
@@ -16,7 +16,7 @@ function makeUtcSameClock(dateLike, hhmm = '19:00') {
   const [hh, mm] = String(hhmm).split(':').map(n => parseInt(n, 10));
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), hh, mm, 0));
 }
-// ✅ บันทึกวันที่งานเป็น “เที่ยงวัน UTC” เพื่อล็อกวันให้ตรงทั่วโลก
+//  บันทึกวันที่งานเป็น “เที่ยงวัน UTC” เพื่อล็อกวันให้ตรงทั่วโลก
 function dateUtcNoonInThisMonth(day) {
   const now = new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), day, 12, 0, 0));
