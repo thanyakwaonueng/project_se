@@ -404,6 +404,144 @@
   color: #ff3333;
 }
 
+/* Event Details */
+.popup-event-details {
+  padding: 0 10px;
+}
+
+
+.popup-event-desc {
+  text-align: left;
+  font-size: 14px;
+  color: #555;
+  line-height: 1.5;
+}
+
+
+/* Time Information */
+.time-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  justify-items: center; /* จัดแนวนอนตรงกลางในแต่ละ cell */
+  align-items: center; 
+}
+
+.time-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.time-icon {
+  font-size: 20px;
+}
+
+.time-label {
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.time-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Action Buttons */
+.popup-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.btn-event-detail.primary {
+  background: #292929;
+  color: #d2d2d2;
+  flex: 1;
+  min-width: 120px;
+}
+
+.btn-event-detail.secondary {
+  background: transparent;
+  color: #292929;
+  border: 2px solid #292929 !important;
+  flex: 1;
+  min-width: 120px;
+}
+
+.btn-event-detail.primary:hover {
+  background: #a9deff;
+  color: #292929;
+}
+
+.btn-event-detail.secondary:hover {
+  background: #292929;
+  color: #d2d2d2;
+}
+
+
+
+/* Enhanced Responsive Design */
+@media (max-width: 768px) {
+  .popup-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .time-info {
+    grid-template-columns: 1fr;
+  }
+  
+  .popup-actions {
+    flex-direction: column;
+  }
+  
+  .image-overlay {
+    opacity: 1; /* Always show on mobile */
+    background: linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.4) 0%,
+      transparent 40%,
+      transparent 70%,
+      rgba(0,0,0,0.4) 100%
+    );
+  }
+}
+
+/* Smooth scrolling for popup content */
+.popup-event-content {
+  scroll-behavior: smooth;
+}
+
+/* Hover effects for interactive elements */
+.popup-event-card:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease;
+}
+
+/* Loading state for images */
+.popup-image {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 @keyframes popupFadeIn {
   from {
     opacity: 0;

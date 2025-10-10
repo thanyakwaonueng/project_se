@@ -319,33 +319,51 @@ export default function Event() {
                     onError={(e) => { e.currentTarget.src = '/img/graphic-3.png'; }}
                   />
 
-                  <div className="popup-event-section">
-                    <h3 className="popup-event-title">{ev.title}</h3>
+                {/* Event Content */}
+                <div className="popup-event-details">
+                  <h3 className="popup-event-title">{ev.title}</h3>
+                  <p className="popup-event-desc">{ev.desc}</p>
 
-                    {/* แสดงยอดผู้ติดตาม */}
-                    {/* {typeof ev.followersCount === 'number' && (
-                      <div style={{ fontSize: 13, opacity: .85, marginBottom: 8 }}>
-                        👥 {ev.followersCount} followers
+                  {/* Time Information */}
+                  <div className="time-info">
+                    <div className="time-item">
+                      <span className="time-icon">🕐</span>
+                      <div>
+                        <div className="time-label">Door Open</div>
+                        <div className="time-value">{ev.doorOpenTime || '-'}</div>
                       </div>
-                    )} */}
-
-                    {/* readiness badge (ถ้ามีข้อมูลจาก backend) */}
-                    {/* {ev._ready && (
-                      <div style={{ fontSize: 12, marginBottom: 8, color: ev._ready.isReady ? '#0a7' : '#b35' }}>
-                        {ev._ready.isReady
-                          ? 'Ready: all artists accepted'
-                          : `Pending: ${ev._ready.accepted}/${ev._ready.totalInvited} accepted`}
+                    </div>
+                    <div className="time-item">
+                      <span className="time-icon">🏁</span>
+                      <div>
+                        <div className="time-label">Event Ends</div>
+                        <div className="time-value">{ev.endEventTime || '-'}</div>
                       </div>
-                    )} */}
-
-                    <Link to={`/events/${ev.id}`} className="btn-event-detail">
-                      View Event
-                    </Link>
+                    </div>
                   </div>
 
-                  {index < selectedEvent.length - 1 && <hr className="popup-divider" />}
+                  {/* Action Buttons */}
+                  <div className="popup-actions">
+                    <Link to={`/events/${ev.id}`} className="btn-event-detail primary">
+                      View Full Details
+                    </Link>
+                    
+                    {ev.ticketLink && (
+                      <a 
+                        href={ev.ticketLink} 
+                        className="btn-event-detail secondary"
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                      >
+                        Get Tickets
+                      </a>
+                    )}
+                  </div>
                 </div>
-              ))}
+
+                {index < selectedEvent.length - 1 && <hr className="popup-divider" />}
+              </div>
+            ))}
             </div>
           </div>
         )}
