@@ -385,13 +385,7 @@ export default function CreateEvent() {
                 onBlur={() => setName(name.trim())}
                 required
                 placeholder="Event name"
-                aria-invalid={!isNameUnique}
-                aria-describedby="name-uniq-hint"
               />
-              <div id="name-uniq-hint" className="ee-help" style={{ marginTop: 6 }}>
-                {nameChecking ? 'Checking name…'
-                  : (!isNameUnique ? 'This event name is already in use.' : '')}
-              </div>
             </div>
 
             {/* Poster & Description Section - Layout ใหม่ */}
@@ -678,7 +672,7 @@ export default function CreateEvent() {
           <button
             type="submit"
             className="ee-btn ee-btn-primary"
-            disabled={loading || nameChecking || !isNameUnique || !name.trim()}
+            disabled={loading || !name.trim()}
           >
             {loading ? (hasEvent ? 'Updating…' : 'Creating…') : (hasEvent ? 'Update Event' : 'Create Event')}
           </button>
