@@ -658,7 +658,7 @@ body {
   /* ยกเลิกการตั้งค่าจากโหมดแนวนอนเดิม */
   .artist-card,
   .group-card {
-    flex: initial !important;
+    /* flex: initial !important; */
     width: 100% !important;
     max-width: 100% !important;
     margin: 0;               /* ไม่ต้องเผื่อช่องว่างล่างเพิ่ม */
