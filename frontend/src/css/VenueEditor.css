@@ -286,12 +286,12 @@
   border: 1px solid #111111;
   background: #ffffff;
   color: #111111;
-  border-radius: 8px;                   /* โค้งกำลังดี */
+  border-radius: 4px;                   /* โค้งกำลังดี */
   padding: 10px 10px;                   /* ขนาดปุ่ม */
   cursor: pointer;
-  transition: background-color .25s ease, color .25s ease, border-color .25s ease;
+  transition: background-color .4s ease, color .4s ease, border-color .4s ease;
 }
-.ve-chip:hover { background: #f0f0f0; }
+.ve-chip:hover { background: #adadad; }
 .ve-chip.is-selected,
 .ve-chip[aria-pressed="true"],
 .ve-chip[data-selected="true"] {

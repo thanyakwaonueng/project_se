@@ -44,10 +44,6 @@ function normalizeVideoUrl(raw) {
 
 
 
-
-
-
-
 // [ADD] Helper: ดึง bookingType จากหลายโครงสร้างให้ครอบจักรวาล
 function extractBookingType(g) {
   const candidates = [
@@ -155,6 +151,10 @@ export default function Artist() {
   const [followingIds, setFollowingIds] = useState(new Set());
 
   const lastFocusRef = useRef(null);
+  
+  //add 
+  const railRef = useRef(null);
+
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -172,6 +172,21 @@ export default function Artist() {
     const { min, max } = MOCK_PRICE_RANGE;
     return `฿${fmtTHB(min)} – ฿${fmtTHB(max)}`;
   }, [selectedGroup]);
+
+
+
+
+  // === [Video Lightbox state + handlers] ===
+  const [openVideo, setOpenVideo] = useState(null); // string | null
+  const openVideoLightbox = (url) => setOpenVideo(url);
+  const closeVideoLightbox = () => setOpenVideo(null);
+
+  // ปิดด้วย ESC เมื่อมีเปิดอยู่
+  useEffect(() => {
+    const onEsc = (e) => e.key === "Escape" && closeVideoLightbox();
+    if (openVideo) window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, [openVideo]);
 
 
 
@@ -500,8 +515,8 @@ const sortedGroups = useMemo(() => {
         .slice(0, 12);
       if (same.length) return same;
     }
-    return groups.filter((g) => g.id !== meId).slice(0, 12);
-  }, [groups, selectedGroup, groupGenres]);
+    return groups.filter((g) => g.id !== meId && hasGenre(g, primary));
+}, [groups, selectedGroup, groupGenres]);
 
   const fmtCompact = (n) => {
     const num = Number(n || 0);
@@ -549,30 +564,33 @@ const sortedGroups = useMemo(() => {
   const canSeeArtistDocs =
     isOwner || user?.role === "ADMIN" || user?.role === "ORGANIZE";
 
-  // 小 component สำหรับ player ให้คงอัตราส่วน 16:9
-  const PlayerCard = ({ url, poster, title }) => {
-    if (!url) return null;
-    return (
-      <div className="gallery-item is-video" title={title}>
-        <div style={{ position: "relative", width: "100%", paddingTop: "56.25%", borderRadius: 12, overflow: "hidden" }}>
-          <ReactPlayer
-            url={url}
-            controls
-            width="100%"
-            height="100%"
-            style={{ position: "absolute", top: 0, left: 0 }}
-            light={poster || true}
-            playing={false}
-            config={{
-              file: {
-                attributes: { preload: "metadata" },
-              },
-            }}
-          />
-        </div>
+  //  component สำหรับ player ให้คงอัตราส่วน 16:9
+  //  component สำหรับ player ให้คงอัตราส่วน 16:9 และเปิด lightbox เมื่อคลิก
+const PlayerCard = ({ url, poster, title }) => {
+  if (!url) return null;
+  return (
+    <button
+      type="button"
+      className="gallery-item is-video as-button"
+      title={title}
+      onClick={() => openVideoLightbox(url)}
+    >
+      <div style={{ position: "relative", width: "100%", paddingTop: "56.25%", borderRadius: 12, overflow: "hidden" }}>
+        <ReactPlayer
+          url={url}
+          controls
+          width="100%"
+          height="100%"
+          style={{ position: "absolute", top: 0, left: 0 }}
+          light={poster || true}
+          playing={false}
+          config={{ file: { attributes: { preload: "metadata" } } }}
+        />
       </div>
-    );
-  };
+    </button>
+  );
+};
+
 
   const selectedGenresSafe = Array.isArray(selectedGenres) ? selectedGenres : [];
 
@@ -884,8 +902,8 @@ const sortedGroups = useMemo(() => {
               {/* ขวา: ผู้ติดตาม + โซเชียล */}
               <aside className="right-box">
                 <div className="follow-box" aria-label="Followers">
-                  <div className="follow-big">{fmtCompact(selectedGroup?.followersCount)}+</div>
-                  <div className="follow-sub">follow</div>
+                  <div className="follow-big">{fmtCompact(selectedGroup?.followersCount)}</div>
+                  <div className="follow-sub">followers</div>
                 </div>
 
                 <div className="social-bar">
@@ -1036,44 +1054,126 @@ const sortedGroups = useMemo(() => {
                       src={(showAllImages ? imagesAll : imagesToShow)[lightbox.index]?.src}
                       alt={(showAllImages ? imagesAll : imagesToShow)[lightbox.index]?.alt || ""}
                     />
-                    <button className="lightbox-close" type="button" onClick={closeLightbox} aria-label="Close">×</button>
+                    {/* <button className="lightbox-close" type="button" onClick={closeLightbox} aria-label="Close">×</button> */}
                   </div>
                 </div>
               )}
+
+              {/* ---------- Lightbox (วีดิโอ) ---------- */}
+              {openVideo && (
+                <div
+                  className="vid-lightbox"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Video player"
+                  onClick={closeVideoLightbox}
+                >
+                  <div className="vid-box" onClick={(e) => e.stopPropagation()}>
+                    {/* <button className="vid-close" type="button" onClick={closeVideoLightbox} aria-label="Close">×</button> */}
+                    <div className="vid-player-wrap">
+                      <ReactPlayer url={openVideo} controls playing={false} width="100%" height="100%" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </section>
 
             <hr className="big-divider" />
 
             {/* OTHER (mock) */}
+            {/* OTHER */}
             <section className="other-sec">
               <div className="other-head">
-                <h3 className="other-title">OTHER</h3>
-                <div className="other-sub">
-                  Artists in <b>{groupGenres[0] || "All genres"}</b>
+                <div>
+                  <h3 className="other-title">OTHER</h3>
+                    <div className="other-sub">
+                      Artists in <b>{groupGenres[0] || "All genres"}</b>
+                    </div>
+                </div>
+
+                <div className="other-head-actions">
+                  <Link to="/artists" className="other-more">
+                    Explore more artists ↗
+                  </Link>
+
+                  {/* ปุ่มเลื่อนซ้าย/ขวา */}
+                  {/* <div className="other-nav-wrap">
+                    <button
+                      className="other-nav other-nav--prev"
+                      aria-label="Previous"
+                      onClick={() =>
+                        railRef.current?.scrollBy({
+                          left: -Math.round((railRef.current?.clientWidth || 800) * 0.9),
+                          behavior: "smooth",
+                        })
+                      }
+                    >
+                      ‹
+                    </button>
+                    <button
+                      className="other-nav other-nav--next"
+                      aria-label="Next"
+                      onClick={() =>
+                        railRef.current?.scrollBy({
+                          left: Math.round((railRef.current?.clientWidth || 800) * 0.9),
+                          behavior: "smooth",
+                        })
+                      }
+                    >
+                      ›
+                    </button>
+                  </div> */}
                 </div>
               </div>
 
               {otherArtists.length ? (
-                <div className="other-strip" role="list">
-                  {otherArtists.map((a) => (
-                    <Link
-                      key={a.id}
-                      to={`/artists/${a.id}`}
-                      className="other-card"
-                      role="listitem"
-                      title={a.name}
-                    >
-                      <div className="other-thumb">
-                        <img
-                          src={a.image || "/img/fallback.jpg"}
-                          alt={a.name}
-                          loading="lazy"
-                          onError={(e) => (e.currentTarget.src = "/img/fallback.jpg")}
-                        />
-                      </div>
-                      <div className="other-name">{a.name}</div>
-                    </Link>
-                  ))}
+                <div className="other-strip" role="list" ref={railRef}>
+                  {otherArtists.map((a) => {
+                    const image =
+                      a.image || "/img/fallback.jpg";
+                    const genre =
+                      (Array.isArray(a.genres) && a.genres[0]) ||
+                      (Array.isArray(a.genre) && a.genre[0]) ||
+                      a.genre ||
+                      groupGenres[0] ||
+                      "—";
+                    const followers =
+                      a.followers ?? a.followerCount ?? a.followersCount ?? null;
+
+                    return (
+                      <Link
+                        key={a.id}
+                        to={`/artists/${a.id}`}
+                        className="other-card"
+                        role="listitem"
+                        title={a.name}
+                      >
+                        {/* รูป + ปุ่มหัวใจ + ป้าย genre */}
+                        <div className="other-thumb">
+                          <img
+                            src={image}
+                            alt={a.name}
+                            loading="lazy"
+                            onError={(e) => (e.currentTarget.src = "/img/fallback.jpg")}
+                          />
+
+
+                          <span className="other-genre-chip">{genre}</span>
+                        </div>
+
+                        {/* ชื่อ + followers */}
+                        <div className="other-meta">
+                          <div className="other-name">{a.name}</div>
+                          {followers !== null && (
+                            <div className="other-followers">
+                              {Intl.NumberFormat("en-US").format(followers)} followers
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="a-empty" style={{ padding: 12 }}>
@@ -1081,6 +1181,7 @@ const sortedGroups = useMemo(() => {
                 </div>
               )}
             </section>
+
           </section>
         </>
       )}

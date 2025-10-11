@@ -90,6 +90,62 @@ function isWithinVenueHours(startHHMM, endHHMM, venueOpenHHMM, venueCloseHHMM) {
 }
 
 
+// ===== Genre picker modal (simple) =====
+const GENRES = [
+  "Pop", "Rock", "Indie", "Jazz", "Blues",
+  "Hip-Hop", "EDM", "Folk", "Metal", "R&B"
+];
+
+
+
+function GenrePickerModal({ open, value, onSelect, onClose }) {
+  if (!open) return null;
+  return (
+    <div className="ee-modalOverlay" role="dialog" aria-modal="true" aria-label="Select genre">
+      <div className="ee-modal">
+        <div className="ee-modalHead">
+          <h3 className="ee-modalTitle">Select genre</h3>
+          <button className="ee-modalClose" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+
+        <div className="genre-selector">
+          <div className="genre-tags">
+            {GENRES.map((g) => (
+              <button
+                key={g}
+                type="button"
+                className={`genre-tag ${value === g ? "active" : ""}`}
+                onClick={() => { onSelect(g); onClose(); }}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+
+          {value && (
+            <div className="selected-genre" aria-live="polite">
+              Selected:
+              <span className="selected-genre-text">{value}</span>
+              <button
+                type="button"
+                className="clear-genre"
+                onClick={() => onSelect("")}
+                aria-label="Clear genre"
+                title="Clear genre"
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+
 export default function CreateEvent() {
   const { eventId } = useParams(); // /me/event/:eventId
 
@@ -107,6 +163,10 @@ export default function CreateEvent() {
   const [doorOpenTime, setDoorOpenTime] = useState(''); // HH:mm (text)
   const [endTime, setEndTime] = useState('');           // HH:mm (text)
   const [genre, setGenre] = useState('');
+
+  // const [genre, setGenre] = useState('');
+  const [openGenrePicker, setOpenGenrePicker] = useState(false);
+
 
   // 🆕 เวลาทำการของสถานที่
   const [venueOpen, setVenueOpen] = useState(null);  // "HH:mm" หรือ null
@@ -632,16 +692,40 @@ export default function CreateEvent() {
             </div>
 
             {/* Genre */}
+            {/* Genre (click-to-pick, keep underline look) */}
+            {/* Genres — pill buttons */}
             <div className="ee-field ee-col-span-2">
-              <label className="ee-label" htmlFor="genre">Genre</label>
-              <input
-                id="genre"
-                className="ee-input"
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                placeholder="Pop / Rock / Indie"
-              />
+              <label className="ee-label">Genres</label>
+
+              <div
+                className="ee-chipGrid"
+                role="radiogroup"
+                aria-label="Genres"
+              >
+                {GENRES.map((g, i) => (
+                  <button
+                    key={g}
+                    type="button"
+                    role="radio"
+                    aria-checked={genre === g}
+                    className={`ee-chip ${genre === g ? "is-active" : ""}`}
+                    onClick={() => setGenre(g)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setGenre(g);
+                      }
+                    }}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+
+              {/* เก็บค่าไว้ส่งฟอร์ม (ถ้าใช้ submit แบบ form) */}
+              <input type="hidden" name="genre" value={genre} />
             </div>
+
           </div>
         </section>
 

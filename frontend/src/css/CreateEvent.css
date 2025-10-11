@@ -51,14 +51,17 @@
    1) FORM / SECTION / TITLES
    ============================================================== */
 .ee-form {
-  width: 80%;
+  width: 100%;
   margin-inline: auto;
   background: #fff;
   border-radius: 12px;
   padding: 16px;
 }
 
-.ee-section { margin-bottom: 18px; }
+.ee-section { 
+  margin-bottom: 18px; 
+  /* width: 80%; */
+}
 
 .ee-section-title {
   font-weight: 700;
@@ -427,8 +430,8 @@
   .ee-header,
   .ee-form,
   .ee-alert {
-    width: 70%;
-    max-width: 1200px;
+    width: 80%;
+    /* max-width: 1200px; */
   }
 }
 
@@ -977,4 +980,62 @@
     max-width: calc(50% - 6px);
     text-align: center;
   }
+}
+
+
+
+
+
+
+
+/* ===== Genres: pill buttons ===== */
+.ee-chipGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1080px) {
+  .ee-chipGrid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  .ee-chipGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.ee-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 18px;
+  border: 1.5px solid #111;
+  border-radius: 4px;
+  background: #fff;
+  /* font-weight: 600; */
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  transition: transform .4s ease, background-color .4s ease, color .4s ease, box-shadow .4s ease;
+  outline: none;
+}
+
+.ee-chip:hover {
+  /* transform: translateY(-1px); */
+  /* box-shadow: 0 2px 0 #111; */
+  background-color: #a1a1a1;
+
+}
+
+.ee-chip:focus-visible {
+  box-shadow: 0 0 0 3px rgba(17,17,17,.25);
+}
+
+.ee-chip.is-active {
+  background: #111;
+  color: #fff;
+  box-shadow: none;
+  transform: none;
+}
+
+.ee-chip.is-active:hover {
+  /* box-shadow: 0 2px 0 #111; */
 }
