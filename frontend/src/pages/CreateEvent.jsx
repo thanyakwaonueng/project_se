@@ -90,6 +90,24 @@ function isWithinVenueHours(startHHMM, endHHMM, venueOpenHHMM, venueCloseHHMM) {
 }
 
 
+
+// ใส่ : อัตโนมัติขณะพิมพ์, รับเฉพาะตัวเลข สูงสุด 4 หลัก
+function liveMaskHHmm(input) {
+  const d = String(input || '').replace(/\D/g, '').slice(0, 4);
+  if (d.length <= 2) return d;             // "1", "19"
+  return d.slice(0, 2) + ':' + d.slice(2); // "193" -> "19:3", "1930" -> "19:30"
+}
+
+// บล็อกคีย์ที่ไม่ใช่เลข/เครื่องหมายจำเป็น
+function blockNonTimeKeys(e) {
+  const allow = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'];
+  if (allow.includes(e.key)) return;
+  if (e.key === ':' || /\d/.test(e.key)) return;
+  e.preventDefault();
+}
+
+
+
 // ===== Genre picker modal (simple) =====
 const GENRES = [
   "Pop", "Rock", "Indie", "Jazz", "Blues",
@@ -142,6 +160,7 @@ function GenrePickerModal({ open, value, onSelect, onClose }) {
     </div>
   );
 }
+
 
 
 
@@ -646,37 +665,37 @@ export default function CreateEvent() {
 
                 {/* time (24h text) */}
                 <div className="ee-field">
-                  <label className="ee-label" htmlFor="doorOpenTime">Door Open *</label>
+                  <label className="ee-label" htmlFor="doorOpenTime">Event Start *</label>
                   <input
-                    id="doorOpenTime"
-                    type="text"
-                    className="ee-input"
-                    inputMode="numeric"
-                    placeholder="HH:mm"
-                    title="e.g., 13:00 or 19:30"
-                    pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
-                    value={doorOpenTime}
-                    onChange={(e) => setDoorOpenTime(e.target.value)}
-                    onBlur={(e) => onBlurTime(e.target.value, setDoorOpenTime)}
-                    required
-                  />
+                  id="doorOpenTime"
+                  type="text"
+                  className="ee-input"
+                  inputMode="numeric"
+                  placeholder="HH:mm"
+                  value={doorOpenTime}
+                  maxLength={5}
+                  onKeyDown={blockNonTimeKeys}
+                  onChange={(e) => setDoorOpenTime(liveMaskHHmm(e.target.value))}
+                  onBlur={(e) => setDoorOpenTime(to24h(e.target.value))} // ใช้ to24h เดิม
+                  required
+                />
                 </div>
 
                 <div className="ee-field">
-                  <label className="ee-label" htmlFor="endTime">End Time *</label>
+                  <label className="ee-label" htmlFor="endTime">Event End *</label>
                   <input
-                    id="endTime"
-                    type="text"
-                    className="ee-input"
-                    inputMode="numeric"
-                    placeholder="HH:mm"
-                    title="e.g., 22:00 or 23:30"
-                    pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    onBlur={(e) => onBlurTime(e.target.value, setEndTime)}
-                    required
-                  />
+                  id="endTime"
+                  type="text"
+                  className="ee-input"
+                  inputMode="numeric"
+                  placeholder="HH:mm"
+                  value={endTime}
+                  maxLength={5}
+                  onKeyDown={blockNonTimeKeys}
+                  onChange={(e) => setEndTime(liveMaskHHmm(e.target.value))}
+                  onBlur={(e) => setEndTime(to24h(e.target.value))}
+                  required
+                />
                 </div>
 
                 <datalist id="time-suggestions">
