@@ -885,24 +885,5 @@ body {
     padding: 20px 15px;
   }
 }
-/* Global loader — smaller, frameless, smooth */
-.loader {
-  width: 72px;          /* smaller */
-  height: 12px;         /* slimmer */
-  -webkit-mask: radial-gradient(circle closest-side,#000 94%,#0000) left/20% 100%;
-  background: linear-gradient(currentColor 0 0) left/0% 100% no-repeat; /* no track */
-  animation: l17 3.2s infinite linear; /* slow, smooth flow */
-  margin: 0 auto;
-}
 
-@keyframes l17 {
-  100% {background-size:120% 100%}
-}
-
-.loader-inline {
-  width: 48px;
-  height: 8px;
-  margin: 0;
-  display: inline-block;
-  vertical-align: middle;
-}
+/* loader styles moved to src/css/index.css for global reuse */

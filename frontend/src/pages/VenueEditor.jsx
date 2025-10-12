@@ -138,7 +138,7 @@ export default function VenueEditor() {
   if (loading) {
     return (
       <div className="ve-page" aria-busy="true">
-        <div style={{ minHeight: '40vh', display: 'grid', placeItems: 'center', padding: 32 }}>
+        <div style={{ height: '70vh', display: 'grid', placeItems: 'center', padding: 32 }}>
           <div className="loader" aria-label="Loading venue editor" />
         </div>
       </div>

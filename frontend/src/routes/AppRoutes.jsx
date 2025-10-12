@@ -43,7 +43,7 @@ function RequireProfile({ children }) {
   if (allow) return children;
 
   if (loading) return (
-    <div style={{ padding: 32, display: 'grid', placeItems: 'center' }}>
+    <div style={{ height: '70vh', padding: 32, display: 'grid', placeItems: 'center' }}>
       <div className="loader" aria-label="Loading app" />
     </div>
   );
