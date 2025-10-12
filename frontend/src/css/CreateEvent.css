@@ -426,12 +426,12 @@
    ============================================================== */
 
 /* Large Desktop (1440px+) */
-@media (min-width: 1440px) {
+@media (min-width: 1200px) {
   .ee-header,
   .ee-form,
   .ee-alert {
     width: 80%;
-    max-width: 1400px;
+    /* max-width: 1400px; */
   }
 }
 
