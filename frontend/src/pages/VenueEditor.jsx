@@ -50,6 +50,19 @@ function to24h(s) {
 
 const HHMM_REGEX = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 
+// Limit time inputs to digits and ':' and live-mask to HH:mm
+function liveMaskHHmm(input) {
+  const d = String(input || '').replace(/\D/g, '').slice(0, 4);
+  if (d.length <= 2) return d;
+  return d.slice(0, 2) + ':' + d.slice(2);
+}
+function blockNonTimeKeys(e) {
+  const allow = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'];
+  if (allow.includes(e.key)) return;
+  if (e.key === ':' || /\d/.test(e.key)) return;
+  e.preventDefault();
+}
+
 export default function VenueEditor() {
   // ===== basic info =====
   const [name, setName] = useState('');
@@ -391,7 +404,9 @@ export default function VenueEditor() {
                     title="24-hour time such as 10:00, 19:30"
                     pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
                     value={timeOpen}
-                    onChange={(e) => setTimeOpen(e.target.value)}
+                    maxLength={5}
+                    onKeyDown={blockNonTimeKeys}
+                    onChange={(e) => setTimeOpen(liveMaskHHmm(e.target.value))}
                     onBlur={(e) => onBlurTime(e.target.value, setTimeOpen)}
                   />
                 </div>
@@ -408,7 +423,9 @@ export default function VenueEditor() {
                     title="24-hour time such as 10:00, 19:30"
                     pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
                     value={timeClose}
-                    onChange={(e) => setTimeClose(e.target.value)}
+                    maxLength={5}
+                    onKeyDown={blockNonTimeKeys}
+                    onChange={(e) => setTimeClose(liveMaskHHmm(e.target.value))}
                     onBlur={(e) => onBlurTime(e.target.value, setTimeClose)}
                   />
                 </div>
