@@ -11,6 +11,14 @@
 
 }
 
+.vmap-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  width: 100%;
+}
+
 .vmap-alert {
   background: #ffeef0;
   color: #86181d;
