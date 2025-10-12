@@ -1008,7 +1008,12 @@ const setA = (key, value) => setArtist(prev => ({ ...prev, [key]: value }));
                         <div className="acc-avatarEdit">change image</div>
                       </>
                     ) : (
-                      <div className="acc-avatarHint"><br/>()</div>
+                      <div className="acc-avatarEmpty" aria-label="No profile image uploaded">
+                        <div className="acc-avatarIcon">📷</div>
+                        <div className="acc-avatarText">No profile uploaded</div>
+                        <div className="acc-avatarSub">Recommended: Square image, JPG or PNG</div>
+                        <div className="acc-avatarHint">Click to upload image</div>
+                      </div>
                     )}
                   </div>
                   <input ref={avatarInputRef} type="file" accept="image/*" className="acc-fileInput" onChange={handleAvatarChange} />
