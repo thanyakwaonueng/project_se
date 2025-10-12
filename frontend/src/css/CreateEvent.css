@@ -426,12 +426,12 @@
    ============================================================== */
 
 /* Large Desktop (1440px+) */
-@media (min-width: 1440px) {
+@media (min-width: 1200px) {
   .ee-header,
   .ee-form,
   .ee-alert {
     width: 80%;
-    /* max-width: 1200px; */
+    /* max-width: 1400px; */
   }
 }
 
@@ -440,7 +440,7 @@
   .ee-header,
   .ee-form,
   .ee-alert {
-    width: 85%;
+    width: 80%;
   }
 }
 
@@ -449,7 +449,7 @@
   .ee-header,
   .ee-form,
   .ee-alert {
-    width: 90%;
+    width: 80%;
   }
   
   .ee-title {
@@ -501,7 +501,7 @@
   .ee-header,
   .ee-form,
   .ee-alert {
-    width: 95%;
+    width: 80%;
   }
   
   .ee-title {
