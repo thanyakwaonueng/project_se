@@ -1570,13 +1570,13 @@ app.post('/events', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const data = req.body;
 
-    const venue = await prisma.venue.findUnique({
-      where: { performerId: userId },
-      include: {
-        performer: { include: { user: true } },
-        location: true,
-      },
-    });
+  const venue = await prisma.venue.findUnique({
+    where: { performerId: userId },
+    include: {
+      performer: { include: { user: true } },
+      location: true,
+    },
+  });
     if (!venue) return res.status(400).json({ error: "Venue profile not found for this user" });
 
     // ====== ⛔ ป้องกันเวลาชนกันภายใน venue เดียวกัน ======
