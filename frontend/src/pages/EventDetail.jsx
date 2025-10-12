@@ -571,15 +571,6 @@ export default function EventDetail() {
     return () => { alive = false; };
   }, []);
 
-  // Unified global loader while fetching event
-  if (loading) {
-    return (
-      <div style={{ minHeight: '40vh', display: 'grid', placeItems: 'center', padding: 32 }}>
-        <div className="loader" aria-label="Loading event" />
-      </div>
-    );
-  }
-
 const toggleFollow = async () => {
   if (!ev?.id || busy) return;
   setBusy(true);
