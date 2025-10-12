@@ -38,26 +38,6 @@ app.use(express.json());
 app.use(cookieParser());
 const port = process.env.PORT || 4000;
 
-const API_CACHE_TTL_MS = 15 * 1000; // 15 seconds
-const apiCache = {
-  groups: new Map(),
-  events: new Map(),
-};
-
-function getCacheEntry(map, key) {
-  const entry = map.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.time > API_CACHE_TTL_MS) {
-    map.delete(key);
-    return null;
-  }
-  return entry.payload;
-}
-
-function setCacheEntry(map, key, value) {
-  map.set(key, { time: Date.now(), payload: value });
-}
-
 
 /**
  *  รองรับ FE ที่เรียก /api/* โดยรีไรท์เป็นเส้นทางเดิม
@@ -1128,15 +1108,6 @@ app.get('/groups', async (req, res) => {
       }
     }
 
-    const cacheKey = JSON.stringify({
-      take: findArgs.take ?? null,
-      skip: findArgs.skip ?? null,
-      cursor: findArgs.cursor ? findArgs.cursor.performerId ?? null : null,
-      me: meId ?? null,
-    });
-    const cached = getCacheEntry(apiCache.groups, cacheKey);
-    if (cached) return res.json(cached);
-
     const artists = await prisma.artist.findMany(findArgs);
 
     const toArray = (csvOrNull) =>
@@ -1287,7 +1258,6 @@ app.get('/groups', async (req, res) => {
       };
     });
 
-    setCacheEntry(apiCache.groups, cacheKey, groups);
     res.json(groups);
   } catch (err) {
     console.error('GET /groups error:', err);
@@ -1873,15 +1843,6 @@ app.get('/events', async (req, res) => {
       if (!eventFindArgs.skip) eventFindArgs.skip = 1;
     }
 
-    const eventsCacheKey = JSON.stringify({
-      take: eventFindArgs.take ?? null,
-      skip: eventFindArgs.skip ?? null,
-      cursor: eventFindArgs.cursor ? eventFindArgs.cursor.id ?? null : null,
-      me: meId ?? null,
-    });
-    const cachedEvents = getCacheEntry(apiCache.events, eventsCacheKey);
-    if (cachedEvents) return res.json(cachedEvents);
-
     const events = await prisma.event.findMany(eventFindArgs);
 
     const mapped = events.map(e => {
@@ -1894,61 +1855,10 @@ app.get('/events', async (req, res) => {
       };
     });
 
-    setCacheEntry(apiCache.events, eventsCacheKey, mapped);
     return res.json(mapped);
   } catch (err) {
     console.error('GET /events error:', err);
     return res.status(500).json({ error: 'Could not fetch events' });
-  }
-});
-
-app.get('/events/summary', async (req, res) => {
-  try {
-    let meId = null;
-    try {
-      const token = req.cookies?.token;
-      if (token) {
-        const decoded = jwt.verify(token, SECRET);
-        meId = decoded?.id ?? null;
-      }
-    } catch {}
-
-    const take = Math.min(Number.parseInt(req.query.take, 10) || 50, 200);
-    const skip = Math.max(Number.parseInt(req.query.skip, 10) || 0, 0);
-
-    const events = await prisma.event.findMany({
-      take,
-      skip,
-      orderBy: { date: 'asc' },
-      include: {
-        venue: {
-          select: {
-            performer: { select: { user: { select: { name: true } } } },
-          },
-        },
-        _count: { select: { likedBy: true } },
-        likedBy: meId
-          ? { where: { userId: meId }, select: { userId: true }, take: 1 }
-          : false,
-      },
-    });
-
-    const summary = events.map((e) => ({
-      id: e.id,
-      name: e.name,
-      date: e.date,
-      genre: e.genre || '',
-      posterUrl: e.posterUrl || null,
-      venueName: e.venue?.performer?.user?.name || '',
-      isPublished: e.isPublished,
-      followersCount: e._count?.likedBy ?? 0,
-      likedByMe: !!(Array.isArray(e.likedBy) && e.likedBy.length),
-    }));
-
-    res.json(summary);
-  } catch (err) {
-    console.error('GET /events/summary error:', err);
-    res.status(500).json({ error: 'Failed to fetch event summaries' });
   }
 });
 
@@ -3789,67 +3699,3 @@ app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
 
-app.get('/groups/summary', async (req, res) => {
-  try {
-    let meId = null;
-    try {
-      const token = req.cookies?.token;
-      if (token) {
-        const decoded = jwt.verify(token, SECRET);
-        meId = decoded?.id ?? null;
-      }
-    } catch {}
-
-    const take = Math.min(Number.parseInt(req.query.take, 10) || 50, 200);
-    const skip = Math.max(Number.parseInt(req.query.skip, 10) || 0, 0);
-
-    const artists = await prisma.artist.findMany({
-      take,
-      skip,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        performerId: true,
-        description: true,
-        genre: true,
-        subGenre: true,
-        priceMin: true,
-        priceMax: true,
-        performer: {
-          select: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                profilePhotoUrl: true,
-              },
-            },
-            _count: { select: { likedBy: true } },
-            likedBy: meId
-              ? { where: { userId: meId }, select: { userId: true }, take: 1 }
-              : false,
-          },
-        },
-      },
-    });
-
-    const summary = artists.map((a) => ({
-      id: a.performerId,
-      name: a.performer?.user?.name || `Artist #${a.performerId}`,
-      description: a.description || '',
-      genre: a.genre || '',
-      subGenre: a.subGenre || '',
-      image:
-        a.performer?.user?.profilePhotoUrl ||
-        'https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg',
-      followersCount: a.performer?._count?.likedBy ?? 0,
-      likedByMe: !!(Array.isArray(a.performer?.likedBy) && a.performer.likedBy.length),
-      priceMin: a.priceMin ?? null,
-      priceMax: a.priceMax ?? null,
-    }));
-
-    res.json(summary);
-  } catch (err) {
-    console.error('GET /groups/summary error:', err);
-    res.status(500).json({ error: 'Failed to fetch artist summaries' });
-  }
-});
