@@ -539,25 +539,19 @@ const sortedGroups = useMemo(() => {
 
   if (loadingGroups) {
     return (
-      <div className="artist-container a-bleed">
-        <div className="container-heading">
-          <h1 className="hero-title">MELODY &amp; MEMORIES</h1>
-          <div className="seamless-filter-search">
-            <div className="connected-filter-tabs">
-              <button className="connected-filter-tab active" disabled>All</button>
-              <button className="connected-filter-tab" disabled>Popular</button>
-              <button className="connected-filter-tab" disabled>New</button>
-              <button className="connected-filter-tab select-genre" disabled>SELECT GENRE</button>
-            </div>
-            <div className="connected-search-container">
-              <input className="connected-search-box" type="search" placeholder="Search artists…" disabled />
-              <button className="search-icon" type="button" disabled>🔍</button>
-            </div>
-          </div>
-        </div>
-        <div style={{ padding: 48, minHeight: "40vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div className="loader" aria-label="Loading artists"></div>
-        </div>
+      <div
+        className="artist-container a-bleed"
+        style={{
+          padding: 48,
+          minHeight: "60vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 16,
+        }}
+      >
+        <div className="loader" aria-label="Loading artists"></div>
       </div>
     );
   }
