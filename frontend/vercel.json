@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://vercel-deployment-server-jade.vercel.app/:path*"
+      "destination": "https://project-se-omega.vercel.app//:path*"
     },
     {
       "source": "/(.*)",
