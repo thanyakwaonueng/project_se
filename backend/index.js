@@ -38,6 +38,26 @@ app.use(express.json());
 app.use(cookieParser());
 const port = process.env.PORT || 4000;
 
+const API_CACHE_TTL_MS = 15 * 1000; // 15 seconds
+const apiCache = {
+  groups: new Map(),
+  events: new Map(),
+};
+
+function getCacheEntry(map, key) {
+  const entry = map.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.time > API_CACHE_TTL_MS) {
+    map.delete(key);
+    return null;
+  }
+  return entry.payload;
+}
+
+function setCacheEntry(map, key, value) {
+  map.set(key, { time: Date.now(), payload: value });
+}
+
 
 /**
  *  รองรับ FE ที่เรียก /api/* โดยรีไรท์เป็นเส้นทางเดิม
@@ -1108,6 +1128,15 @@ app.get('/groups', async (req, res) => {
       }
     }
 
+    const cacheKey = JSON.stringify({
+      take: findArgs.take ?? null,
+      skip: findArgs.skip ?? null,
+      cursor: findArgs.cursor ? findArgs.cursor.performerId ?? null : null,
+      me: meId ?? null,
+    });
+    const cached = getCacheEntry(apiCache.groups, cacheKey);
+    if (cached) return res.json(cached);
+
     const artists = await prisma.artist.findMany(findArgs);
 
     const toArray = (csvOrNull) =>
@@ -1258,6 +1287,7 @@ app.get('/groups', async (req, res) => {
       };
     });
 
+    setCacheEntry(apiCache.groups, cacheKey, groups);
     res.json(groups);
   } catch (err) {
     console.error('GET /groups error:', err);
@@ -1843,6 +1873,15 @@ app.get('/events', async (req, res) => {
       if (!eventFindArgs.skip) eventFindArgs.skip = 1;
     }
 
+    const eventsCacheKey = JSON.stringify({
+      take: eventFindArgs.take ?? null,
+      skip: eventFindArgs.skip ?? null,
+      cursor: eventFindArgs.cursor ? eventFindArgs.cursor.id ?? null : null,
+      me: meId ?? null,
+    });
+    const cachedEvents = getCacheEntry(apiCache.events, eventsCacheKey);
+    if (cachedEvents) return res.json(cachedEvents);
+
     const events = await prisma.event.findMany(eventFindArgs);
 
     const mapped = events.map(e => {
@@ -1855,6 +1894,7 @@ app.get('/events', async (req, res) => {
       };
     });
 
+    setCacheEntry(apiCache.events, eventsCacheKey, mapped);
     return res.json(mapped);
   } catch (err) {
     console.error('GET /events error:', err);
