@@ -189,9 +189,9 @@ export default function Venue() {
 
   if (loading) {
     return (
-      <div className="vn-page">
-        <div className="vn-loading">
-          <div className="loader" aria-label="Loading venue"></div>
+      <div className="vn-page" aria-busy="true">
+        <div style={{ height: '70vh', display: 'grid', placeItems: 'center', padding: 32 }}>
+          <div className="loader" aria-label="Loading venue" />
         </div>
       </div>
     );
