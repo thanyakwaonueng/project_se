@@ -1904,8 +1904,14 @@ app.get('/events/:id', async (req, res) => {
 
     const readiness = summarizeReadiness(ev.artistEvents || []);
     const isOwnerOrAdmin = !!(me && (me.role === 'ADMIN' || me.id === ev.venueId));
-    const isInvitedArtist =
-      !!(me && me.role === 'ARTIST' && (ev.artistEvents || []).some(ae => ae.artistId === me.id));
+    const isInvitedArtist = !!(
+      me &&
+      (ev.artistEvents || []).some(ae => {
+        if (ae.artistId === me.id) return true;
+        const performerUserId = ae.artist?.performer?.user?.id;
+        return performerUserId && performerUserId === me.id;
+      })
+    );
 
     //  ใหม่: ถ้าไม่ใช่เจ้าของ/แอดมิน/ศิลปินที่ถูกเชิญ → ต้องเป็นงานที่ publish แล้วเท่านั้น
     if (!isOwnerOrAdmin && !isInvitedArtist && !ev.isPublished) {
