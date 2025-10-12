@@ -92,7 +92,12 @@ export default function Venue() {
         // ✅ backend ควร include performer{user}, location, events
         const v = (await api.get(`/venues/${vid}`, { withCredentials: true })).data;
         if (!alive) return;
-        setVenueData(v || null);
+        if (!v || typeof v !== "object") {
+          setVenueData(null);
+          setErr("Venue not found");
+          return;
+        }
+        setVenueData(v);
       } catch (e) {
         if (!alive) return;
         setErr(
@@ -209,7 +214,18 @@ export default function Venue() {
       </div>
     );
 
-  if (!venueData) return null;
+  if (!venueData) {
+    return (
+      <div className="vn-page">
+        <div className="vn-error">Venue not found.</div>
+        <div style={{ marginTop: 8 }}>
+          <Link to="/venues" className="vn-btn-ghost">
+            ← Return to map
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   /* ---------- GALLERY: รองรับ array หรือ csv ---------- */
   const gallery = toArr(venueData.photoUrls);
