@@ -3,78 +3,88 @@ import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import "../css/Profile.css";
+import { useAuth } from "../lib/auth";
 
 export default function ProfilePage() {
-  const [me, setMe] = useState(null);
+  const { user: me, loading: authLoading, error: authError } = useAuth();
   const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(true);
 
   const [tab, setTab] = useState("artists");
 
   // Following: artists/events
   const [allGroups, setAllGroups] = useState([]);
+  const [groupsLoaded, setGroupsLoaded] = useState(false);
   const [mutatingArtistIds, setMutatingArtistIds] = useState(new Set());
   const [allEvents, setAllEvents] = useState([]);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
   const [mutatingEventIds, setMutatingEventIds] = useState(new Set());
 
   // Artist schedule
   const [aePending, setAePending] = useState([]);
   const [aeAccepted, setAeAccepted] = useState([]);
+  const [artistScheduleLoaded, setArtistScheduleLoaded] = useState(false);
   // const [aeDeclined, setAeDeclined] = useState([]);
 
   // Organizer schedule (raw /myevents)
   const [orgEvents, setOrgEvents] = useState([]);
+  const [orgScheduleLoaded, setOrgScheduleLoaded] = useState(false);
 
   // paging (following artists)
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 8;
 
-  /* ===== me ===== */
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        const { data } = await axios.get("/api/auth/me", { withCredentials: true });
-        if (alive) setMe(data);
-      } catch (e) {
-        setErr(e?.response?.data?.error || "โหลดข้อมูลโปรไฟล์ไม่สำเร็จ");
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => { alive = false; };
-  }, []);
+    setAllGroups([]);
+    setGroupsLoaded(false);
+    setAllEvents([]);
+    setEventsLoaded(false);
+    setAePending([]);
+    setAeAccepted([]);
+    setArtistScheduleLoaded(false);
+    setOrgEvents([]);
+    setOrgScheduleLoaded(false);
+    setPage(1);
+  }, [me?.id]);
+
+  useEffect(() => {
+    if (authError) setErr(authError);
+  }, [authError]);
 
   /* ===== groups (artists) ===== */
   useEffect(() => {
-    if (!me) return;
+    if (!me || tab !== "artists" || groupsLoaded) return;
     let alive = true;
     (async () => {
       try {
         const { data } = await axios.get("/api/groups", { withCredentials: true });
-        if (alive) setAllGroups(Array.isArray(data) ? data : []);
+        if (!alive) return;
+        setAllGroups(Array.isArray(data) ? data : []);
+        setGroupsLoaded(true);
       } catch (e) {
         console.error("GET /api/groups error:", e);
+        if (alive) setErr("โหลดรายชื่อศิลปินไม่สำเร็จ");
       }
     })();
     return () => { alive = false; };
-  }, [me]);
+  }, [me, tab, groupsLoaded]);
 
   /* ===== events (following) ===== */
   useEffect(() => {
-    if (!me) return;
+    if (!me || tab !== "events" || eventsLoaded) return;
     let alive = true;
     (async () => {
       try {
         const { data } = await axios.get("/api/events", { withCredentials: true });
-        if (alive) setAllEvents(Array.isArray(data) ? data : []);
+        if (!alive) return;
+        setAllEvents(Array.isArray(data) ? data : []);
+        setEventsLoaded(true);
       } catch (e) {
         console.error("GET /api/events error:", e);
+        if (alive) setErr("โหลดอีเวนต์ไม่สำเร็จ");
       }
     })();
     return () => { alive = false; };
-  }, [me]);
+  }, [me, tab, eventsLoaded]);
 
   const u = me || {};
   const performer  = u.performerInfo || null;
@@ -93,7 +103,7 @@ export default function ProfilePage() {
 
   /* ===== Artist schedule load ===== */
   useEffect(() => {
-    if (!isArtistApproved || !myId) return;
+    if (!isArtistApproved || !myId || artistScheduleLoaded) return;
     let alive = true;
     (async () => {
       try {
@@ -105,29 +115,33 @@ export default function ProfilePage() {
         if (!alive) return;
         setAePending(Array.isArray(p.data) ? p.data : []);
         setAeAccepted(Array.isArray(a.data) ? a.data : []);
+        setArtistScheduleLoaded(true);
         // setAeDeclined(Array.isArray(d.data) ? d.data : []);
       } catch (e) {
         console.error("Load my artist schedule error:", e);
+        if (alive) setErr("โหลดตารางศิลปินไม่สำเร็จ");
       }
     })();
     return () => { alive = false; };
-  }, [isArtistApproved, myId]);
+  }, [isArtistApproved, myId, artistScheduleLoaded]);
 
   /* ===== Organizer schedule load (/myevents) ===== */
   useEffect(() => {
-    if (!isOrganizer) return;
+    if (!isOrganizer || orgScheduleLoaded) return;
     let alive = true;
     (async () => {
       try {
         const { data } = await axios.get("/api/myevents", { withCredentials: true });
         if (!alive) return;
         setOrgEvents(Array.isArray(data) ? data : []);
+        setOrgScheduleLoaded(true);
       } catch (e) {
         console.error("GET /api/myevents error:", e);
+        if (alive) setErr("โหลดตารางผู้จัดไม่สำเร็จ");
       }
     })();
     return () => { alive = false; };
-  }, [isOrganizer]);
+  }, [isOrganizer, orgScheduleLoaded]);
 
   /* ===== following artists/events ===== */
   const myFollowersCount = useMemo(() => {
@@ -265,9 +279,9 @@ export default function ProfilePage() {
   const fmtTimeHM = (d) => d ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
 
   /* ===== early returns AFTER all hooks declared ===== */
-  // if (loading) return <div className="stack">Loading…</div>;
+  if (authLoading) return <div className="stack">Loading…</div>;
   if (err) return <div className="stack alert alert-danger">{err}</div>;
-  if (!me) return <div className="stack"></div>;
+  if (!me) return <div className="stack">กรุณาล็อกอินเพื่อดูโปรไฟล์</div>;
 
   return (
     <div className="profile-page-wrap">
