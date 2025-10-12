@@ -804,7 +804,16 @@ const toggleFollow = async () => {
       </div>
     </div>
   );
-  if (!ev) return null;
+  if (!ev) {
+    return (
+      <div className="page">
+        <div className="note err">Event not found.</div>
+        <div style={{ marginTop: 8 }}>
+          <button className="btn" onClick={() => navigate(-1)}>Go back</button>
+        </div>
+      </div>
+    );
+  }
 
   /* ================= HERO ================= */
   const poster = ev?.posterUrl || '/img/graphic-3.png';
