@@ -3,26 +3,64 @@ body, html, * {
   font-family: 'Poppins', 'Mitr', sans-serif;
 }
 
-/* Global loader — unified spinner for all pages */
+/* Global loader — orbiting dot spinner (unified across pages) */
 .loader {
-  width: 32px;
-  height: 32px;
+  color: currentColor;           /* inherits text color (usually dark) */
+  font-size: 45px;               /* overall spinner size */
+  text-indent: -9999em;          /* hide any text content */
+  overflow: hidden;
+  width: 1em;
+  height: 1em;
   border-radius: 50%;
-  border: 3px solid rgba(0,0,0,0.15);
-  border-top-color: rgba(0,0,0,0.6);
-  animation: spin 1s linear infinite;
+  position: relative;
+  transform: translateZ(0);
+  animation: mltShdSpin 1.7s infinite ease, round 1.7s infinite ease;
   margin: 0 auto;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+@keyframes mltShdSpin {
+  0% {
+    box-shadow:
+      0 -0.83em 0 0 currentColor,
+      0 -0.83em 0 0 currentColor,
+      0 -0.83em 0 0 currentColor,
+      0 -0.83em 0 0 currentColor;
+  }
+  10% {
+    box-shadow:
+      0 -0.83em 0 0 currentColor,
+      -0.338em -0.758em 0 0 currentColor,
+      -0.555em -0.617em 0 0 currentColor,
+      -0.671em -0.488em 0 0 currentColor;
+  }
+  20% {
+    box-shadow:
+      0 -0.83em 0 0 currentColor,
+      -0.555em -0.617em 0 0 currentColor,
+      -0.671em -0.488em 0 0 currentColor,
+      -0.745em -0.34em 0 0 currentColor;
+  }
+  38% {
+    box-shadow:
+      0 -0.83em 0 0 currentColor,
+      -0.671em -0.488em 0 0 currentColor,
+      -0.745em -0.34em 0 0 currentColor,
+      -0.77em -0.178em 0 0 currentColor;
+  }
+  100% {
+    box-shadow:
+      0 -0.83em 0 0 currentColor,
+      0 -0.83em 0 0 currentColor,
+      0 -0.83em 0 0 currentColor,
+      0 -0.83em 0 0 currentColor;
+  }
 }
 
-/* Inline loader for tight spaces (e.g., inside buttons) */
+@keyframes round { to { transform: rotate(360deg); } }
+
+/* Inline variant for tight spaces (e.g., inside buttons) */
 .loader-inline {
-  width: 20px;
-  height: 20px;
-  border-width: 2px;
+  font-size: 26px; /* smaller but same animation */
 }
 
 /* Standard page-level loading wrapper (centers loader) */
