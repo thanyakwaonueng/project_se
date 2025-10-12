@@ -1864,7 +1864,15 @@ app.get('/events/:id', async (req, res) => {
     if (!ev) return res.status(404).json({ message: 'not found' });
 
     const readiness = summarizeReadiness(ev.artistEvents || []);
-    const isOwnerOrAdmin = !!(me && (me.role === 'ADMIN' || me.id === ev.venueId));
+    const ownerUserId =
+      ev?.venue?.performer?.user?.id ??
+      ev?.venue?.performer?.userId ??
+      ev?.venue?.performerId ??
+      ev?.venueId;
+    const isOwnerOrAdmin = !!(
+      me &&
+      (me.role === 'ADMIN' || (ownerUserId != null && Number(me.id) === Number(ownerUserId)))
+    );
     const isInvitedArtist = !!(
       me &&
       (ev.artistEvents || []).some(ae => {
