@@ -135,6 +135,16 @@ export default function VenueEditor() {
     setAvatarPreview('');
   };
 
+  if (loading) {
+    return (
+      <div className="ve-page" aria-busy="true">
+        <div style={{ minHeight: '40vh', display: 'grid', placeItems: 'center', padding: 32 }}>
+          <div className="loader" aria-label="Loading venue editor" />
+        </div>
+      </div>
+    );
+  }
+
   const api = axios;
 
   async function uploadOne(file) {
