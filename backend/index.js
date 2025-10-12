@@ -6,7 +6,7 @@ require('dotenv').config({path:'.env'})
 
 const express = require('express');
 const cookieParser = require('cookie-parser');
-const { PrismaClient } = require('./generated/prisma');
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const nodemailer = require('nodemailer')
 const validator = require('validator')
