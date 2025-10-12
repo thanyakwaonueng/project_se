@@ -53,7 +53,9 @@ export default function Home() {
   /* ===== states ===== */
   const [latestArtists, setLatestArtists] = useState([]);     // ศิลปินที่เพิ่มล่าสุด
   const [genreList, setGenreList] = useState([]);             // ดึง genre ที่มีจริงจาก /api/groups
+  const [loadingArtists, setLoadingArtists] = useState(true);
   const [upcomingEvents, setUpcomingEvents] = useState([]);   // 3 อีเวนต์ถัดไป
+  const [loadingEvents, setLoadingEvents] = useState(true);
   const [busyArtistIds, setBusyArtistIds] = useState(new Set());
 
   const [scrollLeftActive, setScrollLeftActive] = useState(false);
@@ -64,7 +66,8 @@ export default function Home() {
     let alive = true;
     (async () => {
       try {
-        const { data } = await axios.get("/api/groups", { withCredentials: true });
+        setLoadingArtists(true);
+        const { data } = await axios.get("/api/groups?take=24", { withCredentials: true });
         const arr = Array.isArray(data) ? data : [];
 
         // sort ใหม่ก่อน + map ข้อมูลการ์ด
@@ -112,6 +115,8 @@ export default function Home() {
           setLatestArtists([]);  // ใช้ fallback ด้านล่าง
           setGenreList([]);      // ไม่มี genre จาก API
         }
+      } finally {
+        if (alive) setLoadingArtists(false);
       }
     })();
     return () => { alive = false; };
@@ -122,7 +127,8 @@ export default function Home() {
     let alive = true;
     (async () => {
       try {
-        const { data } = await axios.get("/api/events", { withCredentials: true });
+        setLoadingEvents(true);
+        const { data } = await axios.get("/api/events?take=12", { withCredentials: true });
         const arr = Array.isArray(data) ? data : [];
         const today = new Date();
         const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -144,6 +150,8 @@ export default function Home() {
       } catch (e) {
         console.warn("GET /api/events failed:", e?.response?.data || e?.message);
         if (alive) setUpcomingEvents([]);
+      } finally {
+        if (alive) setLoadingEvents(false);
       }
     })();
     return () => { alive = false; };
@@ -346,19 +354,23 @@ export default function Home() {
 
         <div className="container-3">
           <div className="artist-grid" id="artistGrid">
-            {artistRows.map(artist => (
-            <ArtistCard 
-              key={artist.id}
-              id={artist.id}
-              title={artist.title}
-              genre={artist.genre}
-              image={artist.image}
-              likedByMe={artist.likedByMe}
-              followersCount={artist.followersCount}
-              likeBusy={busyArtistIds.has(artist.id)}
-              onToggleLike={toggleLikeArtist}
-            />
-            ))}
+            {loadingArtists ? (
+              <div style={{ padding: "24px 0", textAlign: "center", color: "#666" }}>Loading artists…</div>
+            ) : (
+              artistRows.map(artist => (
+                <ArtistCard 
+                  key={artist.id}
+                  id={artist.id}
+                  title={artist.title}
+                  genre={artist.genre}
+                  image={artist.image}
+                  likedByMe={artist.likedByMe}
+                  followersCount={artist.followersCount}
+                  likeBusy={busyArtistIds.has(artist.id)}
+                  onToggleLike={toggleLikeArtist}
+                />
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -377,11 +389,15 @@ export default function Home() {
           
           <div className="genre-section">
             <div className="genre-grid">
-              {(genreList.length ? genreList : ["pop","indie","rock"]).map((g, i) => (
-                <Link key={`${g}-${i}`} to={`/artists?genre=${encodeURIComponent(g)}`} className="genre-item">
-                  {g}
-                </Link>
-              ))}
+              {loadingArtists ? (
+                <div style={{ padding: "16px 0", textAlign: "center", color: "#666" }}>Loading genres…</div>
+              ) : (
+                (genreList.length ? genreList : ["pop","indie","rock"]).map((g, i) => (
+                  <Link key={`${g}-${i}`} to={`/artists?genre=${encodeURIComponent(g)}`} className="genre-item">
+                    {g}
+                  </Link>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -393,19 +409,23 @@ export default function Home() {
           <h1 className="upcoming-event">Upcoming events</h1>
           <p className="artist-subtitle">Catch the next wave of sounds around the city</p>
           <div className="event-grid">
-            {(upcomingEvents.length ? upcomingEvents : []).map(ev => (
-              <EventCard 
-                key={ev.id}
-                id={ev.id}
-                title={ev.title}
-                date={ev.date}
-                genre={ev.genre}
-                image={ev.image}
-                desc={ev.desc}
-              />
-            ))}
+            {loadingEvents ? (
+              <div style={{ padding: "20px 0", textAlign: "center", color: "#666" }}>Loading events…</div>
+            ) : (
+              (upcomingEvents.length ? upcomingEvents : []).map(ev => (
+                <EventCard 
+                  key={ev.id}
+                  id={ev.id}
+                  title={ev.title}
+                  date={ev.date}
+                  genre={ev.genre}
+                  image={ev.image}
+                  desc={ev.desc}
+                />
+              ))
+            )}
 
-            {!upcomingEvents.length && (
+            {!loadingEvents && !upcomingEvents.length && (
               <div style={{ padding: "20px 0", color: "#666" }}>
                 No upcoming events yet.
               </div>

@@ -56,7 +56,7 @@ export default function ProfilePage() {
     let alive = true;
     (async () => {
       try {
-        const { data } = await axios.get("/api/groups", { withCredentials: true });
+        const { data } = await axios.get("/api/groups?take=200", { withCredentials: true });
         if (!alive) return;
         setAllGroups(Array.isArray(data) ? data : []);
         setGroupsLoaded(true);

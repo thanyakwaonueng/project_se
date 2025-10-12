@@ -306,7 +306,7 @@ useEffect(() => {
       setLoadingGroups(true);
       setGroupsError(null);
       try {
-        const res = await axios.get("/api/groups", { withCredentials: true });
+        const res = await axios.get("/api/groups?take=150", { withCredentials: true });
 
         const rows = Array.isArray(res.data) ? res.data : [];
         // ---- [ADD] normalize bookingType ----
@@ -536,6 +536,10 @@ const sortedGroups = useMemo(() => {
     const arr = (selectedGroup?.schedule || []).filter(ev => new Date(ev.dateISO) < now);
     return arr.sort((a,b) => new Date(b.dateISO) - new Date(a.dateISO));
   }, [selectedGroup]);
+
+  if (loadingGroups) {
+    return <div className="artist-container a-bleed" style={{ padding: 16 }}>Loading artists…</div>;
+  }
 
   if (groupsError) {
     return <div className="artist-container a-bleed" style={{padding:16}}>Failed to load artists.</div>;
