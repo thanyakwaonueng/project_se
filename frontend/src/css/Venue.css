@@ -349,6 +349,42 @@
 }
 .vn-thumb:hover img { transform: scale(1.03); filter: contrast(1.03); }
 
+/* Lightbox overlay */
+.vn-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  cursor: zoom-out;
+}
+.vn-lightbox img {
+  max-width: 90vw;
+  max-height: 90vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  cursor: default;
+}
+.vn-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255,255,255,.14);
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.vn-lightbox-close:hover { background: rgba(255,255,255,.22); }
+
 /* ==========================================================================
    UPCOMING (Schedule look & feel แบบเดียวกับหน้า Artist แต่สโคปเฉพาะหน้า Venue)
    ========================================================================== */
