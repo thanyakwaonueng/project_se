@@ -302,7 +302,7 @@ function normalizeMemberCount(val) {
 
 
 export default function AccountSetupPage() {
-  const { refresh } = useAuth();
+  const { refresh, user: authUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -387,6 +387,7 @@ export default function AccountSetupPage() {
 
   // Role
   const [role, setRole] = useState(""); // "", "AUDIENCE", "ARTIST"
+  const [initialRole, setInitialRole] = useState("");
 
   // Basic profile
   const [displayName, setDisplayName] = useState("");
@@ -490,11 +491,16 @@ const setA = (key, value) => setArtist(prev => ({ ...prev, [key]: value }));
         if (!mounted || !data) return;
 
         // role จริงของระบบ
-        setMeRole(data.role || "AUDIENCE");
+        const currentRole = data.role || "AUDIENCE";
+        setMeRole(currentRole);
 
-        // ตั้งค่า role ในฟอร์ม
-        if (isEdit) setRole(data.role || "AUDIENCE");
-        else setRole("");
+        if (isEdit) {
+          setRole(currentRole);
+          setInitialRole(currentRole);
+        } else if (!role) {
+          setRole("");
+          setInitialRole("");
+        }
 
         setDisplayName(data.name || (data.email ? data.email.split("@")[0] : "") || "");
         setFavoriteGenres(Array.isArray(data.favoriteGenres) ? data.favoriteGenres : []);
@@ -605,7 +611,7 @@ const setA = (key, value) => setArtist(prev => ({ ...prev, [key]: value }));
   };
 
   const resetForm = () => {
-    setRole(isEdit ? role : "");
+    setRole(isEdit ? initialRole : "");
     setDisplayName("");
     setFavoriteGenres([]);
     setBirthDate("");
