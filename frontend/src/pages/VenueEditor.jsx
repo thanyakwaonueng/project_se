@@ -218,6 +218,8 @@ export default function VenueEditor() {
       } catch (e) {
         console.error('fetch /auth/me failed:', e);
         setError('Failed to load user data.');
+      } finally {
+        if (alive) setLoading(false);
       }
     })();
     return () => { alive = false; };
