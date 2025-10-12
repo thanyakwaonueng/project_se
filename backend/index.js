@@ -408,7 +408,8 @@ async function authMiddleware(req, res, next) {
 /* ───────────────────────────── AUTH ROUTES ───────────────────────────── */
 app.post('/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+    email = (email || '').trim().toLowerCase();
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) return res.status(401).json({ error: 'User not found' });
