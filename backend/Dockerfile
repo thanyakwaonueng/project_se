@@ -21,4 +21,3 @@ EXPOSE 4000
 # Wait for DB, then run server
 ENTRYPOINT ["./wait-for-db.sh"]
 CMD ["npx", "nodemon", "index.js"]
-

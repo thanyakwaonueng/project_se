@@ -1,6 +1,7 @@
 // src/pages/Home.jsx
 import '../css/Home.css';
 import { useEffect, useMemo, useState } from "react";
+import { Link } from 'react-router-dom';
 import axios from "axios";
 
 /* ===== helper: format date -> "september 10 ,2025" ===== */
@@ -338,9 +339,9 @@ export default function Home() {
 
         <div className="discover-artists-subtitle">
           <p className="artist-subtitle">Your guide to new sounds in Chiang Mai, one vibe at a time</p>
-          <a href="/artists">
+          <Link to="/artists">
             <h2>Explore more artists ↗</h2>
-          </a>
+          </Link>
         </div>
 
         <div className="container-3">
@@ -369,17 +370,17 @@ export default function Home() {
 
           <div className="discover-music-subtitle">
             <p className="subtitle">Explore Chiang Mai’s music scene through genres you love</p>
-            <a href="/artists">
+            <Link to="/artists">
               <h2>Explore more genres ↗</h2>
-            </a>
+            </Link>
           </div>
           
           <div className="genre-section">
             <div className="genre-grid">
               {(genreList.length ? genreList : ["pop","indie","rock"]).map((g, i) => (
-                <a key={`${g}-${i}`} href={`/artists?genre=${encodeURIComponent(g)}`} className="genre-item">
+                <Link key={`${g}-${i}`} to={`/artists?genre=${encodeURIComponent(g)}`} className="genre-item">
                   {g}
-                </a>
+                </Link>
               ))}
             </div>
           </div>

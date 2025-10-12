@@ -26,8 +26,8 @@ export default function Navbar() {
     if (!user) {
       return (
         <>
-          <a href="/login" onClick={closeMobileMenu}>LOGIN</a>
-          <a href="/signup" onClick={closeMobileMenu}>SIGN UP</a>
+          <Link to="/login" onClick={closeMobileMenu}>LOGIN</Link>
+          <Link to="/signup" onClick={closeMobileMenu}>SIGN UP</Link>
         </>
       );
     }
@@ -35,11 +35,10 @@ export default function Navbar() {
     return (
       <>
         {/* Role menu toggle */}
-        <a
-          href="#"
+        <button
+          type="button"
           className="mobile-menu-link"
           onClick={(e) => {
-            e.preventDefault();
             setRoleMenuOpen(!roleMenuOpen);
           }}
         >
@@ -47,22 +46,22 @@ export default function Navbar() {
           <span style={{ fontSize: '0.6em', lineHeight: 1 }}>
             {roleMenuOpen ? '▲' : '▼'}
           </span>
-        </a>
+        </button>
 
         {/* Submenu */}
         {roleMenuOpen && (
           <div className="mobile-submenu" style={{ paddingLeft: '15px' }}>
-            <a href="/me/profile" onClick={closeMobileMenu}>Profile</a>
+            <Link to="/me/profile" onClick={closeMobileMenu}>Profile</Link>
             {(user.role === 'ARTIST' || user.role === 'ADMIN') && (
-              <a href="/artist/inviterequests" onClick={closeMobileMenu}>Artist Pending Invite</a>
+              <Link to="/artist/inviterequests" onClick={closeMobileMenu}>Artist Pending Invite</Link>
             )}
             {(user.role === 'ORGANIZE' || user.role === 'ADMIN') && (
               <>
-                <a href="/me/event" onClick={closeMobileMenu}>Create Event</a>
-                <a href="/myevents" onClick={closeMobileMenu}>My Event</a>
+                <Link to="/me/event" onClick={closeMobileMenu}>Create Event</Link>
+                <Link to="/myevents" onClick={closeMobileMenu}>My Event</Link>
               </>
             )}
-            <a href="/logout" onClick={closeMobileMenu}>Logout</a>
+            <Link to="/logout" onClick={closeMobileMenu}>Logout</Link>
           </div>
         )}
       </>
@@ -121,13 +120,13 @@ export default function Navbar() {
     if (!user) {
       return (
         <>
-          <a href="/login" className="navbar-menu-wrapper navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
+          <Link to="/login" className="navbar-menu-wrapper navbar-menu-link w-inline-block" onClick={closeMobileMenu}>
             <div className="navbar-menu-text">LOGIN</div>
             <div className="navbar-menu-text">LOGIN</div>
-          </a>
-          <a href="/signup" className="navbar-menu-wrapper navbar-menu-link w-inline-block" id="nav-signup-btn" onClick={closeMobileMenu}>
+          </Link>
+          <Link to="/signup" className="navbar-menu-wrapper navbar-menu-link w-inline-block" id="nav-signup-btn" onClick={closeMobileMenu}>
             SIGN UP
-          </a>
+          </Link>
         </>
       );
     }
@@ -222,9 +221,9 @@ export default function Navbar() {
               {/* Mobile Notification Link – แสดงเฉพาะตอนมี user */}
               {user && <NotificationBell mobileMode={true} />}
 
-              <a href="/artists" onClick={closeMobileMenu}>ARTISTS</a>
-              <a href="/events" onClick={closeMobileMenu}>EVENTS</a>
-              <a href="/venues/map" onClick={closeMobileMenu}>VENUES</a>
+              <Link to="/artists" onClick={closeMobileMenu}>ARTISTS</Link>
+              <Link to="/events" onClick={closeMobileMenu}>EVENTS</Link>
+              <Link to="/venues/map" onClick={closeMobileMenu}>VENUES</Link>
               {/* <LanguageDropdown /> */}
             </div>
           </div>
@@ -233,18 +232,18 @@ export default function Navbar() {
         {/* Desktop Menu */}
         <div className="d-none d-lg-block">
           <div className="navbar-menu-wrapper">
-            <a href="/artists" className="navbar-menu-link w-inline-block">
+            <Link to="/artists" className="navbar-menu-link w-inline-block">
               <div className="navbar-menu-text">ARTISTS</div>
               <div className="navbar-menu-text">ARTISTS</div>
-            </a>
-            <a href="/events" className="navbar-menu-link w-inline-block">
+            </Link>
+            <Link to="/events" className="navbar-menu-link w-inline-block">
               <div className="navbar-menu-text">EVENTS</div>
               <div className="navbar-menu-text">EVENTS</div>
-            </a>
-            <a href="/venues/map" className="navbar-menu-link w-inline-block">
+            </Link>
+            <Link to="/venues/map" className="navbar-menu-link w-inline-block">
               <div className="navbar-menu-text">VENUES</div>
               <div className="navbar-menu-text">VENUES</div>
-            </a>
+            </Link>
             <div className="navbar-auth-section">
               {user ? (
                 <>

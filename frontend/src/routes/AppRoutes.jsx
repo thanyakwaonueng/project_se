@@ -1,7 +1,6 @@
 // routes/AppRoutes.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useEffect } from 'react';
 
 import Layout from '../pages/Layout';
 import Home from '../pages/Home';
@@ -31,47 +30,32 @@ import UploadFile from '../pages/UploadFile';
 import NotificationsPage from '../pages/Notifications';
 // เพจใหม่ (ตัวเดียวใช้ได้ทั้งสร้าง/แก้ไข)
 import VenueEditor from '../pages/VenueEditor';
+import { AuthProvider, useAuth } from '../lib/auth';
 
 /** เช็คว่าตั้งค่าโปรไฟล์ขั้นต่ำหรือยัง */
 function RequireProfile({ children }) {
   const location = useLocation();
-  const [loading, setLoading] = useState(true);
-  const [needsSetup, setNeedsSetup] = useState(false);
+  const { user, loading } = useAuth();
 
   const path = location.pathname;
   const allow = path.startsWith('/login') || path.startsWith('/signup') || path.startsWith('/accountsetup');
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      if (allow) {
-        alive && setLoading(false);
-        alive && setNeedsSetup(false);
-        return;
-      }
-      try {
-        setLoading(true);
-        const { data } = await axios.get('/api/auth/me', { withCredentials: true });
-        const hasBasic =
-          !!(data?.name) ||
-          (Array.isArray(data?.favoriteGenres) && data.favoriteGenres.length > 0) ||
-          !!(data?.birthday);
-        const hasPerformer =
-          !!(data?.performerInfo?.artistInfo) ||
-          !!(data?.performerInfo?.venueInfo);
-        const done = hasBasic || hasPerformer;
-        if (alive) setNeedsSetup(!done);
-      } catch (_e) {
-        if (alive) setNeedsSetup(false);
-      } finally {
-        alive && setLoading(false);
-      }
-    })();
-    return () => { alive = false; };
-  }, [path, allow]);
+  if (allow) return children;
 
-  if (loading) return null;
-  if (needsSetup) {
+  if (loading) return <div style={{ padding: 16 }}>Loading…</div>;
+
+  if (!user) return children;
+
+  const hasBasic =
+    !!(user?.name) ||
+    (Array.isArray(user?.favoriteGenres) && user.favoriteGenres.length > 0) ||
+    !!(user?.birthday);
+  const hasPerformer =
+    !!(user?.performerInfo?.artistInfo) ||
+    !!(user?.performerInfo?.venueInfo);
+  const done = hasBasic || hasPerformer;
+
+  if (!done) {
     return <Navigate to="/accountsetup" replace state={{ from: path }} />;
   }
   return children;
@@ -92,114 +76,119 @@ function MyVenueSwitch() {
 
 export default function AppRoutes() {
   return (
-    <Router>
-      <Routes>
+    <AuthProvider>
+      <Router>
+        <Routes>
         
-        {/* just for testing purpose */}
-        <Route path="/uploadfile" element={<UploadFile />} />
+          {/* just for testing purpose */}
+          <Route path="/uploadfile" element={<UploadFile />} />
 
 
-        {/* กลุ่ม public: login / signup / logout / accountsetup */}
-        <Route element={<Layout />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/logout" element={<Logout />} />
+          {/* กลุ่ม public: login / signup / logout / accountsetup */}
+          <Route element={<Layout />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/logout" element={<Logout />} />
+            <Route
+              path="/accountsetup"
+              element={
+                <ProtectedRoute allow={['AUDIENCE', 'ARTIST', 'ORGANIZE', 'ADMIN']}>
+                  <AccountSetupPage />
+                </ProtectedRoute>
+              }
+            />
+          </Route>
+
+          {/* public: หน้าเนื้อหา */}
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+
+            <Route path="/artists" element={<Artist />} />
+            <Route path="/artists/:id" element={<Artist />} />
+
+            <Route path="/events" element={<Event />} />
+            <Route path="/events/:id" element={<EventDetail />} />
+
+            <Route path="/venues" element={<VenueMap />} />
+            <Route path="/venues/map" element={<VenueMap />} />
+            <Route path="/venues/:id" element={<Venue />} />
+          </Route>
+
+          {/* ต้องมีโปรไฟล์แล้ว */}
           <Route
-            path="/accountsetup"
             element={
-              <ProtectedRoute allow={['AUDIENCE', 'ARTIST', 'ORGANIZE', 'ADMIN']}>
-                <AccountSetupPage />
-              </ProtectedRoute>
+              <RequireProfile>
+                <Layout />
+              </RequireProfile>
             }
-          />
-        </Route>
+          >
+            {/* ✅ หน้าแจ้งเตือนรวมทุกชนิด */}
+            <Route path="/notifications" element={<NotificationsPage />} />
 
-        {/* public: หน้าเนื้อหา */}
-        <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
+            {/* ✅ แก้ไข/สร้าง venue ใช้หน้าเดียว */}
+            <Route
+              path="/venue/edit"
+              element={
+                <ProtectedRoute allow={['ORGANIZE', 'ADMIN']}>
+                  <VenueEditor />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route path="/artists" element={<Artist />} />
-          <Route path="/artists/:id" element={<Artist />} />
+            {/* ✅ My Venue menu → เด้งไปหน้า editor เดียว */}
+            <Route
+              path="/me/venue"
+              element={
+                <ProtectedRoute allow={['ORGANIZE', 'ADMIN']}>
+                  <MyVenueSwitch />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route path="/events" element={<Event />} />
-          <Route path="/events/:id" element={<EventDetail />} />
+            {/* ❌ ลบ 2 เส้นทางเก่า
+                /venues/:id/edit  (VenueProfileForm)
+                /me/venue/create  (CreateVenue)
+            */}
 
-          <Route path="/venues" element={<VenueMap />} />
-          <Route path="/venues/map" element={<VenueMap />} />
-          <Route path="/venues/:id" element={<Venue />} />
-        </Route>
+            {/* อื่น ๆ ที่ต้องล็อกอิน */}
+            <Route path="/myevents" element={<MyEvents />} />
+            <Route path="/myevents/:id" element={<EventDetail />} />
 
-        {/* ต้องมีโปรไฟล์แล้ว */}
-        <Route
-          element={
-            <RequireProfile>
-              <Layout />
-            </RequireProfile>
-          }
-        >
-          {/* ✅ หน้าแจ้งเตือนรวมทุกชนิด */}
-          <Route path="/notifications" element={<NotificationsPage />} />
+            <Route
+              path="/page_events/new"
+              element={
+                <ProtectedRoute allow={['ORGANIZE', 'ADMIN']}>
+                  <CreateEvent />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* ✅ แก้ไข/สร้าง venue ใช้หน้าเดียว */}
-          <Route
-            path="/venue/edit"element={<ProtectedRoute allow={['ORGANIZE', 'ADMIN']}><VenueEditor />
-              </ProtectedRoute>
-            }
-          />
+            <Route path="/me/artist" element={<CreateArtist />} />
+            <Route path="/me/event" element={<CreateEvent />} />
+            <Route path="/me/event/:eventId" element={<CreateEvent />} />
+            <Route path="/me/profile" element={<ProfilePage />} />
 
-          {/* ✅ My Venue menu → เด้งไปหน้า editor เดียว */}
-          <Route
-            path="/me/venue"
-            element={
-              <ProtectedRoute allow={['ORGANIZE', 'ADMIN']}>
-                <MyVenueSwitch />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ❌ ลบ 2 เส้นทางเก่า
-              /venues/:id/edit  (VenueProfileForm)
-              /me/venue/create  (CreateVenue)
-          */}
-
-          {/* อื่น ๆ ที่ต้องล็อกอิน */}
-          <Route path="/myevents" element={<MyEvents />} />
-          <Route path="/myevents/:id" element={<EventDetail />} />
-
-          <Route
-            path="/page_events/new"
-            element={
-              <ProtectedRoute allow={['ORGANIZE', 'ADMIN']}>
-                <CreateEvent />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route path="/me/artist" element={<CreateArtist />} />
-          <Route path="/me/event" element={<CreateEvent />} />
-          <Route path="/me/event/:eventId" element={<CreateEvent />} />
-          <Route path="/me/profile" element={<ProfilePage />} />
-
-          {/* แอดมิน */}
-          <Route
-            path="/admin/role_requests"
-            element={
-              <ProtectedRoute allow={['ADMIN']}>
-                <AdminRoleRequestsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/artist/inviterequests"
-            element={
-              <ProtectedRoute allow={['ADMIN', 'ARTIST']}>
-                <ArtistInviteRequestsPage />
-              </ProtectedRoute>
-            }
-          />
-        </Route>
-      </Routes>
-    </Router>
+            {/* แอดมิน */}
+            <Route
+              path="/admin/role_requests"
+              element={
+                <ProtectedRoute allow={['ADMIN']}>
+                  <AdminRoleRequestsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/artist/inviterequests"
+              element={
+                <ProtectedRoute allow={['ADMIN', 'ARTIST']}>
+                  <ArtistInviteRequestsPage />
+                </ProtectedRoute>
+              }
+            />
+          </Route>
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
