@@ -42,6 +42,13 @@
   padding: 12px 14px;
   box-shadow: var(--shadow-sm);
 }
+.vn-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 120px;
+}
 .vn-error { color: #8b0000; }
 
 /* ==========================================================================
