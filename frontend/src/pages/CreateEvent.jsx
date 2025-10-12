@@ -411,7 +411,13 @@ export default function CreateEvent() {
           : 'The event is now ready. You can manage the line-up and publish it when ready.',
         confirmButtonColor: '#2563eb',
       });
-      navigate(`/events/${res.data.id}`);
+
+      const nextId = res?.data?.id ?? (eventId ? parseInt(eventId, 10) : null);
+      if (nextId) {
+        navigate(`/myevents/${nextId}`);
+      } else {
+        navigate('/myevents');
+      }
     } catch (err) {
       setLoading(false);
       const fallbackMsg =

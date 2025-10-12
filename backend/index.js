@@ -1072,11 +1072,7 @@ app.get('/groups', async (req, res) => {
       }
     } catch {}
 
-    const takeParam = Number.parseInt(req.query.take, 10);
-    const skipParam = Number.parseInt(req.query.skip, 10);
-    const cursorParam = Number.parseInt(req.query.cursor, 10);
-
-    const findArgs = {
+    const artists = await prisma.artist.findMany({
       include: {
         performer: {
           include: {
@@ -1090,25 +1086,7 @@ app.get('/groups', async (req, res) => {
         artistRecords: true,
       },
       orderBy: { createdAt: 'desc' },
-    };
-
-    if (Number.isFinite(takeParam) && takeParam > 0) {
-      findArgs.take = Math.min(takeParam, 200);
-    }
-    if (Number.isFinite(skipParam) && skipParam > 0) {
-      findArgs.skip = skipParam;
-    }
-    if (Number.isFinite(cursorParam) && cursorParam > 0) {
-      findArgs.cursor = { performerId: cursorParam };
-      if (!findArgs.orderBy || !('performerId' in findArgs.orderBy)) {
-        findArgs.orderBy = { performerId: 'asc' };
-      }
-      if (!findArgs.skip) {
-        findArgs.skip = 1; // skip cursor itself
-      }
-    }
-
-    const artists = await prisma.artist.findMany(findArgs);
+    });
 
     const toArray = (csvOrNull) =>
       (csvOrNull || '')
@@ -1798,11 +1776,7 @@ app.get('/events', async (req, res) => {
       }
     } catch {}
 
-    const takeParam = Number.parseInt(req.query.take, 10);
-    const skipParam = Number.parseInt(req.query.skip, 10);
-    const cursorParam = Number.parseInt(req.query.cursor, 10);
-
-    const eventFindArgs = {
+    const events = await prisma.event.findMany({
       where: {
         isPublished: true, //  แสดงเฉพาะงานที่กด Publish แล้ว
       },
@@ -1830,20 +1804,7 @@ app.get('/events', async (req, res) => {
           : false,
       },
       orderBy: { date: 'asc' },
-    };
-
-    if (Number.isFinite(takeParam) && takeParam > 0) {
-      eventFindArgs.take = Math.min(takeParam, 200);
-    }
-    if (Number.isFinite(skipParam) && skipParam > 0) {
-      eventFindArgs.skip = skipParam;
-    }
-    if (Number.isFinite(cursorParam) && cursorParam > 0) {
-      eventFindArgs.cursor = { id: cursorParam };
-      if (!eventFindArgs.skip) eventFindArgs.skip = 1;
-    }
-
-    const events = await prisma.event.findMany(eventFindArgs);
+    });
 
     const mapped = events.map(e => {
       const readiness = summarizeReadiness(e.artistEvents || []);
