@@ -134,18 +134,8 @@ export default function VenueEditor() {
     setAvatarFile(null);
     setAvatarPreview('');
   };
-
-  if (loading) {
-    return (
-      <div className="ve-page" aria-busy="true">
-        <div style={{ minHeight: '40vh', display: 'grid', placeItems: 'center', padding: 32 }}>
-          <div className="loader" aria-label="Loading venue editor" />
-        </div>
-      </div>
-    );
-  }
-
   const api = axios;
+  const meIdRef = useRef(null);
 
   async function uploadOne(file) {
     const form = new FormData();
@@ -179,6 +169,7 @@ export default function VenueEditor() {
           return;
         }
         setUserId(me.id);
+        meIdRef.current = me.id;
         const v = me?.performerInfo?.venueInfo;
 
         if (v) {
@@ -356,7 +347,12 @@ export default function VenueEditor() {
           : 'Your venue profile is ready to customize.',
         confirmButtonColor: '#2563eb',
       });
-      navigate(`/venues/${userId || ''}`);
+      const nextId = userId || (meIdRef.current ?? null);
+      if (nextId) {
+        navigate(`/venues/${nextId}`);
+      } else {
+        navigate('/venues');
+      }
     } catch (err) {
       setLoading(false);
       const msg = err?.response?.data?.error || 'Failed to save';
@@ -379,6 +375,20 @@ export default function VenueEditor() {
   // ===== UI =====
   return (
     <div className="ve-page" aria-busy={loading ? "true" : "false"}>
+      {loading && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(255,255,255,0.72)',
+            display: 'grid',
+            placeItems: 'center',
+            zIndex: 999,
+          }}
+        >
+          <div className="loader" aria-label="Saving venue" />
+        </div>
+      )}
       <header className="ve-header" style={{ width: "80%", marginInline: "auto" }}>
         <div>
           <h1 className="ve-title ve-title-hero">{hasProfile ? "VENUE SETUP" : "VENUE SETUP"}</h1>
