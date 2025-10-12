@@ -520,7 +520,12 @@ export default function VenueEditor() {
                       <div className="venue-avatar-edit-compact">change image</div>
                     </>
                   ) : (
-                    <div className="venue-avatar-hint"><br/>()</div>
+                    <div className="venue-avatar-empty" aria-label="No profile image uploaded">
+                      <div className="venue-avatar-icon">📷</div>
+                      <div className="venue-avatar-text">No profile uploaded</div>
+                      <div className="venue-avatar-sub">Recommended: Square image, JPG or PNG</div>
+                      <div className="venue-avatar-hint">Click to upload image</div>
+                    </div>
                   )}
                 </div>
                 <input 
