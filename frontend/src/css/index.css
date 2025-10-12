@@ -5,7 +5,7 @@ body, html, * {
 
 /* Global loader — orbiting dot spinner (unified across pages) */
 .loader {
-  color: currentColor;           /* inherits text color (usually dark) */
+  color: #000;                   /* force black across all pages */
   font-size: 45px;               /* overall spinner size */
   text-indent: -9999em;          /* hide any text content */
   overflow: hidden;
@@ -60,7 +60,8 @@ body, html, * {
 
 /* Inline variant for tight spaces (e.g., inside buttons) */
 .loader-inline {
-  font-size: 26px; /* smaller but same animation */
+  color: #000;       /* force black in inline usage too */
+  font-size: 26px;   /* smaller but same animation */
 }
 
 /* Standard page-level loading wrapper (centers loader) */

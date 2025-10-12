@@ -95,7 +95,7 @@ export default function VenueEditor() {
 
   // ===== status =====
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState(false);
   const [userId, setUserId] = useState(null);
   const navigate = useNavigate();

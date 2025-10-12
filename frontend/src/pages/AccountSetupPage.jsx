@@ -454,7 +454,7 @@ const setA = (key, value) => setArtist(prev => ({ ...prev, [key]: value }));
   const memberCountOptions = MEMBER_COUNTS;   // ["Solo","Duo","Trio","4",...,"10+"]
 
   // UX
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [ok, setOk]           = useState(false);
   const [err, setErr]         = useState("");
