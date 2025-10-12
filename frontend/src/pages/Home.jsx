@@ -354,11 +354,10 @@ export default function Home() {
 
         <div className="container-3">
           <div className="artist-grid" id="artistGrid">
-            {loadingArtists && (
-              <p className="home-loading-text">Loading artists…</p>
-            )}
             {loadingArtists ? (
-              <div style={{ padding: "24px 0", textAlign: "center", color: "#666" }}>Loading artists…</div>
+              <div style={{ padding: "24px 0", textAlign: "center", color: "#666" }}>
+                <div className="loader" aria-label="Loading artists"></div>
+              </div>
             ) : (
               artistRows.map(artist => (
                 <ArtistCard 
@@ -393,7 +392,9 @@ export default function Home() {
           <div className="genre-section">
             <div className="genre-grid">
               {loadingArtists ? (
-                <div style={{ padding: "16px 0", textAlign: "center", color: "#666" }}>Loading genres…</div>
+                <div style={{ padding: "16px 0", textAlign: "center", color: "#666" }}>
+                  <div className="loader" aria-label="Loading genres"></div>
+                </div>
               ) : (
                 (genreList.length ? genreList : ["pop","indie","rock"]).map((g, i) => (
                   <Link key={`${g}-${i}`} to={`/artists?genre=${encodeURIComponent(g)}`} className="genre-item">
@@ -413,8 +414,7 @@ export default function Home() {
           <p className="artist-subtitle">Catch the next wave of sounds around the city</p>
           {loadingEvents ? (
             <div className="home-events-loading">
-              <span className="home-spinner" aria-hidden="true" />
-              <span>Loading events…</span>
+              <div className="loader" aria-label="Loading events"></div>
             </div>
           ) : (
             <div className="event-grid">

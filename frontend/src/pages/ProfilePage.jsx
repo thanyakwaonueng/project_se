@@ -428,7 +428,9 @@ export default function ProfilePage() {
           <div className="following-body">
             {tab === "artists" ? (
               !groupsLoaded ? (
-                <div className="pf-loading">Loading followed artists…</div>
+                <div className="pf-loading">
+                  <div className="loader" aria-label="Loading followed artists"></div>
+                </div>
               ) : artistsCount ? (
                 <div className="pf-list">
                   {pageItems.map((a) => (
@@ -496,7 +498,9 @@ export default function ProfilePage() {
                 ))}
               </div>
             ) : !eventsLoaded ? (
-              <div className="pf-loading">Loading followed events…</div>
+              <div className="pf-loading">
+                <div className="loader" aria-label="Loading followed events"></div>
+              </div>
             ) : (
               <div className="empty">You haven’t followed any events</div>
             )}

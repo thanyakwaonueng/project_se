@@ -538,7 +538,11 @@ const sortedGroups = useMemo(() => {
   }, [selectedGroup]);
 
   if (loadingGroups) {
-    return <div className="artist-container a-bleed" style={{ padding: 16 }}>Loading artists…</div>;
+    return (
+      <div className="artist-container a-bleed" style={{ padding: 32, textAlign: "center" }}>
+        <div className="loader" aria-label="Loading artists"></div>
+      </div>
+    );
   }
 
   if (groupsError) {

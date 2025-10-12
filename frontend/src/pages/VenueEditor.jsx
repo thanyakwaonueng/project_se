@@ -135,7 +135,6 @@ export default function VenueEditor() {
     setAvatarPreview('');
   };
 
-  // ===== helper: uploaders =====
   const api = axios;
 
   async function uploadOne(file) {
