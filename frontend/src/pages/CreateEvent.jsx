@@ -441,7 +441,7 @@ export default function CreateEvent() {
     <div className="ee-page" aria-busy={loading ? "true" : "false"}>
       {/* ===== Header ===== */}
       <header className="ee-header">
-        <h1 className="ee-title">{hasEvent ? 'EDIT EVENT' : 'Create Event'}</h1>
+        <h1 className="ee-title">{hasEvent ? 'EDIT EVENT' : 'CREATE EVENT'}</h1>
       </header>
 
       <div className="ve-line" />
