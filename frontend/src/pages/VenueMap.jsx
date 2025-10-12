@@ -530,7 +530,7 @@ export default function VenueMap() {
           </div>
 
           {loading ? (
-            <div className="vmap-loader">
+            <div className="page-loading" aria-busy="true">
               <div className="loader" aria-label="Loading venues and events"></div>
             </div>
           ) : mode === 'VENUES' ? (

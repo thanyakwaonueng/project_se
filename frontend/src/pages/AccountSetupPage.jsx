@@ -962,7 +962,7 @@ const setA = (key, value) => setArtist(prev => ({ ...prev, [key]: value }));
   if (loading) {
     return (
       <div className="acc-page">
-        <div className="acc-container" style={{ height: '70vh', padding: 32, display: 'grid', placeItems: 'center' }}>
+        <div className="acc-container page-loading">
           <div className="loader" aria-label="Loading account setup" />
         </div>
       </div>

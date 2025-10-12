@@ -117,7 +117,7 @@ export default function ArtistProfileForm() {
 
   if (busy || loading) {
     return (
-      <div style={{ height: '70vh', padding: 32, display: 'grid', placeItems: 'center' }}>
+      <div className="page-loading" aria-busy="true">
         <div className="loader" aria-label="Loading artist profile form" />
       </div>
     );

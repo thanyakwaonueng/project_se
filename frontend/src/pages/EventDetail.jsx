@@ -789,7 +789,7 @@ const toggleFollow = async () => {
   if (loading) {
     return (
       <div className="page" aria-busy="true">
-        <div style={{ height: '70vh', display: 'grid', placeItems: 'center', padding: 32 }}>
+        <div className="page-loading">
           <div className="loader" aria-label="Loading event" />
         </div>
       </div>
