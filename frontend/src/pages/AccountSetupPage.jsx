@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import api, { extractErrorMessage } from "../lib/api";
+import { useAuth } from "../lib/auth";
 import Swal from "sweetalert2";
 import "../css/AccountSetupPage.css";
 
@@ -301,6 +302,7 @@ function normalizeMemberCount(val) {
 
 
 export default function AccountSetupPage() {
+  const { refresh } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -815,6 +817,12 @@ const setA = (key, value) => setArtist(prev => ({ ...prev, [key]: value }));
             bandcamp: artist.bandcampUrl || null,
           },
         }, { withCredentials: true });
+      }
+
+      try {
+        await refresh();
+      } catch (refreshErr) {
+        console.error("ACCOUNT_SETUP_REFRESH_ERROR", refreshErr);
       }
 
       setOk(true);
