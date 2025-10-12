@@ -115,7 +115,13 @@ export default function ArtistProfileForm() {
     }
   };
 
-  if (busy || loading) return <div style={{ padding: 16 }}>กำลังโหลด…</div>;
+  if (busy || loading) {
+    return (
+      <div style={{ padding: 32, display: "flex", justifyContent: "center" }}>
+        <div className="loader" aria-label="Loading artist profile form"></div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 720, margin: '24px auto', padding: 16 }}>

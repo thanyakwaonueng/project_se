@@ -305,7 +305,9 @@ export default function NotificationsPage() {
           <span className="np-chip">{unreadCount} unread</span>
         </div>
         <div className="np-actions">
-          <button className="np-btn" onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh'}</button>
+          <button className="np-btn" onClick={load} disabled={loading}>
+            {loading ? <div className="loader loader-inline" aria-hidden="true"></div> : 'Refresh'}
+          </button>
           <button className="np-btn primary" onClick={markAllRead} disabled={loading || unreadCount===0}>Mark all read</button>
         </div>
       </div>
@@ -319,7 +321,9 @@ export default function NotificationsPage() {
       {error && <div className="np-err">{error}</div>}
 
       {loading ? (
-        <div className="np-empty">กำลังโหลด…</div>
+        <div className="np-empty">
+          <div className="loader" aria-label="Loading notifications"></div>
+        </div>
       ) : !shown.length ? (
         <div className="np-empty">ไม่มีแจ้งเตือนในหมวดนี้</div>
       ) : (

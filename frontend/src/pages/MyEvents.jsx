@@ -237,7 +237,11 @@ export default function MyEvents() {
     loadEvents();
   }, []);
 
-  // if (loading) return <p style={styles.loadingText}>Loading events…</p>;
+  if (loading) return (
+    <div style={{ ...styles.container, display: "flex", justifyContent: "center", padding: "80px 0" }}>
+      <div className="loader" aria-label="Loading events"></div>
+    </div>
+  );
   if (error) return <p style={styles.errorText}>{error}</p>;
 
   return (

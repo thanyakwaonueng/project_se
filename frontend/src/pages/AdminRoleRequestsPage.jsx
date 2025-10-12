@@ -235,10 +235,7 @@ export default function AdminRoleRequestsPage() {
                   }}
                 >
                   {isActionLoading ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" />
-                      {/* Loading... */}
-                    </>
+                    <div className="loader loader-inline" aria-hidden="true"></div>
                   ) : (
                     'Reject'
                   )}
@@ -260,10 +257,7 @@ export default function AdminRoleRequestsPage() {
                   }}
                 >
                   {isActionLoading ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" />
-                      {/* Loading... */}
-                    </>
+                    <div className="loader loader-inline" aria-hidden="true"></div>
                   ) : (
                     'Approve'
                   )}
@@ -339,9 +333,7 @@ export default function AdminRoleRequestsPage() {
 
             {loading ? (
               <div className="text-center py-5 text-muted">
-                <div className="spinner-border" role="status">
-                  {/* <span className="visually-hidden">Loading...</span> */}
-                </div>
+                <div className="loader" aria-label="Loading requests"></div>
                 <div className="mt-3">Loading requests...</div>
               </div>
             ) : !filteredItems.length ? (
@@ -456,10 +448,7 @@ export default function AdminRoleRequestsPage() {
                                         }}
                                       >
                                         {isActionLoading ? (
-                                          <>
-                                            <span className="spinner-border spinner-border-sm me-1" />
-                                            {/* Loading... */}
-                                          </>
+                                          <div className="loader loader-inline" aria-hidden="true"></div>
                                         ) : (
                                           'Reject'
                                         )}
@@ -481,10 +470,7 @@ export default function AdminRoleRequestsPage() {
                                         }}
                                       >
                                         {isActionLoading ? (
-                                          <>
-                                            <span className="spinner-border spinner-border-sm me-1" />
-                                            {/* Loading... */}
-                                          </>
+                                          <div className="loader loader-inline" aria-hidden="true"></div>
                                         ) : (
                                           'Approve'
                                         )}
@@ -524,9 +510,7 @@ export default function AdminRoleRequestsPage() {
 
             {detailLoading && (
               <div className="text-center py-3 text-muted">
-                <div className="spinner-border" role="status">
-                  {/* <span className="visually-hidden">Loading...</span> */}
-                </div>
+                <div className="loader" aria-label="Loading request details"></div>
                 <div className="mt-2">Loading details...</div>
               </div>
             )}

@@ -280,7 +280,9 @@ function InviteModal({
             <span className="search-ico" aria-hidden>🔎</span>
           </label>
           <div className="search-meta">
-            {loadingArtists ? 'Loading…' : `Found ${filtered.length} artist(s)`}
+            {loadingArtists
+              ? <div className="loader loader-inline" aria-label="Loading artists"></div>
+              : `Found ${filtered.length} artist(s)`}
           </div>
         </div>
 
@@ -784,6 +786,16 @@ const toggleFollow = async () => {
   };
 
   // if (loading) return <div className="page"><div className="note">กำลังโหลด…</div></div>;
+  if (loading) {
+    return (
+      <div className="page">
+        <div style={{ padding: "80px 0", display: "flex", justifyContent: "center" }}>
+          <div className="loader" aria-label="Loading event"></div>
+        </div>
+      </div>
+    );
+  }
+
   if (err) return (
     <div className="page">
       <div className="note err">{err}</div>

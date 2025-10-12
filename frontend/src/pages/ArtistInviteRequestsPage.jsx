@@ -251,7 +251,7 @@ export default function ArtistInvitesPage() {
                 disabled={isActLoading}
                 style={{ borderRadius: '20px', padding: '8px 16px', fontSize: '14px', fontWeight: '500', border: 'none' }}
               >
-                {isActLoading ? <span className="spinner-border spinner-border-sm me-2" /> : 'Accept'}
+                {isActLoading ? <div className="loader loader-inline" aria-hidden="true"></div> : 'Accept'}
               </button>
 
               <button
@@ -260,7 +260,7 @@ export default function ArtistInvitesPage() {
                 disabled={isActLoading}
                 style={{ borderRadius: '20px', padding: '8px 16px', fontSize: '14px', fontWeight: '500' }}
               >
-                {isActLoading ? <span className="spinner-border spinner-border-sm me-2" /> : 'Decline'}
+                {isActLoading ? <div className="loader loader-inline" aria-hidden="true"></div> : 'Decline'}
               </button>
             </div>
           ) : (
@@ -317,7 +317,7 @@ export default function ArtistInvitesPage() {
 
             {loading ? (
               <div className="text-center py-5 text-muted">
-                <div className="spinner-border" role="status" />
+              <div className="loader" aria-label="Loading invitations"></div>
                 <div className="mt-3">Loading invitations...</div>
               </div>
             ) : !filteredItems.length ? (
@@ -373,7 +373,7 @@ export default function ArtistInvitesPage() {
                                       disabled={isActLoading}
                                       style={{ borderRadius: '20px', padding: '2px 15px', fontSize: '13px', fontWeight: '500', marginRight: '3px' }}
                                     >
-                                      {isActLoading ? <span className="spinner-border spinner-border-sm me-1" /> : 'Decline'}
+                        {isActLoading ? <div className="loader loader-inline" aria-hidden="true"></div> : 'Decline'}
                                     </button>
                                     <button
                                       className="btn-viewdetail-ev"
@@ -381,7 +381,7 @@ export default function ArtistInvitesPage() {
                                       disabled={isActLoading}
                                       style={{ borderRadius: '20px', padding: '2px 16px', fontSize: '13px', fontWeight: '500', border: 'none' }}
                                     >
-                                      {isActLoading ? <span className="spinner-border spinner-border-sm me-1" /> : 'Accept'}
+                        {isActLoading ? <div className="loader loader-inline" aria-hidden="true"></div> : 'Accept'}
                                     </button>
                                   </div>
                                 ) : (
