@@ -1902,6 +1902,56 @@ app.get('/events', async (req, res) => {
   }
 });
 
+app.get('/events/summary', async (req, res) => {
+  try {
+    let meId = null;
+    try {
+      const token = req.cookies?.token;
+      if (token) {
+        const decoded = jwt.verify(token, SECRET);
+        meId = decoded?.id ?? null;
+      }
+    } catch {}
+
+    const take = Math.min(Number.parseInt(req.query.take, 10) || 50, 200);
+    const skip = Math.max(Number.parseInt(req.query.skip, 10) || 0, 0);
+
+    const events = await prisma.event.findMany({
+      take,
+      skip,
+      orderBy: { date: 'asc' },
+      include: {
+        venue: {
+          select: {
+            performer: { select: { user: { select: { name: true } } } },
+          },
+        },
+        _count: { select: { likedBy: true } },
+        likedBy: meId
+          ? { where: { userId: meId }, select: { userId: true }, take: 1 }
+          : false,
+      },
+    });
+
+    const summary = events.map((e) => ({
+      id: e.id,
+      name: e.name,
+      date: e.date,
+      genre: e.genre || '',
+      posterUrl: e.posterUrl || null,
+      venueName: e.venue?.performer?.user?.name || '',
+      isPublished: e.isPublished,
+      followersCount: e._count?.likedBy ?? 0,
+      likedByMe: !!(Array.isArray(e.likedBy) && e.likedBy.length),
+    }));
+
+    res.json(summary);
+  } catch (err) {
+    console.error('GET /events/summary error:', err);
+    res.status(500).json({ error: 'Failed to fetch event summaries' });
+  }
+});
+
 
 app.get('/events/:id', async (req, res) => {
   try {
@@ -3739,3 +3789,67 @@ app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
 
+app.get('/groups/summary', async (req, res) => {
+  try {
+    let meId = null;
+    try {
+      const token = req.cookies?.token;
+      if (token) {
+        const decoded = jwt.verify(token, SECRET);
+        meId = decoded?.id ?? null;
+      }
+    } catch {}
+
+    const take = Math.min(Number.parseInt(req.query.take, 10) || 50, 200);
+    const skip = Math.max(Number.parseInt(req.query.skip, 10) || 0, 0);
+
+    const artists = await prisma.artist.findMany({
+      take,
+      skip,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        performerId: true,
+        description: true,
+        genre: true,
+        subGenre: true,
+        priceMin: true,
+        priceMax: true,
+        performer: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                profilePhotoUrl: true,
+              },
+            },
+            _count: { select: { likedBy: true } },
+            likedBy: meId
+              ? { where: { userId: meId }, select: { userId: true }, take: 1 }
+              : false,
+          },
+        },
+      },
+    });
+
+    const summary = artists.map((a) => ({
+      id: a.performerId,
+      name: a.performer?.user?.name || `Artist #${a.performerId}`,
+      description: a.description || '',
+      genre: a.genre || '',
+      subGenre: a.subGenre || '',
+      image:
+        a.performer?.user?.profilePhotoUrl ||
+        'https://i.pinimg.com/736x/a7/39/8a/a7398a0e0e0d469d6314df8b73f228a2.jpg',
+      followersCount: a.performer?._count?.likedBy ?? 0,
+      likedByMe: !!(Array.isArray(a.performer?.likedBy) && a.performer.likedBy.length),
+      priceMin: a.priceMin ?? null,
+      priceMax: a.priceMax ?? null,
+    }));
+
+    res.json(summary);
+  } catch (err) {
+    console.error('GET /groups/summary error:', err);
+    res.status(500).json({ error: 'Failed to fetch artist summaries' });
+  }
+});
