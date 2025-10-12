@@ -354,6 +354,9 @@ export default function Home() {
 
         <div className="container-3">
           <div className="artist-grid" id="artistGrid">
+            {loadingArtists && (
+              <p className="home-loading-text">Loading artists…</p>
+            )}
             {loadingArtists ? (
               <div style={{ padding: "24px 0", textAlign: "center", color: "#666" }}>Loading artists…</div>
             ) : (
@@ -408,11 +411,14 @@ export default function Home() {
         <div className="container-5">
           <h1 className="upcoming-event">Upcoming events</h1>
           <p className="artist-subtitle">Catch the next wave of sounds around the city</p>
-          <div className="event-grid">
-            {loadingEvents ? (
-              <div style={{ padding: "20px 0", textAlign: "center", color: "#666" }}>Loading events…</div>
-            ) : (
-              (upcomingEvents.length ? upcomingEvents : []).map(ev => (
+          {loadingEvents ? (
+            <div className="home-events-loading">
+              <span className="home-spinner" aria-hidden="true" />
+              <span>Loading events…</span>
+            </div>
+          ) : (
+            <div className="event-grid">
+              {(upcomingEvents.length ? upcomingEvents : []).map(ev => (
                 <EventCard 
                   key={ev.id}
                   id={ev.id}
@@ -422,15 +428,15 @@ export default function Home() {
                   image={ev.image}
                   desc={ev.desc}
                 />
-              ))
-            )}
+              ))}
 
-            {!loadingEvents && !upcomingEvents.length && (
-              <div style={{ padding: "20px 0", color: "#666" }}>
-                No upcoming events yet.
-              </div>
-            )}
-          </div>
+              {!upcomingEvents.length && (
+                <div style={{ padding: "20px 0", color: "#666" }}>
+                  No upcoming events yet.
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="container-6">

@@ -62,6 +62,7 @@ export default function ProfilePage() {
         setGroupsLoaded(true);
       } catch (e) {
         console.error("GET /api/groups error:", e);
+        if (alive) setGroupsLoaded(true);
         if (alive) setErr("โหลดรายชื่อศิลปินไม่สำเร็จ");
       }
     })();
@@ -80,6 +81,7 @@ export default function ProfilePage() {
         setEventsLoaded(true);
       } catch (e) {
         console.error("GET /api/events error:", e);
+        if (alive) setEventsLoaded(true);
         if (alive) setErr("โหลดอีเวนต์ไม่สำเร็จ");
       }
     })();
@@ -120,6 +122,7 @@ export default function ProfilePage() {
       } catch (e) {
         console.error("Load my artist schedule error:", e);
         if (alive) setErr("โหลดตารางศิลปินไม่สำเร็จ");
+        if (alive) setArtistScheduleLoaded(true);
       }
     })();
     return () => { alive = false; };
@@ -138,6 +141,7 @@ export default function ProfilePage() {
       } catch (e) {
         console.error("GET /api/myevents error:", e);
         if (alive) setErr("โหลดตารางผู้จัดไม่สำเร็จ");
+        if (alive) setOrgScheduleLoaded(true);
       }
     })();
     return () => { alive = false; };
@@ -423,7 +427,9 @@ export default function ProfilePage() {
 
           <div className="following-body">
             {tab === "artists" ? (
-              artistsCount ? (
+              !groupsLoaded ? (
+                <div className="pf-loading">Loading followed artists…</div>
+              ) : artistsCount ? (
                 <div className="pf-list">
                   {pageItems.map((a) => (
                     <div key={a.id} className="pf-card">
@@ -489,6 +495,8 @@ export default function ProfilePage() {
                   </div>
                 ))}
               </div>
+            ) : !eventsLoaded ? (
+              <div className="pf-loading">Loading followed events…</div>
             ) : (
               <div className="empty">You haven’t followed any events</div>
             )}
