@@ -800,12 +800,13 @@
   box-shadow: 0 12px 24px rgba(0, 0, 0, .10);
 }
 
-/* ---- Media (16:9) ---- */
+/* ---- Media (fixed height like Home artist card) ---- */
 .other-thumb {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  height: 200px;           /* match Home .artist-image-wrapper */
   background: #f3f4f6;
+  overflow: hidden;
 }
 
 .other-thumb img {
@@ -928,6 +929,8 @@
     grid-auto-columns: minmax(220px, 1fr);
     gap: 16px;
   }
+  /* scale media height slightly down on small screens */
+  .other-thumb { height: 180px; }
 }
 
 

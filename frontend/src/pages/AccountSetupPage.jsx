@@ -985,7 +985,7 @@ const setA = (key, value) => setArtist(prev => ({ ...prev, [key]: value }));
         {/* เลือก ROLE */}
         {!isEdit && !role && (
           <section className="acc-section acc-roleIntro">
-            <h2 className="acc-sectionTitle">เลือกบทบาทของคุณ</h2>
+            {/* <h2 className="acc-sectionTitle">เลือกบทบาทของคุณ</h2> */}
             <div className="acc-roleGrid">
               <button type="button" className="acc-roleCard" onClick={() => chooseRole("AUDIENCE")} aria-label="เลือกบทบาท Audience">
                 <div className="acc-roleCardLabel">Audience</div>
