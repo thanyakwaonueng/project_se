@@ -56,6 +56,8 @@ export default function Venue() {
   const [venueData, setVenueData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  // Lightbox state for gallery
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
   // ผู้ใช้ปัจจุบันเพื่อแสดงปุ่มแก้ไข
   const [me, setMe] = useState(null);
@@ -477,6 +479,15 @@ export default function Venue() {
                   src={bust(src)}
                   alt={`photo ${i + 1}`}
                   loading="lazy"
+                  onClick={() => setLightboxUrl(bust(src))}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setLightboxUrl(bust(src));
+                    }
+                  }}
                   onError={(e) => {
                     e.currentTarget.style.opacity = 0;
                   }}
@@ -505,6 +516,30 @@ export default function Venue() {
             ))}
           </div>
         </section>
+      )}
+
+      {lightboxUrl && (
+        <div
+          className="vn-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image preview"
+          onClick={() => setLightboxUrl(null)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setLightboxUrl(null);
+          }}
+          tabIndex={-1}
+        >
+          <button
+            className="vn-lightbox-close"
+            type="button"
+            aria-label="Close"
+            onClick={(e) => { e.stopPropagation(); setLightboxUrl(null); }}
+          >
+            ×
+          </button>
+          <img src={lightboxUrl} alt="enlarged" onClick={(e) => e.stopPropagation()} />
+        </div>
       )}
     </div>
   );

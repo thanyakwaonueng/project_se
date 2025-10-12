@@ -449,7 +449,7 @@ export default function VenueEditor() {
             <div className="ve-field ve-col-span-2">
               <label className="ve-label">Genres</label>
               <div className="ve-chips">
-                {["Pop","Rock","Indie","Jazz","Blues","Hip-Hop","EDM","Folk","Metal","R&B"].map(g => {
+                {["All","Pop","Rock","Indie","Jazz","Blues","Hip-Hop","Folk","Metal","R&B"].map(g => {
                   const selected = genre?.toLowerCase() === g.toLowerCase();
                   return (
                     <button
