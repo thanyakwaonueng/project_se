@@ -587,7 +587,7 @@ app.post('/googlesignup', async(req, res) =>{
   console.log("Signing up Google...")
   try {
     const { code } = req.body; 
-    
+    let logined = true
     // แลก code -> tokens (access_token + id_token)
     const { tokens } = await client.getToken(code);
     //console.log("Tokens:", tokens);
@@ -609,6 +609,7 @@ app.post('/googlesignup', async(req, res) =>{
     if(!user){
       user = await prisma.user.create({data:{email, passwordHash: "", role: 'AUDIENCE', 
                                       isVerified: true}}) //No need for OTP
+      logined = false
     }
     
     //Create Cookie like login function
@@ -622,7 +623,7 @@ app.post('/googlesignup', async(req, res) =>{
       maxAge: 24 * 60 * 60 * 1000, //24 Hours (1 Day)
     });
     
-    return res.status(201).json({message: 'Logged in', user})
+    return res.status(201).json({login: logined})
   } catch (err) {
     console.error('POST /googlesignup error:', err);
     return res.status(400).json({ error: err.message || 'Google sign up failed' });
