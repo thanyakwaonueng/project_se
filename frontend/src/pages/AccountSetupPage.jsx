@@ -1555,7 +1555,28 @@ const setA = (key, value) => setArtist(prev => ({ ...prev, [key]: value }));
             <div className="acc-actions">
               <button type="button" className="acc-btn" onClick={resetForm}>Reset</button>
               <button type="button" className="acc-btn acc-btnPrimary" disabled={saving} onClick={handleSave}>
-                {saving ? "Saving…" : "Save"}
+                {saving ? (
+                  <>
+                    <div className="loader loader-inline" aria-hidden="true" />
+                    <span
+                      style={{
+                        position: 'absolute',
+                        width: 1,
+                        height: 1,
+                        padding: 0,
+                        margin: -1,
+                        overflow: 'hidden',
+                        clip: 'rect(0, 0, 0, 0)',
+                        whiteSpace: 'nowrap',
+                        border: 0,
+                      }}
+                    >
+                      Saving
+                    </span>
+                  </>
+                ) : (
+                  "Save"
+                )}
               </button>
             </div>
           </>
