@@ -154,7 +154,7 @@ function InviteModal({
     return () => { alive = false; };
   }, [open]);
 
-  // อัปเดต endTime อัตโนมัติตาม start + duration (ยังคงเดิม)
+  // อัปเดต endTime อัตโนมัติตาม start + duration (คำนวณอัตโนมัติ — ไม่ต้องกรอกเอง)
   useEffect(() => {
     if (!open) return;
     const sm = toMin(form.startTime || '');
@@ -163,9 +163,9 @@ function InviteModal({
     const maxM = windowEndHHMM   ? toMin(windowEndHHMM)   : 24*60;
     const d = Number(form.duration) || 60;
     const endM = Math.min(maxM, sm + d);
-    if (!endDirty) setForm(f => ({ ...f, endTime: minToHHMM(endM) }));
+    setForm(f => ({ ...f, endTime: minToHHMM(endM) }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, form.startTime, form.duration, windowStartHHMM, windowEndHHMM, endDirty]);
+  }, [open, form.startTime, form.duration, windowStartHHMM, windowEndHHMM]);
 
   const displayName = (a) =>
     a?.performer?.user?.name || `Artist #${a?.performerId ?? ''}`;
@@ -376,25 +376,15 @@ function InviteModal({
               />
             </label>
 
-            <label>End time
+            <label>End time (auto)
               <input
                 type="text"
-                inputMode="numeric"
+                readOnly
+                aria-readonly
+                className="ro-input"
                 placeholder="HH:mm"
-                title="เวลาแบบ 24 ชั่วโมง เช่น 20:30"
-                pattern="^([01]?\\d|2[0-3]):([0-5]\\d)$"
+                title="End time is calculated from start and duration"
                 value={form.endTime}
-                onChange={(e)=>{
-                  const d = String(e.target.value||'').replace(/[^0-9]/g,'').slice(0,4);
-                  const v = d.length<=2 ? d : `${d.slice(0,2)}:${d.slice(2)}`;
-                  setEndDirty(true);
-                  setForm(prev=>({ ...prev, endTime: v }));
-                }}
-                onBlur={(e)=>{
-                  const t = normTime(e.target.value);
-                  setEndDirty(true);
-                  setForm(prev=>({ ...prev, endTime: (t && HHMM_REGEX.test(t)) ? t : (t || '') }));
-                }}
               />
             </label>
 

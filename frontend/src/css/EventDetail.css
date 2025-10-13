@@ -1414,6 +1414,31 @@
   gap: 12px;
   align-items: start;
 }
+.grid3 label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: #111214;
+}
+.grid3 input[type="text"],
+.grid3 select {
+  height: 40px;
+  width: 100%;
+  border: 1px solid #e8e8ea;
+  border-radius: 10px;
+  padding: 0 12px;
+  outline: none;
+  background: #fff;
+}
+.grid3 input[type="text"]:focus,
+.grid3 select:focus {
+  border-color: #c7c7cb;
+}
+.grid3 .ro-input {
+  background: #f7f7f8;
+  color: #111214;
+}
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 .chips { gap: 8px; }
