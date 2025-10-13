@@ -349,7 +349,7 @@ function InviteModal({
         {warn && <div className="warn">{warn}</div>}
 
         {/* Time form */}
-        <form onSubmit={submit} className="frm invite-form" style={{marginTop:12}}>
+        <form onSubmit={submit} noValidate className="frm invite-form" style={{marginTop:12}}>
           {/* Quick slots removed per request */}
 
           <div className="grid3">
@@ -360,7 +360,6 @@ function InviteModal({
                 inputMode="numeric"
                 placeholder="HH:mm"
                 title="เวลาแบบ 24 ชั่วโมง เช่น 19:30"
-                pattern="^([01]?\\d|2[0-3]):([0-5]\\d)$"
                 value={form.startTime}
                 onChange={(e)=>{
                   if (selectedSlot!=null) setSelectedSlot(null);
