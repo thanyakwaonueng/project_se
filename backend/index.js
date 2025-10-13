@@ -1153,7 +1153,7 @@ app.get('/groups', async (req, res) => {
       const schedule = (Array.isArray(a.artistEvents) ? a.artistEvents : [])
         .filter((ae) => {
           const e = ae.event;
-          if (!e || !e.date || !(e.isPublished || ['ACCEPTED', 'PENDING'].includes(String(ae.status).toUpperCase()))) {
+          if (!e || !e.date || !e.isPublished) {
             return false;
           }
           return true;
