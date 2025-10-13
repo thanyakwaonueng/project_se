@@ -63,7 +63,8 @@ function normTime(t) {
 const HHMM_REGEX = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 
 const toMin = (hhmm) => {
-  const m = (hhmm||'').match(/^(\d{2}):(\d{2})$/);
+  const s = typeof hhmm === 'string' ? hhmm : String(hhmm ?? '');
+  const m = s.match(/^(\d{2}):(\d{2})$/);
   if (!m) return null;
   return parseInt(m[1],10)*60 + parseInt(m[2],10);
 };
@@ -359,7 +360,7 @@ function InviteModal({
                 inputMode="numeric"
                 placeholder="HH:mm"
                 title="เวลาแบบ 24 ชั่วโมง เช่น 19:30"
-                pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
+                pattern="^([01]?\\d|2[0-3]):([0-5]\\d)$"
                 value={form.startTime}
                 onChange={(e)=>{
                   if (selectedSlot!=null) setSelectedSlot(null);
@@ -411,7 +412,7 @@ function InviteModal({
             </label>
           </div>
 
-          {/* End time input moved beside Start time */}
+          {/* End time input moved beside Start time */}/}
 
           <div className="act">
             <button type="button" className="btn" onClick={onClose}>Cancel</button>
