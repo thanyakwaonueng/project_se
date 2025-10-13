@@ -612,14 +612,11 @@ export default function VenueMap() {
             ) : (
               <div className="vmap-grid">
                 {pageItems.map(ev => {
-                  const img = ev.bannerUrl
+                  const img = ev.posterUrl
+                    || ev.bannerUrl
                     || ev.coverImage
                     || ev.image
                     || (Array.isArray(ev.images) && ev.images[0])
-                    || ev.venue?.bannerUrl
-                    || ev.venue?.coverImage
-                    || ev.venue?.profilePhotoUrl
-                    || (Array.isArray(ev.venue?.photoUrls) && ev.venue.photoUrls[0])
                     || '/img/fallback.jpg';
 
                   return (
