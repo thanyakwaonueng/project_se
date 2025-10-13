@@ -33,5 +33,17 @@ export default function Logout() {
     })();
   }, [logout, navigate]);
 
-  return <div style={{ padding: 16 }}>Logging out…</div>;
+  return (
+    <div
+      style={{
+        minHeight: '40vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+      }}
+    >
+      <div className="loader" aria-hidden="true" />
+    </div>
+  );
 }
