@@ -963,7 +963,7 @@ const setA = (key, value) => setArtist(prev => ({ ...prev, [key]: value }));
     return (
       <div className="acc-page">
         <div className="acc-container page-loading">
-          <div className="loader" aria-label="Loading account setup" />
+          <div className="loader" aria-hidden="true" />
         </div>
       </div>
     );
