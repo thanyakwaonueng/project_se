@@ -366,11 +366,11 @@ function InviteModal({
                   if (selectedSlot!=null) setSelectedSlot(null);
                   const d = String(e.target.value||'').replace(/[^0-9]/g,'').slice(0,4);
                   const v = d.length<=2 ? d : `${d.slice(0,2)}:${d.slice(2)}`;
-                  setForm(v=>({ ...v, startTime: v }));
+                  setForm(prev=>({ ...prev, startTime: v }));
                 }}
                 onBlur={(e)=>{
                   const t = normTime(e.target.value);
-                  setForm(v=>({ ...v, startTime: (t && HHMM_REGEX.test(t)) ? t : (t || '') }));
+                  setForm(prev=>({ ...prev, startTime: (t && HHMM_REGEX.test(t)) ? t : (t || '') }));
                 }}
                 disabled={selectedSlot!=null}
               />
@@ -387,11 +387,13 @@ function InviteModal({
                 onChange={(e)=>{
                   const d = String(e.target.value||'').replace(/[^0-9]/g,'').slice(0,4);
                   const v = d.length<=2 ? d : `${d.slice(0,2)}:${d.slice(2)}`;
-                  setForm(v=>({ ...v, endTime: v }));
+                  setEndDirty(true);
+                  setForm(prev=>({ ...prev, endTime: v }));
                 }}
                 onBlur={(e)=>{
                   const t = normTime(e.target.value);
-                  setForm(v=>({ ...v, endTime: (t && HHMM_REGEX.test(t)) ? t : (t || '') }));
+                  setEndDirty(true);
+                  setForm(prev=>({ ...prev, endTime: (t && HHMM_REGEX.test(t)) ? t : (t || '') }));
                 }}
               />
             </label>
@@ -412,7 +414,7 @@ function InviteModal({
             </label>
           </div>
 
-          {/* End time input moved beside Start time */}/}
+          {/* End time input moved beside Start time */}
 
           <div className="act">
             <button type="button" className="btn" onClick={onClose}>Cancel</button>
