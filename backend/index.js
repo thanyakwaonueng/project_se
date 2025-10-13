@@ -1085,6 +1085,20 @@ app.get('/groups', async (req, res) => {
           },
         },
         artistRecords: true,
+        artistEvents: {
+          include: {
+            event: {
+              include: {
+                venue: {
+                  include: {
+                    performer: { include: { user: true } },
+                    location: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -1136,11 +1150,17 @@ app.get('/groups', async (req, res) => {
 
       // ---- สร้าง schedule (คงของเดิม) ----
       const schedule = (Array.isArray(a.artistEvents) ? a.artistEvents : [])
+        .filter((ae) => {
+          const e = ae.event;
+          if (!e || !e.date || !(e.isPublished || ['ACCEPTED', 'PENDING'].includes(String(ae.status).toUpperCase()))) {
+            return false;
+          }
+          return true;
+        })
         .map((ae) => {
           const e = ae.event;
-          if (!e) return null;
           const venue = e.venue;
-          const venueName = venue?.performer?.user?.name ?? 'Unknown Venue';
+          const venueName = venue?.performer?.user?.name ?? venue?.name ?? 'Unknown Venue';
           return {
             id: e.id,
             dateISO: e.date.toISOString(),
@@ -1153,7 +1173,6 @@ app.get('/groups', async (req, res) => {
             performanceFee: ae.fee ?? null,
           };
         })
-        .filter(Boolean)
         .sort((x, y) => new Date(x.dateISO) - new Date(y.dateISO));
 
       return {
