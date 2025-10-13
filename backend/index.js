@@ -31,7 +31,8 @@ const supabase = createClient(
 );
 
 //Google OAuth
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, "http://localhost:5173")
+const redirectURI = "https://project-se-client.vercel.app" //callbackURI สำหรับ Deploy server
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, redirectURI)
 
 const app = express();
 app.use(express.json());
