@@ -120,6 +120,7 @@ function InviteModal({
       return (sm!=null && em!=null && em>sm) ? (em-sm) : 60;
     })(),
   });
+  const [endDirty, setEndDirty] = useState(false);
 
   useEffect(() => {
     const st = normTime(initial?.start) || '';
@@ -133,6 +134,7 @@ function InviteModal({
       duration: (sm!=null && em!=null && em>sm) ? (em-sm) : 60,
     });
     setSelectedSlot(null);
+    setEndDirty(false);
     setWarn('');
   }, [initial]);
 
@@ -160,9 +162,9 @@ function InviteModal({
     const maxM = windowEndHHMM   ? toMin(windowEndHHMM)   : 24*60;
     const d = Number(form.duration) || 60;
     const endM = Math.min(maxM, sm + d);
-    setForm(f => ({ ...f, endTime: minToHHMM(endM) }));
+    if (!endDirty) setForm(f => ({ ...f, endTime: minToHHMM(endM) }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, form.startTime, form.duration, windowStartHHMM, windowEndHHMM]);
+  }, [open, form.startTime, form.duration, windowStartHHMM, windowEndHHMM, endDirty]);
 
   const displayName = (a) =>
     a?.performer?.user?.name || `Artist #${a?.performerId ?? ''}`;
@@ -346,10 +348,10 @@ function InviteModal({
         {warn && <div className="warn">{warn}</div>}
 
         {/* Time form */}
-        <form onSubmit={submit} className="frm" style={{marginTop:12}}>
+        <form onSubmit={submit} className="frm invite-form" style={{marginTop:12}}>
           {/* Quick slots removed per request */}
 
-          <div className="grid2">
+          <div className="grid3">
             <label>Start time
               {/* 👉 เปลี่ยนเป็นกรอก 24 ชั่วโมง (ไม่ใช้ am/pm/ไม่ใช้ type=time) */}
               <input
@@ -361,13 +363,35 @@ function InviteModal({
                 value={form.startTime}
                 onChange={(e)=>{
                   if (selectedSlot!=null) setSelectedSlot(null);
-                  setForm(v=>({ ...v, startTime: e.target.value }));
+                  const d = String(e.target.value||'').replace(/[^0-9]/g,'').slice(0,4);
+                  const v = d.length<=2 ? d : `${d.slice(0,2)}:${d.slice(2)}`;
+                  setForm(v=>({ ...v, startTime: v }));
                 }}
                 onBlur={(e)=>{
                   const t = normTime(e.target.value);
                   setForm(v=>({ ...v, startTime: (t && HHMM_REGEX.test(t)) ? t : (t || '') }));
                 }}
                 disabled={selectedSlot!=null}
+              />
+            </label>
+
+            <label>End time
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="HH:mm"
+                title="เวลาแบบ 24 ชั่วโมง เช่น 20:30"
+                pattern="^([01]?\\d|2[0-3]):([0-5]\\d)$"
+                value={form.endTime}
+                onChange={(e)=>{
+                  const d = String(e.target.value||'').replace(/[^0-9]/g,'').slice(0,4);
+                  const v = d.length<=2 ? d : `${d.slice(0,2)}:${d.slice(2)}`;
+                  setForm(v=>({ ...v, endTime: v }));
+                }}
+                onBlur={(e)=>{
+                  const t = normTime(e.target.value);
+                  setForm(v=>({ ...v, endTime: (t && HHMM_REGEX.test(t)) ? t : (t || '') }));
+                }}
               />
             </label>
 
@@ -387,10 +411,7 @@ function InviteModal({
             </label>
           </div>
 
-          {/* End time locked (read-only) */}
-          <div className="kv" style={{marginTop:4}}>
-            <b>End time</b><span>{form.endTime || '—'}</span>
-          </div>
+          {/* End time input moved beside Start time */}
 
           <div className="act">
             <button type="button" className="btn" onClick={onClose}>Cancel</button>

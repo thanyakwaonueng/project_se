@@ -1337,7 +1337,9 @@
 .mdl {
   width: min(960px, 92vw);
   max-height: 86vh;
-  overflow-y: auto; /* allow scrolling inside modal */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* container does not scroll; inner list scrolls */
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0,0,0,.25);
@@ -1366,7 +1368,7 @@
 .search-ico { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #7b7b84; }
 
 .artist-list { 
-  max-height: 360px; 
+  flex: 1;
   overflow-y: auto; 
   padding-right: 4px; 
   margin: 8px 0 6px; 
@@ -1399,6 +1401,19 @@
 .warn { color: #b91c1c; margin: 8px 0 4px; font-size: 13px; }
 
 .frm { margin-top: 10px; }
+.invite-form { 
+  position: sticky; 
+  bottom: 0; 
+  background: #ffffff; 
+  border-top: 1px solid #ececef; 
+  padding-top: 8px; 
+}
+.grid3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 .chips { gap: 8px; }
