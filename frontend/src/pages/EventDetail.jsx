@@ -102,6 +102,8 @@ function InviteModal({
   const [q, setQ] = useState('');
   const [selectedId, setSelectedId] = useState(initial?.artistId ?? null);
   const [warn, setWarn] = useState('');
+  // Use either a quick slot OR manual time (mutually exclusive)
+  const [selectedSlot, setSelectedSlot] = useState(null);
 
   // replace declined mode
   const replaceDeclinedId = (initial?.status === 'DECLINED' && initial?.aeId) ? initial.aeId : null;
@@ -130,6 +132,7 @@ function InviteModal({
       endTime: et,
       duration: (sm!=null && em!=null && em>sm) ? (em-sm) : 60,
     });
+    setSelectedSlot(null);
     setWarn('');
   }, [initial]);
 
@@ -344,7 +347,7 @@ function InviteModal({
 
         {/* Time form */}
         <form onSubmit={submit} className="frm" style={{marginTop:12}}>
-          {/* Quick slots */}
+          {/* Quick slots (single selection) */}
           {(() => {
             const slots = [];
             const step = 30;
@@ -356,13 +359,28 @@ function InviteModal({
             }
             if (slots.length === 0) return null;
             return (
-              <div className="chips">
-                {slots.map(([s,e],i)=>(
-                  <button key={i} type="button" className="chip"
-                    onClick={()=>setForm(f=>({ ...f, startTime:minToHHMM(s), endTime:minToHHMM(e) }))}>
-                    {minToHHMM(s)}–{minToHHMM(e)}
-                  </button>
-                ))}
+              <div>
+                <div className="chips" aria-label="Quick slots">
+                  {slots.map(([s,e],i)=>(
+                    <button
+                      key={i}
+                      type="button"
+                      className={`chip ${selectedSlot===i ? 'on' : ''}`}
+                      onClick={() => {
+                        setSelectedSlot(i);
+                        setForm(f=>({ ...f, startTime:minToHHMM(s), endTime:minToHHMM(e) }));
+                      }}
+                      title="Pick this time"
+                    >
+                      {minToHHMM(s)}–{minToHHMM(e)}
+                    </button>
+                  ))}
+                </div>
+                {selectedSlot!=null && (
+                  <div style={{marginTop:6, fontSize:12, color:'#64748b'}}>
+                    Using a quick slot. <button type="button" className="alink" onClick={()=>setSelectedSlot(null)}>Use manual time</button>
+                  </div>
+                )}
               </div>
             );
           })()}
@@ -378,12 +396,14 @@ function InviteModal({
                 pattern="^([01]?\d|2[0-3]):([0-5]\d)$"
                 value={form.startTime}
                 onChange={(e)=>{
+                  if (selectedSlot!=null) setSelectedSlot(null);
                   setForm(v=>({ ...v, startTime: e.target.value }));
                 }}
                 onBlur={(e)=>{
                   const t = normTime(e.target.value);
                   setForm(v=>({ ...v, startTime: (t && HHMM_REGEX.test(t)) ? t : (t || '') }));
                 }}
+                disabled={selectedSlot!=null}
               />
             </label>
 
@@ -391,14 +411,19 @@ function InviteModal({
               <div className="duration-wrap">
                 <select
                   value={form.duration}
-                  onChange={(e)=>setForm(v=>({ ...v, duration: Number(e.target.value) || 60 }))}>
+                  onChange={(e)=>{
+                    if (selectedSlot!=null) setSelectedSlot(null);
+                    setForm(v=>({ ...v, duration: Number(e.target.value) || 60 }));
+                  }}
+                  disabled={selectedSlot!=null}>
                   {DURATIONS.map(d=><option key={d} value={d}>{d} min</option>)}
                 </select>
                 <div className="duration-chips">
                   {DURATIONS.slice(0,5).map(d=>(
                     <button key={d} type="button"
                       className={`chip ${Number(form.duration)===d?'on':''}`}
-                      onClick={()=>setForm(v=>({ ...v, duration:d }))}>
+                      onClick={()=>{ if (selectedSlot!=null) setSelectedSlot(null); setForm(v=>({ ...v, duration:d })); }}
+                      disabled={selectedSlot!=null}>
                       {d}′
                     </button>
                   ))}
@@ -887,17 +912,12 @@ const toggleFollow = async () => {
       <section className="ed-info">
         <div className="ed-info-grid">
           <div className="ed-info-block">
-            <h3 className="ed-info-title">CONTACT</h3>
-            <div className="ed-kv"><div>Email</div><div>—</div></div>
-            <div className="ed-kv"><div>Phone</div><div>—</div></div>
-            <div className="ticket-content"> 
-              <h3 className="ed-info-title">TICKET LINK</h3>
-              <p className="ed-text">
-                {ev?.ticketLink
-                  ? <a className="alink" href={ev.ticketLink} target="_blank" rel="noreferrer">Tickets ↗</a>
-                  : '—'}
-              </p>
-            </div>
+            <h3 className="ed-info-title">TICKET LINK</h3>
+            <p className="ed-text">
+              {ev?.ticketLink
+                ? <a className="alink" href={ev.ticketLink} target="_blank" rel="noreferrer">Tickets ↗</a>
+                : '—'}
+            </p>
           </div>
 
           <div className="ed-info-block">
