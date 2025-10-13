@@ -82,16 +82,27 @@ export default function Signup() {
     onSuccess: async (accesstoken) => { //ทำการขอเป็น access token
       try {
         // ส่ง code ไปให้ backend แลก id_token + access_token พร้อม login ไปเลย
-        await axios.post("/api/googlesignup", {code: accesstoken.code,}, {withCredentials: true});
-
-        Swal.fire({
-            icon: 'success',
-            title: 'Welcome!',
-            text: 'Your account has been created successfully.',
-            confirmButtonColor: '#3085d6'
+        const res = await axios.post("/api/googlesignup", {code: accesstoken.code,}, {withCredentials: true});
+        if(res.login){
+          Swal.fire({
+                  icon: 'success',
+                  title: 'Login Successful',
+                  text: 'Welcome back!',
+                  confirmButtonColor: '#3085d6',
           }).then(() => {
-            window.location.assign('/accountsetup');
-        });
+                  // redirect หลังจากกด OK
+                  window.location.assign('/');
+          });
+        }else{
+          Swal.fire({
+              icon: 'success',
+              title: 'Welcome!',
+              text: 'Your account has been created successfully.',
+              confirmButtonColor: '#3085d6'
+            }).then(() => {
+              window.location.assign('/accountsetup');
+          });
+        }
 
           
         
