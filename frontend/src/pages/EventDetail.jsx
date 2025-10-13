@@ -347,43 +347,7 @@ function InviteModal({
 
         {/* Time form */}
         <form onSubmit={submit} className="frm" style={{marginTop:12}}>
-          {/* Quick slots (single selection) */}
-          {(() => {
-            const slots = [];
-            const step = 30;
-            const d = Number(form.duration) || 60;
-            const minM = windowStartHHMM ? toMin(windowStartHHMM) : 18*60;
-            const maxM = windowEndHHMM   ? toMin(windowEndHHMM)   : 24*60;
-            for (let m = minM; m + d <= maxM && slots.length < 6; m += step) {
-              slots.push([m, m + d]);
-            }
-            if (slots.length === 0) return null;
-            return (
-              <div>
-                <div className="chips" aria-label="Quick slots">
-                  {slots.map(([s,e],i)=>(
-                    <button
-                      key={i}
-                      type="button"
-                      className={`chip ${selectedSlot===i ? 'on' : ''}`}
-                      onClick={() => {
-                        setSelectedSlot(i);
-                        setForm(f=>({ ...f, startTime:minToHHMM(s), endTime:minToHHMM(e) }));
-                      }}
-                      title="Pick this time"
-                    >
-                      {minToHHMM(s)}–{minToHHMM(e)}
-                    </button>
-                  ))}
-                </div>
-                {selectedSlot!=null && (
-                  <div style={{marginTop:6, fontSize:12, color:'#64748b'}}>
-                    Using a quick slot. <button type="button" className="alink" onClick={()=>setSelectedSlot(null)}>Use manual time</button>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+          {/* Quick slots removed per request */}
 
           <div className="grid2">
             <label>Start time
@@ -418,20 +382,12 @@ function InviteModal({
                   disabled={selectedSlot!=null}>
                   {DURATIONS.map(d=><option key={d} value={d}>{d} min</option>)}
                 </select>
-                <div className="duration-chips">
-                  {DURATIONS.slice(0,5).map(d=>(
-                    <button key={d} type="button"
-                      className={`chip ${Number(form.duration)===d?'on':''}`}
-                      onClick={()=>{ if (selectedSlot!=null) setSelectedSlot(null); setForm(v=>({ ...v, duration:d })); }}
-                      disabled={selectedSlot!=null}>
-                      {d}′
-                    </button>
-                  ))}
-                </div>
+                {/* duration chips removed */}
               </div>
             </label>
           </div>
 
+          {/* End time locked (read-only) */}
           <div className="kv" style={{marginTop:4}}>
             <b>End time</b><span>{form.endTime || '—'}</span>
           </div>
