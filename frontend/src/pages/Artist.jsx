@@ -525,6 +525,15 @@ const sortedGroups = useMemo(() => {
     return num.toLocaleString();
   };
 
+  const listenPlatforms = useMemo(() => ([
+    { key: 'spotify',    label: 'Spotify',       icon: '/img/spotify.png',     href: selectedGroup?.socials?.spotify },
+    { key: 'apple',      label: 'Apple Music',   icon: '/img/apple-music.png', href: selectedGroup?.socials?.appleMusic },
+    { key: 'youtube',    label: 'YouTube Music', icon: '/img/youtube.png',     href: selectedGroup?.socials?.youtube },
+    { key: 'soundcloud', label: 'SoundCloud',    icon: '/img/soundcloud.png',  href: selectedGroup?.socials?.soundcloud },
+    { key: 'bandcamp',   label: 'Bandcamp',      icon: '/img/bandcamp.png',    href: selectedGroup?.socials?.bandcamp },
+    { key: 'shazam',     label: 'Shazam',        icon: '/img/shazam.png',      href: selectedGroup?.socials?.shazam },
+  ]), [selectedGroup]);
+
   // schedule lists
   const now = new Date();
   const scheduleUpcoming = useMemo(() => {
@@ -935,24 +944,23 @@ const PlayerCard = ({ url, poster, title }) => {
                 {/* <div className="listen2-quote">“Where words fail, music speaks.”</div> */}
               </div>
               <div className="listen2-grid">
-                <a className="listen2-item" href={selectedGroup?.socials?.spotify || "#"} target="_blank" rel="noreferrer">
-                  <img src="/img/spotify.png" alt="" /><span>Spotify</span>
-                </a>
-                <a className="listen2-item" href={selectedGroup?.socials?.appleMusic || "#"} target="_blank" rel="noreferrer">
-                  <img src="/img/apple-music.png" alt="" /><span>Apple Music</span>
-                </a>
-                <a className="listen2-item" href={selectedGroup?.socials?.youtube || "#"} target="_blank" rel="noreferrer">
-                  <img src="/img/youtube.png" alt="" /><span>YouTube Music</span>
-                </a>
-                <a className="listen2-item" href={selectedGroup?.socials?.soundcloud || "#"} target="_blank" rel="noreferrer">
-                  <img src="/img/soundcloud.png" alt="" /><span>SoundCloud</span>
-                </a>
-                <a className="listen2-item" href={selectedGroup?.socials?.bandcamp || "#"} target="_blank" rel="noreferrer">
-                  <img src="/img/bandcamp.png" alt="" /><span>Bandcamp</span>
-                </a>
-                <a className="listen2-item" href={selectedGroup?.socials?.shazam || "#"} target="_blank" rel="noreferrer">
-                  <img src="/img/shazam.png" alt="" /><span>Shazam</span>
-                </a>
+                {listenPlatforms.map(({ key, label, icon, href }) => {
+                  const hasLink = !!href;
+                  return (
+                    <a
+                      key={key}
+                      className={`listen2-item ${hasLink ? "" : "is-disabled"}`}
+                      href={hasLink ? href : "#"}
+                      target={hasLink ? "_blank" : undefined}
+                      rel={hasLink ? "noreferrer" : undefined}
+                      aria-disabled={hasLink ? undefined : "true"}
+                      tabIndex={hasLink ? 0 : -1}
+                    >
+                      <img src={icon} alt="" />
+                      <span>{label}</span>
+                    </a>
+                  );
+                })}
               </div>
             </div>
 

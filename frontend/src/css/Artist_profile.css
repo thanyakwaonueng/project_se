@@ -463,6 +463,25 @@
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 
+.listen2-item.is-disabled {
+  pointer-events: none;
+  background: #f4f4f4;
+  color: #a0a0a0;
+  box-shadow: none;
+  cursor: default;
+}
+
+.listen2-item.is-disabled img,
+.listen2-item.is-disabled .listen2-icon {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.listen2-item.is-disabled span,
+.listen2-item.is-disabled .listen2-label {
+  color: #a0a0a0;
+}
+
 /* LISTEN ON — mobile: icon only + แนวนอนเลื่อน */
 @media (max-width: 640px) {
   .listen2-grid {
